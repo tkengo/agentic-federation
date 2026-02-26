@@ -1,0 +1,39 @@
+#!/bin/bash
+set -e
+
+REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+
+echo "=== Agentic Federation Install ==="
+echo ""
+
+# CLI
+echo "Installing CLI..."
+cd "$REPO_DIR/cli"
+npm install
+npm run build
+npm link
+echo "  fed command installed globally."
+echo ""
+
+# Dashboard
+echo "Installing Dashboard..."
+cd "$REPO_DIR/dashboard"
+npm install
+npm run build
+echo "  Dashboard built."
+echo ""
+
+# PATH hint
+if ! echo "$PATH" | tr ':' '\n' | grep -qx "$REPO_DIR/bin"; then
+  echo "Add this to your shell profile (~/.zshrc or ~/.bashrc):"
+  echo ""
+  echo "  export PATH=\"$REPO_DIR/bin:\$PATH\""
+  echo ""
+fi
+
+echo "=== Done ==="
+echo ""
+echo "Quick start:"
+echo "  fed init"
+echo "  fed repo add <name>"
+echo "  fed start <repo> <branch>"
