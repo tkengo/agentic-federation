@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { requireSessionDir } from "../lib/session.js";
 import type { StateJson } from "../lib/types.js";
+import { loadSessionWorkflow } from "../lib/workflow.js";
 
 // Get a nested value from an object by dot-separated path
 function getNestedValue(obj: Record<string, unknown>, keyPath: string): unknown {
@@ -73,7 +74,11 @@ export function stateReadCommand(field?: string): void {
   }
 }
 
-export function stateUpdateCommand(field: string, value: string): void {
+export function stateUpdateCommand(
+  field: string,
+  value: string,
+  force: boolean = false
+): void {
   const sessionDir = requireSessionDir();
   const statePath = path.join(sessionDir, "state.json");
 
@@ -84,6 +89,36 @@ export function stateUpdateCommand(field: string, value: string): void {
 
   const state = JSON.parse(fs.readFileSync(statePath, "utf-8")) as Record<string, unknown>;
   const parsed = parseValue(value);
+
+  // Validate status transitions against workflow definition
+  if (field === "status" && typeof parsed === "string") {
+    const wf = loadSessionWorkflow(sessionDir);
+    if (wf) {
+      const currentStatus = state.status as string;
+      const targetStatus = parsed;
+      const currentState = wf.states[currentStatus];
+      if (currentState) {
+        const allowed = currentState.transitions;
+        if (!allowed.includes(targetStatus)) {
+          if (force) {
+            console.error(
+              `Warning: "${targetStatus}" is not a valid transition from "${currentStatus}". Forced.`
+            );
+          } else {
+            console.error(
+              `Error: "${targetStatus}" is not a valid transition from "${currentStatus}".`
+            );
+            console.error(`  Allowed transitions: ${allowed.join(", ")}`);
+            console.error(`  Use --force to override.`);
+            process.exit(1);
+          }
+        }
+      }
+
+
+    }
+  }
+
   setNestedValue(state, field, parsed);
   fs.writeFileSync(statePath, JSON.stringify(state, null, 2) + "\n");
 

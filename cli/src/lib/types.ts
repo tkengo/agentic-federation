@@ -10,8 +10,9 @@ export interface MetaJson {
 export interface StateJson {
   session_name: string;
   status: string;
-  retry_count: { plan_review: number; code_review: number };
-  pending_reviews: string[];
+  workflow?: string;
+  retry_count: Record<string, number>;
+  pending_tasks: string[];
   escalation: { required: boolean; reason: string | null };
   history: Array<{
     ts: string;
@@ -20,17 +21,6 @@ export interface StateJson {
     detail?: string;
   }>;
 }
-
-// Artifact name -> relative file path within session directory
-export const ARTIFACT_MAP: Record<string, string> = {
-  plan: "plan.md",
-  implementation: "implementation.md",
-  plan_review_gemini: "reviews/plan_review_gemini.md",
-  plan_review_codex: "reviews/plan_review_codex.md",
-  code_review_gemini: "reviews/code_review_gemini.md",
-  code_review_codex: "reviews/code_review_codex.md",
-  human_feedback: "human_feedback.md",
-};
 
 export interface RepoConfig {
   repo_root: string;

@@ -11,6 +11,7 @@ interface CleanTarget {
   sessionDir: string;
   worktreePath: string;
   repoRoot: string;
+  branch: string;
   label: string;
 }
 
@@ -47,6 +48,7 @@ function findCleanTargets(): CleanTarget[] {
         sessionDir,
         worktreePath: meta.worktree,
         repoRoot: config.repo_root,
+        branch: meta.branch,
         label: `${meta.repo}/${meta.branch}`,
       });
     }
@@ -107,6 +109,18 @@ export function cleanCommand(dryRun: boolean, force: boolean): void {
           console.error(`    Error: ${err}`);
         }
       }
+    }
+
+    // Delete the branch associated with the worktree
+    try {
+      const forceFlag = force ? " -D" : " -d";
+      execSync(
+        `git -C '${target.repoRoot}' branch${forceFlag} '${target.branch}'`,
+        { stdio: "inherit" }
+      );
+      console.log(`    Deleted branch: ${target.branch}`);
+    } catch {
+      console.error(`    Warning: could not delete branch ${target.branch}`);
     }
 
     // Cleanup Claude project data for this worktree

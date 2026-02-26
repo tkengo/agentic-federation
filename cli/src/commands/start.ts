@@ -8,11 +8,16 @@ import { createSessionDir, linkActiveSession, resolveSession } from "../lib/sess
 import * as tmux from "../lib/tmux.js";
 import type { MetaJson, StateJson, RepoConfig } from "../lib/types.js";
 import { initCommand } from "./init.js";
+import {
+  loadWorkflowByName,
+  getEntryPointState,
+  type WorkflowDefinition,
+} from "../lib/workflow.js";
 
 export async function startCommand(
   repoName: string,
   branch: string,
-  teamMode: boolean
+  workflowName?: string
 ): Promise<void> {
   // ============================================================
   // Preflight checks (no side effects - fail fast before any mutation)
@@ -28,7 +33,6 @@ export async function startCommand(
   initCommand();
 
   const config = loadRepoConfig(repoName);
-  const mode = teamMode ? "team" : "solo";
   const worktreePath = path.join(config.worktree_base, branch);
   const tmuxSession = branch;
 
@@ -94,10 +98,20 @@ export async function startCommand(
   // All checks passed - begin side effects
   // ============================================================
 
+  // Load workflow if specified
+  let workflow: WorkflowDefinition | undefined;
+  if (workflowName) {
+    workflow = loadWorkflowByName(workflowName);
+  }
+  const mode = workflow ? "team" : "solo";
+
   console.log(`=== fed start ===`);
   console.log(`Repo:     ${repoName}`);
   console.log(`Branch:   ${branch}`);
   console.log(`Mode:     ${mode}`);
+  if (workflow) {
+    console.log(`Workflow: ${workflow.name}`);
+  }
   console.log(`Worktree: ${worktreePath}`);
 
   // Cleanup old Claude project data
@@ -121,9 +135,9 @@ export async function startCommand(
   // Active symlink
   linkActiveSession(tmuxSession, sessionPath);
 
-  // Team mode: create state.json, reviews/, notifications/
-  if (teamMode) {
-    initTeamSession(sessionPath, tmuxSession);
+  // Team mode: create state.json, notifications/
+  if (workflow) {
+    initTeamSession(sessionPath, tmuxSession, workflow);
   }
 
   // Sync commands (skills)
@@ -132,9 +146,9 @@ export async function startCommand(
   // Create tmux session with dev window
   createDevWindow(tmuxSession, worktreePath, config);
 
-  // 1-7. Team mode: create agent-team window
-  if (teamMode) {
-    createAgentTeamWindow(tmuxSession, worktreePath, sessionPath);
+  // Team mode: create agent-team window
+  if (workflow) {
+    createAgentTeamWindow(tmuxSession, worktreePath, sessionPath, workflow);
   }
 
   // Attach
@@ -143,8 +157,8 @@ export async function startCommand(
   console.log("");
   console.log("Windows:");
   console.log("  1. dev        - terminal, nvim" + (config.dev_server ? `, ${config.dev_server}` : ""));
-  if (teamMode) {
-    console.log("  2. agent-team - Claude Agent Team (8 panes)");
+  if (workflow) {
+    console.log("  2. agent-team - Agent Team");
   }
   console.log("");
   console.log("Attaching to tmux session...");
@@ -235,94 +249,64 @@ function createDevWindow(
 function createAgentTeamWindow(
   session: string,
   cwd: string,
-  sessionPath: string
+  sessionPath: string,
+  workflow: WorkflowDefinition
 ): void {
   console.log("Creating agent-team window...");
 
-  // Prepare workspace
-  const workspaceDir = path.join(cwd, ".agent-workspace");
-  fs.mkdirSync(path.join(workspaceDir, "notifications"), { recursive: true });
-  fs.mkdirSync(path.join(workspaceDir, "logs"), { recursive: true });
+  // Create logs directory in session
+  const logsDir = path.join(sessionPath, "logs");
+  fs.mkdirSync(logsDir, { recursive: true });
 
-  // Pause stale watcher initially
-  fs.writeFileSync(path.join(workspaceDir, ".pause_stale_watcher"), "");
-
-  // Copy prompts from agentic-federation repo
+  // Copy workflow.yaml to session for runtime reference
   const fedRepo = path.resolve(import.meta.dirname, "..", "..");
-  const srcPrompts = path.join(fedRepo, "prompts");
-  const destPrompts = path.join(workspaceDir, "prompts");
-  if (fs.existsSync(srcPrompts)) {
-    fs.rmSync(destPrompts, { recursive: true, force: true });
-    fs.cpSync(srcPrompts, destPrompts, { recursive: true });
+  const srcWorkflow = path.join(fedRepo, "workflows", `${workflow.name}.yaml`);
+  if (fs.existsSync(srcWorkflow)) {
+    fs.copyFileSync(srcWorkflow, path.join(sessionPath, "workflow.yaml"));
   }
 
-  // Create state.json
-  const state: StateJson = {
-    session_name: session,
-    status: "PLANNING",
-    retry_count: { plan_review: 0, code_review: 0 },
-    pending_reviews: [],
-    escalation: { required: false, reason: null },
-    history: [],
-  };
-  fs.writeFileSync(
-    path.join(workspaceDir, "state.json"),
-    JSON.stringify(state, null, 2) + "\n"
-  );
+  // Create agent-team window with layout from workflow
+  const windowName = workflow.layout.window_name;
+  tmux.newWindow(session, windowName, cwd);
+  const w = `${session}:${windowName}`;
 
-  // Create agent-team window with 8 panes
-  // Layout:
-  // +---------------------+---------------------+
-  // |                     |       human         |
-  // |                     |      (pane 2)       |
-  // |    orchestrator     |                     |
-  // |      (pane 1)       |-----+-----+--------+
-  // |                     | planner  | pln-rev  |
-  // |                     | (pane 3) | (pane 4) |
-  // +----------+----------+----------+----------+
-  // | code-rev | code-rev | pln-rev  | implmtr  |
-  // | (pane 5) | (pane 6) | (pane 7) | (pane 8) |
-  // +----------+----------+----------+----------+
-  tmux.newWindow(session, "agent-team", cwd);
-  const w = `${session}:agent-team`;
+  // Execute layout splits from workflow definition
+  for (const split of workflow.layout.splits) {
+    tmux.splitWindow(`${w}.${split.source}`, split.direction, split.percent, cwd);
+  }
+  tmux.selectPane(`${w}.${workflow.layout.focus}`);
 
-  tmux.splitWindow(`${w}.1`, "v", 25, cwd);
-  tmux.splitWindow(`${w}.1`, "h", 50, cwd);
-  tmux.splitWindow(`${w}.3`, "h", 50, cwd);
-  tmux.splitWindow(`${w}.2`, "v", 35, cwd);
-  tmux.splitWindow(`${w}.3`, "h", 50, cwd);
-  tmux.splitWindow(`${w}.5`, "h", 50, cwd);
-  tmux.splitWindow(`${w}.7`, "h", 50, cwd);
-  tmux.selectPane(`${w}.1`);
-
-  // Start CLIs in panes
-  console.log("Starting CLIs in all panes...");
-  tmux.sendKeys(`${w}.1`, "yoloclaude");  // orchestrator
-  tmux.sendKeys(`${w}.3`, "yoloclaude");  // planner
-  tmux.sendKeys(`${w}.4`, "yologemini");  // plan reviewer
-  tmux.sendKeys(`${w}.5`, "yologemini");  // code reviewer
-  tmux.sendKeys(`${w}.6`, "yolocodex");   // code reviewer
-  tmux.sendKeys(`${w}.7`, "yolocodex");   // plan reviewer
-  tmux.sendKeys(`${w}.8`, "yoloclaude");  // implementer
+  // Start commands in panes from workflow pane definitions
+  console.log("Starting commands in all panes...");
+  for (const pane of workflow.panes) {
+    if (pane.command) {
+      tmux.sendKeys(`${w}.${pane.pane}`, pane.command);
+    }
+  }
 
   // Start TypeScript notification watcher
-  startNotificationWatcher(sessionPath, session, workspaceDir);
+  startNotificationWatcher(sessionPath, session);
 
   // Start TypeScript stale watcher
-  startStaleWatcherTS(sessionPath, session, workspaceDir);
+  startStaleWatcherTS(sessionPath, session);
+
+  // Auto-start orchestrator after a delay for agents to initialize
+  const orchestratorPane = workflow.panes.find((p) => p.id === "orchestrator");
+  if (orchestratorPane) {
+    const w = `${session}:${workflow.layout.window_name}`;
+    setTimeout(() => {
+      tmux.sendKeys(`${w}.${orchestratorPane.pane}`, "/start_orchestrator");
+    }, 5000);
+    console.log(`Orchestrator will auto-start in pane ${orchestratorPane.pane} after 5s delay.`);
+  }
 
   console.log("Agent Team ready.");
-  console.log("");
-  console.log("Next steps:");
-  console.log("  /make_plan <theme>            - Plan & requirements");
-  console.log("  /start_orchestrator           - Start orchestrator (from PLAN_REVIEW)");
 }
 
 // --- Start TypeScript notification watcher as child process ---
 function startNotificationWatcher(
   sessionPath: string,
-  session: string,
-  workspaceDir: string
+  session: string
 ): void {
   const watcherScript = path.resolve(
     import.meta.dirname,
@@ -335,7 +319,7 @@ function startNotificationWatcher(
     return;
   }
 
-  const logFile = path.join(workspaceDir, "logs", "notification-watcher.log");
+  const logFile = path.join(sessionPath, "logs", "notification-watcher.log");
   const watcher = spawn("node", [watcherScript, sessionPath, session], {
     stdio: [
       "ignore",
@@ -351,8 +335,7 @@ function startNotificationWatcher(
 // --- Start TypeScript stale watcher as child process ---
 function startStaleWatcherTS(
   sessionPath: string,
-  session: string,
-  workspaceDir: string
+  session: string
 ): void {
   const watcherScript = path.resolve(
     import.meta.dirname,
@@ -365,10 +348,10 @@ function startStaleWatcherTS(
     return;
   }
 
-  // Pause stale watcher initially (file in session dir)
+  // Pause stale watcher initially
   fs.writeFileSync(path.join(sessionPath, ".pause_stale_watcher"), "");
 
-  const logFile = path.join(workspaceDir, "logs", "stale-watcher.log");
+  const logFile = path.join(sessionPath, "logs", "stale-watcher.log");
   const watcher = spawn("node", [watcherScript, sessionPath, session], {
     stdio: [
       "ignore",
@@ -382,15 +365,20 @@ function startStaleWatcherTS(
 }
 
 // --- 1-2. Team session initialization ---
-function initTeamSession(sessionPath: string, session: string): void {
-  fs.mkdirSync(path.join(sessionPath, "reviews"), { recursive: true });
+function initTeamSession(
+  sessionPath: string,
+  session: string,
+  workflow: WorkflowDefinition
+): void {
+  fs.mkdirSync(path.join(sessionPath, "artifacts"), { recursive: true });
   fs.mkdirSync(path.join(sessionPath, "notifications"), { recursive: true });
 
   const state: StateJson = {
     session_name: session,
-    status: "PLANNING",
-    retry_count: { plan_review: 0, code_review: 0 },
-    pending_reviews: [],
+    status: getEntryPointState(workflow),
+    workflow: workflow.name,
+    retry_count: {},
+    pending_tasks: [],
     escalation: { required: false, reason: null },
     history: [],
   };

@@ -31,6 +31,11 @@ import { archiveCommand, archiveAllCompletedCommand } from "./commands/archive.j
 import { cleanCommand } from "./commands/clean.js";
 import { infoCommand } from "./commands/info.js";
 import { dashCommand } from "./commands/dash.js";
+import {
+  workflowListCommand,
+  workflowShowCommand,
+  workflowValidateCommand,
+} from "./commands/workflow.js";
 
 const program = new Command();
 
@@ -83,9 +88,9 @@ repo
 program
   .command("start <repo> <branch>")
   .description("Start a development session")
-  .option("--team", "Enable team mode with agent-team window")
-  .action(async (repo: string, branch: string, options: { team?: boolean }) => {
-    await startCommand(repo, branch, options.team ?? false);
+  .option("--workflow <name>", "Workflow to use (enables agent team)")
+  .action(async (repo: string, branch: string, options: { workflow?: string }) => {
+    await startCommand(repo, branch, options.workflow);
   });
 
 // --- state ---
@@ -102,9 +107,10 @@ state
 
 state
   .command("update <field> <value>")
-  .description("Update a field in state.json (e.g. 'status PLAN_REVIEW')")
-  .action((field: string, value: string) => {
-    stateUpdateCommand(field, value);
+  .description("Update a field in state.json (e.g. 'status plan_review')")
+  .option("--force", "Force update even if transition is invalid")
+  .action((field: string, value: string, options: { force?: boolean }) => {
+    stateUpdateCommand(field, value, options.force ?? false);
   });
 
 // --- artifact ---
@@ -281,6 +287,32 @@ program
   .description("Launch interactive dashboard (Ink terminal UI)")
   .action(() => {
     dashCommand();
+  });
+
+// --- workflow ---
+const workflow = program
+  .command("workflow")
+  .description("Manage workflow definitions");
+
+workflow
+  .command("list")
+  .description("List available workflows")
+  .action(() => {
+    workflowListCommand();
+  });
+
+workflow
+  .command("show <name>")
+  .description("Show workflow YAML content")
+  .action((name: string) => {
+    workflowShowCommand(name);
+  });
+
+workflow
+  .command("validate <name>")
+  .description("Validate a workflow definition")
+  .action((name: string) => {
+    workflowValidateCommand(name);
   });
 
 program.parse();

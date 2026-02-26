@@ -42,14 +42,14 @@ fed init
 # 2. リポジトリ定義を登録
 fed repo add my-project
 
-# 3. 開発セッションを起動
+# 3. ソロモードで開発セッションを起動 (terminal + nvim)
 fed start my-project feature-branch
 
-# チームモード (8ペインの agent-team ウィンドウ付き)
-fed start my-project feature-branch --team
+# 4. チームモードで起動 (agent-team ウィンドウ付き)
+fed start my-project feature-branch --workflow dev-team
 
 # ダッシュボードを起動
-fed dash
+fed dashboard
 ```
 
 ## Commands
@@ -58,11 +58,20 @@ fed dash
 
 | Command | Description |
 |---|---|
-| `fed start <repo> <branch> [--team]` | 開発セッションを起動 |
+| `fed start <repo> <branch>` | ソロモードで開発セッションを起動 |
+| `fed start <repo> <branch> --workflow <name>` | ワークフロー指定でチームモードを起動 |
 | `fed stop [session-name]` | セッションを停止してアーカイブ |
 | `fed list` (`fed ls`) | アクティブセッション一覧 |
 | `fed info [session-name]` | セッション詳細表示 |
-| `fed dash` | インタラクティブダッシュボード (Ink UI) |
+| `fed dashboard` (`fed dash`) | インタラクティブダッシュボード (Ink UI) |
+
+### ワークフロー
+
+| Command | Description |
+|---|---|
+| `fed workflow list` | 利用可能なワークフロー一覧 |
+| `fed workflow show <name>` | ワークフロー YAML を表示 |
+| `fed workflow validate <name>` | ワークフロー定義のバリデーション |
 
 ### アーカイブ / クリーンアップ
 
@@ -105,6 +114,60 @@ fed dash
 |---|---|
 | `fed init` | `~/.fed/` ディレクトリ構造を作成 (冪等) |
 
+## Workflow
+
+ワークフローは `workflows/` ディレクトリに YAML で定義する。ステートマシン、ペイン構成、タスク定義を一つのファイルにまとめる。
+
+```bash
+# ワークフロー一覧
+fed workflow list
+
+# 内容を確認
+fed workflow show dev-team
+
+# バリデーション
+fed workflow validate dev-team
+```
+
+`--workflow dev-team` で起動すると、YAML に基づいて tmux ペインが作成され、オーケストレータが自動起動する。
+
+### dev-team ワークフロー
+
+デフォルトの開発チームパイプライン:
+
+```
+planning → plan_review → implementing → code_review → completed → approved
+```
+
+8 ペイン構成:
+
+```
++---------------------+---------------------+
+|                     |       human         |
+|      planner        |      (pane 2)       |
+|      (pane 1)       |-----+-----+--------+
+|                     | orch.    | pln-rev  |
+|                     | (pane 3) | (pane 4) |
++----------+----------+----------+----------+
+| code-rev | code-rev | pln-rev  | implmtr  |
+| (pane 5) | (pane 6) | (pane 7) | (pane 8) |
++----------+----------+----------+----------+
+```
+
+## Session Modes
+
+**Solo mode** (default): terminal + nvim (+ dev server)
+
+```
++-------------------+-------------------+
+|    terminal       |      nvim         |
++-------------------+-------------------+
+|           dev server (optional)       |
++---------------------------------------+
+```
+
+**Team mode** (`--workflow`): 上記 + ワークフロー定義に基づく agent-team ウィンドウ
+
 ## Runtime Data
 
 `~/.fed/` にセッション・アーカイブ・ナレッジを格納:
@@ -144,40 +207,16 @@ fed dash
 | `copies` | repo_root からのコピー対象 |
 | `cleanup_pattern` | Claude project data のクリーンアップ対象 glob |
 
-## Session Modes
-
-**Solo mode** (default): terminal + nvim (+ dev server)
-
-```
-+-------------------+-------------------+
-|    terminal       |      nvim         |
-+-------------------+-------------------+
-|           dev server (optional)       |
-+---------------------------------------+
-```
-
-**Team mode** (`--team`): 上記 + 8 ペインの agent-team ウィンドウ
-
-```
-+---------------------+---------------------+
-|                     |       human         |
-|    orchestrator     +-----------+---------+
-|                     | planner   | pln-rev |
-+----------+----------+-----------+---------+
-| code-rev | code-rev | pln-rev   | implmtr |
-+----------+----------+-----------+---------+
-```
-
 ## Dashboard
 
-`fed dash` でインタラクティブなターミナル UI を起動。
+`fed dashboard` でインタラクティブなターミナル UI を起動。
 
 | Key | Action |
 |---|---|
 | `Up/Down` | セッション選択 |
 | `Enter` | tmux セッションに切替 |
 | `p` | 成果物プレビュー |
-| `a` | 承認 (/start_orchestrator) |
+| `a` | 承認 |
 | `f` | フィードバック入力 |
 | `k` | セッション終了 |
 | `q` | ダッシュボード終了 |
@@ -187,7 +226,7 @@ fed dash
 ビルドせずに直接実行:
 
 ```bash
-cd cli && npx tsx src/index.ts start meap feature-test
+cd cli && npx tsx src/index.ts start my-project feature-test
 cd dashboard && npx tsx src/index.tsx
 ```
 
@@ -214,13 +253,14 @@ agentic-federation/
 │   │   │   ├── info.ts           # fed info
 │   │   │   ├── archive.ts        # fed archive
 │   │   │   ├── clean.ts          # fed clean
-│   │   │   ├── dash.ts           # fed dash
+│   │   │   ├── dash.ts           # fed dashboard
 │   │   │   ├── state.ts          # fed state
 │   │   │   ├── artifact.ts       # fed artifact
 │   │   │   ├── notify.ts         # fed notify
 │   │   │   ├── feedback.ts       # fed feedback
 │   │   │   ├── prompt.ts         # fed prompt
 │   │   │   ├── stale.ts          # fed stale
+│   │   │   ├── workflow.ts       # fed workflow
 │   │   │   └── notify-human.ts   # fed notify-human
 │   │   └── lib/                  # 共通ライブラリ
 │   │       ├── paths.ts          # ~/.fed/ パス定数
@@ -228,6 +268,7 @@ agentic-federation/
 │   │       ├── session.ts        # セッション管理
 │   │       ├── tmux.ts           # tmux ヘルパー
 │   │       ├── repo.ts           # リポジトリ定義管理
+│   │       ├── workflow.ts       # ワークフロー定義の読み込み・バリデーション
 │   │       ├── notification-watcher.ts  # 通知ファイル監視 (chokidar)
 │   │       └── stale-watcher.ts  # 状態停滞検知
 ├── dashboard/                    # ダッシュボード (TypeScript + Ink/React)
@@ -237,7 +278,7 @@ agentic-federation/
 │   │   ├── components/           # UI コンポーネント
 │   │   ├── hooks/                # React hooks
 │   │   └── utils/                # ユーティリティ
+├── workflows/                    # ワークフロー定義 (YAML)
 ├── commands/                     # Claude Code スキル定義 (.md)
-├── prompts/                      # エージェントプロンプト
-└── architecture.md               # アーキテクチャドキュメント
+└── prompts/                      # エージェントプロンプト
 ```

@@ -14,8 +14,9 @@ export interface MetaJson {
 export interface StateJson {
   session_name: string;
   status: string;
-  retry_count: { plan_review: number; code_review: number };
-  pending_reviews: string[];
+  workflow?: string;
+  retry_count: Record<string, number>;
+  pending_tasks: string[];
   escalation: { required: boolean; reason: string | null };
   history: Array<{
     ts: string;
@@ -25,16 +26,6 @@ export interface StateJson {
   }>;
 }
 
-export const ARTIFACT_MAP: Record<string, string> = {
-  plan: "plan.md",
-  implementation: "implementation.md",
-  plan_review_gemini: "reviews/plan_review_gemini.md",
-  plan_review_codex: "reviews/plan_review_codex.md",
-  code_review_gemini: "reviews/code_review_gemini.md",
-  code_review_codex: "reviews/code_review_codex.md",
-  human_feedback: "human_feedback.md",
-};
-
 // Mirror of cli/src/lib/paths.ts
 export const FED_HOME = path.join(os.homedir(), ".fed");
 export const SESSIONS_DIR = path.join(FED_HOME, "sessions");
@@ -43,11 +34,11 @@ export const ARCHIVE_DIR = path.join(FED_HOME, "archive");
 
 // Status -> preview artifact mapping
 export const STATUS_PREVIEW_MAP: Record<string, string[]> = {
-  PLAN_REVIEW: ["plan"],
-  PLAN_REVISION: ["plan_review_gemini", "plan_review_codex"],
-  CODE_REVIEW: ["implementation"],
-  CODE_REVISION: ["code_review_gemini", "code_review_codex"],
-  WAITING_HUMAN: ["human_feedback"],
+  plan_review: ["plan"],
+  plan_revision: ["plan_review_gemini", "plan_review_codex"],
+  code_review: ["implementation"],
+  code_revision: ["code_review_gemini", "code_review_codex"],
+  waiting_human: ["human_feedback"],
 };
 
 // Session data used by the dashboard
@@ -56,6 +47,7 @@ export interface SessionData {
   sessionDir: string;
   meta: MetaJson;
   status: string;
-  pendingReviews: string[];
+  workflow?: string;
+  pendingTasks: string[];
   escalation: { required: boolean; reason: string | null };
 }

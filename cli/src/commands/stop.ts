@@ -18,6 +18,17 @@ export function stopCommand(sessionName?: string): void {
     process.exit(1);
   }
 
+  // Prevent stopping the session you're currently inside
+  const currentSession = getCurrentTmuxSession();
+  if (currentSession && currentSession === targetSession) {
+    console.error(
+      `Error: Cannot stop session '${targetSession}' from within itself.\n` +
+      `  Run this command from outside the tmux session, e.g.:\n` +
+      `    fed stop ${targetSession}`
+    );
+    process.exit(1);
+  }
+
   const sessionDir = resolveSession(targetSession);
   if (!sessionDir) {
     console.error(

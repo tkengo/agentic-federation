@@ -39,6 +39,12 @@ export function SessionRow({ session, selected, colWidths }: SessionRowProps) {
       </Box>
       <Text>{`  `}</Text>
       <Text dimColor>{age.padStart(4)}</Text>
+      {session.workflow && (
+        <>
+          <Text>{`  `}</Text>
+          <Text dimColor>[{session.workflow}]</Text>
+        </>
+      )}
     </Box>
   );
 }

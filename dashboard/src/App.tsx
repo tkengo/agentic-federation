@@ -8,20 +8,21 @@ import { SessionList } from "./components/SessionList.js";
 import { Preview } from "./components/Preview.js";
 import { FeedbackInput } from "./components/FeedbackInput.js";
 import { Footer } from "./components/Footer.js";
+import { Splash } from "./components/Splash.js";
 import { useSessions } from "./hooks/useSessions.js";
 import { useSessionWatcher } from "./hooks/useSessionWatcher.js";
 import { useKeyboard } from "./hooks/useKeyboard.js";
 import { useTerminalSize } from "./hooks/useTerminalSize.js";
 import type { SessionData } from "./utils/types.js";
 
-type Screen = "list" | "preview" | "feedback";
+type Screen = "splash" | "list" | "preview" | "feedback";
 
 export function App() {
   const { exit } = useApp();
   const { columns, rows } = useTerminalSize();
   const { sessions, refresh } = useSessions();
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [screen, setScreen] = useState<Screen>("list");
+  const [screen, setScreen] = useState<Screen>("splash");
   const [message, setMessage] = useState<string | null>(null);
 
   // Watch for file changes
@@ -149,6 +150,16 @@ export function App() {
         ? `${selectedSession.meta.repo}/${selectedSession.meta.branch} > feedback`
         : "fed dashboard";
 
+  if (screen === "splash") {
+    return (
+      <Splash
+        columns={columns}
+        rows={rows}
+        onDone={() => setScreen("list")}
+      />
+    );
+  }
+
   return (
     <Box flexDirection="column" width={columns} height={rows}>
       <Header sessionCount={sessions.length} title={headerTitle} />
@@ -189,10 +200,10 @@ export function App() {
         >
           <Text>
             <Text bold>{selectedSession.name}</Text>
-            {selectedSession.pendingReviews.length > 0 && (
+            {selectedSession.pendingTasks.length > 0 && (
               <Text dimColor>
                 {" | "}
-                {selectedSession.pendingReviews.join(", ")}
+                {selectedSession.pendingTasks.join(", ")}
               </Text>
             )}
             {selectedSession.escalation.required && (

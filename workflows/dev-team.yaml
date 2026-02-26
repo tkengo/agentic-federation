@@ -1,0 +1,216 @@
+name: dev-team
+description: "開発チームパイプライン: 計画策定 → 計画レビュー → 実装 → コードレビュー"
+
+panes:
+  - id: planner
+    name: "Planner"
+    pane: 1
+    command: yoloclaude
+  - id: human
+    name: "Human"
+    pane: 2
+    command: null
+  - id: orchestrator
+    name: "Orchestrator"
+    pane: 3
+    command: yoloclaude
+  - id: plan_reviewer_gemini
+    name: "Plan Reviewer (Gemini)"
+    pane: 4
+    command: yologemini
+  - id: code_reviewer_gemini
+    name: "Code Reviewer (Gemini)"
+    pane: 5
+    command: yologemini
+  - id: code_reviewer_codex
+    name: "Code Reviewer (Codex)"
+    pane: 6
+    command: yolocodex
+  - id: plan_reviewer_codex
+    name: "Plan Reviewer (Codex)"
+    pane: 7
+    command: yolocodex
+  - id: implementer
+    name: "Implementer"
+    pane: 8
+    command: yoloclaude
+
+# +---------------------+---------------------+
+# |                     |       human         |
+# |      planner        |      (pane 2)       |
+# |      (pane 1)       |-----+-----+--------+
+# |                     | orch.    | pln-rev  |
+# |                     | (pane 3) | (pane 4) |
+# +----------+----------+----------+----------+
+# | code-rev | code-rev | pln-rev  | implmtr  |
+# | (pane 5) | (pane 6) | (pane 7) | (pane 8) |
+# +----------+----------+----------+----------+
+layout:
+  window_name: agent-team
+  splits:
+    - { source: 1, direction: v, percent: 25 }
+    - { source: 1, direction: h, percent: 50 }
+    - { source: 3, direction: h, percent: 50 }
+    - { source: 2, direction: v, percent: 35 }
+    - { source: 3, direction: h, percent: 50 }
+    - { source: 5, direction: h, percent: 50 }
+    - { source: 7, direction: h, percent: 50 }
+  focus: 1
+
+states:
+  planning:
+    description: "人間と対話しながら計画を策定する"
+    entry_point: true
+    tasks:
+      - pane: planner
+        tracking_key: planner
+        message: >
+          `fed prompt read planner` を実行してプロンプトを読み、
+          計画策定を開始してください。人間と対話しながら要件を整理し、
+          計画を作成してください。
+        output_artifact: plan
+    decision_logic: |
+      planner から完了通知を受け取ったら plan_review に遷移する。
+    transitions: [plan_review]
+
+  plan_review:
+    description: "複数レビュアーによる並列計画レビュー"
+    on_enter: |
+      pending_tasks に全タスクの tracking_key をセットする。
+      fed state update pending_tasks '["gemini_plan", "codex_plan"]'
+    tasks:
+      - pane: plan_reviewer_gemini
+        tracking_key: gemini_plan
+        message: >
+          `fed prompt read plan_reviewer` を実行してプロンプトを読み、
+          レビュアーとして動作してください。
+        input_artifacts: [plan]
+        output_artifact: plan_review_gemini
+      - pane: plan_reviewer_codex
+        tracking_key: codex_plan
+        message: >
+          `fed prompt read plan_reviewer` を実行してプロンプトを読み、
+          レビュアーとして動作してください。
+        input_artifacts: [plan]
+        output_artifact: plan_review_codex
+    on_task_complete: |
+      tracking_key に対応するタスクを pending_tasks から削除する。
+      pending_tasks が空でなければ残りを待つ。
+    decision_logic: |
+      全タスク完了後、各 output_artifact を読んで判定を行う。
+      - 全員 APPROVE → implementing に遷移
+      - いずれかが REQUEST_CHANGES → plan_revision に遷移
+      - いずれかが ESCALATE → waiting_human に遷移
+      REQUEST_CHANGES と ESCALATE が混在する場合は ESCALATE を優先する。
+    cleanup_artifacts: [plan_review_gemini, plan_review_codex]
+    transitions: [implementing, plan_revision, waiting_human]
+
+  plan_revision:
+    description: "レビューフィードバックに基づく計画修正"
+    on_enter: |
+      retry_count.plan_review をインクリメントする。
+      fed state update retry_count.plan_review <current+1>
+    tasks:
+      - pane: planner
+        tracking_key: planner
+        message: >
+          レビューフィードバックがあります。
+          プロンプトの「レビューフィードバックに基づく計画修正」セクションに従って
+          計画を修正してください。
+        input_artifacts: [plan, plan_review_gemini, plan_review_codex]
+        output_artifact: plan
+    decision_logic: |
+      planner の完了通知を受け取ったら:
+      - retry_count.plan_review が 3 未満 → plan_review に遷移（再レビュー）
+      - retry_count.plan_review が 3 以上 → waiting_human に遷移
+    transitions: [plan_review, waiting_human]
+
+  implementing:
+    description: "計画に基づく実装フェーズ"
+    tasks:
+      - pane: implementer
+        tracking_key: implementer
+        message: >
+          `fed prompt read implementer` を実行してプロンプトを読み、
+          実装者として動作してください。
+        input_artifacts: [plan]
+        output_artifact: implementation
+    decision_logic: |
+      implementer から完了通知を受け取ったら code_review に遷移する。
+      implementer からエスカレーション通知を受け取ったら waiting_human に遷移する。
+    transitions: [code_review, waiting_human]
+
+  code_review:
+    description: "複数レビュアーによる並列コードレビュー"
+    on_enter: |
+      pending_tasks に全タスクの tracking_key をセットする。
+      fed state update pending_tasks '["gemini_code", "codex_code"]'
+    tasks:
+      - pane: code_reviewer_gemini
+        tracking_key: gemini_code
+        message: >
+          `fed prompt read code_reviewer` を実行してプロンプトを読み、
+          レビュアーとして動作してください。
+        input_artifacts: [plan, implementation]
+        output_artifact: code_review_gemini
+      - pane: code_reviewer_codex
+        tracking_key: codex_code
+        message: >
+          `fed prompt read code_reviewer` を実行してプロンプトを読み、
+          レビュアーとして動作してください。
+        input_artifacts: [plan, implementation]
+        output_artifact: code_review_codex
+    on_task_complete: |
+      tracking_key に対応するタスクを pending_tasks から削除する。
+      pending_tasks が空でなければ残りを待つ。
+    decision_logic: |
+      全タスク完了後、各 output_artifact を読んで判定を行う。
+      - 全員 APPROVE → completed に遷移
+      - いずれかが REQUEST_CHANGES → code_revision に遷移
+      - いずれかが ESCALATE → waiting_human に遷移
+      REQUEST_CHANGES と ESCALATE が混在する場合は ESCALATE を優先する。
+    cleanup_artifacts: [code_review_gemini, code_review_codex]
+    transitions: [completed, code_revision, waiting_human]
+
+  code_revision:
+    description: "レビューフィードバックに基づくコード修正"
+    on_enter: |
+      retry_count.code_review をインクリメントする。
+      fed state update retry_count.code_review <current+1>
+    tasks:
+      - pane: implementer
+        tracking_key: implementer
+        message: >
+          レビューフィードバックがあります。修正してください。
+        input_artifacts: [code_review_gemini, code_review_codex]
+        output_artifact: implementation
+    decision_logic: |
+      implementer から完了通知を受け取ったら:
+      - retry_count.code_review が 5 未満 → code_review に遷移（再レビュー）
+      - retry_count.code_review が 5 以上 → waiting_human に遷移
+    transitions: [code_review, waiting_human]
+
+  completed:
+    description: "全レビュー通過、人間の最終承認待ち"
+    decision_logic: |
+      fed notify-human で人間に最終確認を依頼する。
+      人間のフィードバックに応じて:
+      - 「承認」→ approved に遷移（ワークフロー完了）
+      - 「計画を修正して」→ plan_revision に遷移（計画修正ループに戻る）
+      - 「実装を修正して」→ implementing に遷移（実装ループに戻る）
+    transitions: [approved, plan_revision, implementing]
+
+  approved:
+    description: "ワークフロー完了"
+    terminal: true
+    decision_logic: |
+      最終状態。遷移なし。
+    transitions: []
+
+  waiting_human:
+    description: "エスカレーション - 人間の判断待ち"
+    decision_logic: |
+      fed notify-human でエスカレーション理由を人間に通知する。
+      人間の指示に応じて任意の状態に遷移する。
+      人間が具体的な遷移先を指示しない場合は、状況に応じて最適な遷移先を提案する。
+    transitions: [planning, plan_review, plan_revision, implementing, code_review, code_revision]

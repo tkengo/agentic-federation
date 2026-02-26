@@ -55,7 +55,8 @@ function loadSessions(): SessionData[] {
       sessionDir,
       meta,
       status: state?.status ?? "active",
-      pendingReviews: state?.pending_reviews ?? [],
+      workflow: state?.workflow,
+      pendingTasks: state?.pending_tasks ?? [],
       escalation: state?.escalation ?? { required: false, reason: null },
     });
   }

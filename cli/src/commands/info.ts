@@ -6,7 +6,6 @@ import {
   readMeta,
 } from "../lib/session.js";
 import type { StateJson } from "../lib/types.js";
-import { ARTIFACT_MAP } from "../lib/types.js";
 
 // Format a timestamp for display
 function formatTimestamp(iso: string): string {
@@ -82,11 +81,17 @@ export function infoCommand(sessionName?: string): void {
 
       console.log("");
       console.log("  Status:      " + state.status);
-      console.log(
-        `  Retries:     plan=${state.retry_count.plan_review} code=${state.retry_count.code_review}`
-      );
-      if (state.pending_reviews.length > 0) {
-        console.log(`  Pending:     ${state.pending_reviews.join(", ")}`);
+      if (state.workflow) {
+        console.log("  Workflow:    " + state.workflow);
+      }
+      const retryParts = Object.entries(state.retry_count)
+        .map(([k, v]) => `${k}=${v}`)
+        .join(" ");
+      if (retryParts) {
+        console.log(`  Retries:     ${retryParts}`);
+      }
+      if (state.pending_tasks.length > 0) {
+        console.log(`  Pending:     ${state.pending_tasks.join(", ")}`);
       }
       if (state.escalation.required) {
         console.log(`  Escalation:  ${state.escalation.reason ?? "yes"}`);
@@ -99,14 +104,18 @@ export function infoCommand(sessionName?: string): void {
   // Artifacts
   console.log("");
   console.log("  Artifacts:");
+  const artifactsDir = path.join(sessionDir, "artifacts");
   let hasArtifacts = false;
-  for (const [name, relPath] of Object.entries(ARTIFACT_MAP)) {
-    const filePath = path.join(sessionDir, relPath);
-    if (fs.existsSync(filePath)) {
+  if (fs.existsSync(artifactsDir)) {
+    const files = fs.readdirSync(artifactsDir).filter((f) =>
+      fs.statSync(path.join(artifactsDir, f)).isFile()
+    );
+    for (const file of files) {
+      const filePath = path.join(artifactsDir, file);
       const stat = fs.statSync(filePath);
       const size = stat.size;
       const modified = stat.mtime.toLocaleString();
-      console.log(`    ${name.padEnd(24)} ${formatFileSize(size).padStart(8)}  ${modified}`);
+      console.log(`    ${file.padEnd(24)} ${formatFileSize(size).padStart(8)}  ${modified}`);
       hasArtifacts = true;
     }
   }

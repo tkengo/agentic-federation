@@ -70,7 +70,7 @@ export function archiveAllCompletedCommand(): void {
   }
 
   const entries = fs.readdirSync(ACTIVE_DIR);
-  const completedStatuses = new Set(["COMPLETED", "APPROVED"]);
+  const completedStatuses = new Set(["completed", "approved"]);
   let archived = 0;
 
   for (const entry of entries) {

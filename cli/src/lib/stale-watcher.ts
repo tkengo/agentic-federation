@@ -11,6 +11,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { execSync } from "node:child_process";
+import { loadSessionWorkflow, getTerminalStates } from "./workflow.js";
 
 const sessionDir = process.argv[2];
 const tmuxSession = process.argv[3];
@@ -25,12 +26,20 @@ if (!sessionDir || !tmuxSession) {
 const stateFile = path.join(sessionDir, "state.json");
 const pauseFile = path.join(sessionDir, ".pause_stale_watcher");
 
-// Terminal statuses that should not trigger stale notifications
-const TERMINAL_STATUSES = new Set([
-  "COMPLETED",
-  "APPROVED",
-  "WAITING_HUMAN",
-]);
+// Resolve terminal statuses from workflow if available, else use hardcoded defaults
+function resolveTerminalStatuses(): Set<string> {
+  try {
+    const wf = loadSessionWorkflow(sessionDir);
+    if (wf) {
+      return new Set(getTerminalStates(wf));
+    }
+  } catch {
+    // Fallback to defaults on any error
+  }
+  return new Set(["completed", "approved", "waiting_human"]);
+}
+
+const TERMINAL_STATUSES = resolveTerminalStatuses();
 
 function log(msg: string): void {
   console.log(`[stale-watcher] ${msg}`);

@@ -9,8 +9,9 @@ Runtime data lives in `~/.fed/`, code lives in this repo.
 
 - **cli/** - Main CLI (TypeScript + Commander.js, ES module)
 - **dashboard/** - Terminal UI (TypeScript + Ink/React)
+- **workflows/** - Workflow definitions (YAML state machines)
 - **commands/** - Claude Code skill definitions (.md), synced to `~/.claude/commands/` by `fed start`
-- **prompts/** - Agent role prompts (orchestrator, implementer, reviewers, plan reviser)
+- **prompts/** - Agent role prompts (orchestrator, planner, implementer, reviewers)
 
 ## Build
 
@@ -48,12 +49,22 @@ Each command is a file in `cli/src/commands/<name>.ts`:
 | Module | Purpose |
 |---|---|
 | `paths.ts` | Constants: `FED_HOME`, `SESSIONS_DIR`, `ACTIVE_DIR`, `ARCHIVE_DIR`, etc. |
-| `types.ts` | Interfaces: `MetaJson`, `StateJson`, `RepoConfig`, `ARTIFACT_MAP` |
+| `types.ts` | Interfaces: `MetaJson`, `StateJson`, `RepoConfig` |
 | `session.ts` | Session resolution: `requireSessionDir()`, `resolveSession()`, `readMeta()` |
 | `tmux.ts` | tmux wrapper: `hasSession()`, `newSession()`, `sendKeys()`, etc. |
 | `repo.ts` | Repo config: `loadRepoConfig()`, `listRepoConfigs()` |
+| `workflow.ts` | Workflow loading, validation, utilities |
 | `notification-watcher.ts` | Standalone process: watches notifications/ with chokidar |
 | `stale-watcher.ts` | Standalone process: checks state.json staleness periodically |
+
+## Workflow System
+
+Workflows are defined in `workflows/*.yaml`. Each workflow defines:
+- **panes**: tmux pane layout and agent assignments
+- **states**: State machine with transitions, tasks, and decision logic
+- **tasks**: Messages to dispatch to agent panes, with input/output artifacts and tracking keys
+
+The orchestrator reads the workflow YAML at runtime via `fed workflow show <name>` and follows the state machine. Agent prompts are role-only; operational details (what to read, where to write, how to report completion) are assembled by the orchestrator from the workflow definition.
 
 ## Dashboard Structure (dashboard/src/)
 
@@ -67,6 +78,8 @@ Dashboard duplicates minimal type definitions from cli/src/lib/ (MetaJson, State
 - `~/.fed/active/<tmux-session>` symlinks point to real session directories
 - Watcher processes (notification, stale) write PID files to session dir for cleanup
 - `fed stop` kills watchers via PID files, then kills tmux session, then archives
+- Agent prompts are role-only; operational instructions come from workflow YAML via orchestrator
+- `--workflow <name>` enables team mode; without it, solo mode (terminal + nvim only)
 
 ## Testing
 

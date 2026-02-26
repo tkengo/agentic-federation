@@ -2,7 +2,7 @@ import React from "react";
 import fs from "node:fs";
 import path from "node:path";
 import { Box, Text } from "ink";
-import { ARTIFACT_MAP, STATUS_PREVIEW_MAP } from "../utils/types.js";
+import { STATUS_PREVIEW_MAP } from "../utils/types.js";
 import type { SessionData } from "../utils/types.js";
 
 interface PreviewProps {
@@ -23,12 +23,10 @@ export function Preview({ session, maxHeight = 30 }: PreviewProps) {
     );
   }
 
+  const artifactsDir = path.join(session.sessionDir, "artifacts");
   const contents: Array<{ name: string; content: string }> = [];
   for (const name of artifactNames) {
-    const relPath = ARTIFACT_MAP[name];
-    if (!relPath) continue;
-
-    const filePath = path.join(session.sessionDir, relPath);
+    const filePath = path.join(artifactsDir, name);
     if (!fs.existsSync(filePath)) continue;
 
     try {
