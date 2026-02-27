@@ -67,6 +67,7 @@ export interface SessionData {
   pendingTasks: string[];
   escalation: { required: boolean; reason: string | null };
   waitingHuman: WaitingHumanData;
+  description?: string;
   stateMtimeMs?: number;
   statusConfigMap?: Record<string, StatusConfig>;
 }

@@ -11,6 +11,8 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 
 ## コードレビューのフロー
 
+1度レビューを実行していたとしても、再レビューを依頼される場合があるので、依頼される度に**毎回必ずレビューを実行すること**。
+
 1. `fed artifact read plan` で実装計画を読む
 2. `fed artifact read implementation` で実装サマリーを読む
 3. コードの変更をレビューする。後述のレビュー観点に従ってレビューすること。

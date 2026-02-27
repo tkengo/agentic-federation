@@ -5,6 +5,7 @@ interface FooterProps {
   screen: "list" | "preview" | "feedback" | "create" | "palette";
   createStep?: "workflow" | "repo" | "branch";
   hasSelectedSession?: boolean;
+  expanded?: boolean;
   cleanRowSelected?: boolean;
   confirmingClean?: boolean;
   cleanableCount?: number;
@@ -14,7 +15,7 @@ interface FooterProps {
   ctrlCPending?: boolean;
 }
 
-export function Footer({ screen, createStep, hasSelectedSession, cleanRowSelected, confirmingClean, cleanableCount, cleaning, confirmingKill, killTargetName, ctrlCPending }: FooterProps) {
+export function Footer({ screen, createStep, hasSelectedSession, expanded, cleanRowSelected, confirmingClean, cleanableCount, cleaning, confirmingKill, killTargetName, ctrlCPending }: FooterProps) {
   if (cleaning) {
     return (
       <Box borderStyle="single" borderTop={false} paddingX={1}>
@@ -99,6 +100,18 @@ export function Footer({ screen, createStep, hasSelectedSession, cleanRowSelecte
     );
   }
 
+  // List screen - expanded artifact mode
+  if (screen === "list" && expanded) {
+    return (
+      <Box borderStyle="single" borderTop={false} paddingX={1}>
+        <Text>
+          <Text dimColor>{"[j/k] Navigate  [Enter] Open in nvim  [Space/Esc] Collapse  "}</Text>
+          {quitHint}
+        </Text>
+      </Box>
+    );
+  }
+
   // List screen - clean row selected
   if (cleanRowSelected) {
     return (
@@ -116,7 +129,7 @@ export function Footer({ screen, createStep, hasSelectedSession, cleanRowSelecte
     return (
       <Box borderStyle="single" borderTop={false} paddingX={1}>
         <Text>
-          <Text dimColor>{"[Enter] Switch  [n] New  [p] Preview  [a] Approve  [f] Feedback  [s] Stop  [:] Commands  "}</Text>
+          <Text dimColor>{"[Enter] Switch  [Space] Expand  [n] New  [s] Stop  [:] Commands  "}</Text>
           {quitHint}
         </Text>
       </Box>

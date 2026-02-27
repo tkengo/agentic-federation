@@ -13,6 +13,7 @@ export interface KeyboardActions {
   onBack?: () => void;
   onCreate?: () => void;
   onPalette?: () => void;
+  onSpace?: () => void;
 }
 
 export function useKeyboard(actions: KeyboardActions, active = true) {
@@ -45,6 +46,8 @@ export function useKeyboard(actions: KeyboardActions, active = true) {
         actions.onCreate?.();
       } else if (input === ":") {
         actions.onPalette?.();
+      } else if (input === " ") {
+        actions.onSpace?.();
       } else if (input === "q") {
         actions.onQuit?.();
       } else if (key.escape) {

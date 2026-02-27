@@ -1,6 +1,7 @@
 import React from "react";
 import { Box, Text } from "ink";
 import { SessionRow } from "./SessionRow.js";
+import { ArtifactList } from "./ArtifactList.js";
 import { useBlink } from "../hooks/useBlink.js";
 import type { SessionData } from "../utils/types.js";
 import { STALE_THRESHOLD_SEC } from "../utils/types.js";
@@ -9,6 +10,8 @@ interface SessionListProps {
   sessions: SessionData[];
   selectedIndex: number;
   dimmed?: boolean;
+  expandedIndex?: number | null;
+  artifactIndex?: number;
 }
 
 function hasAnyStaleSessions(sessions: SessionData[]): boolean {
@@ -18,7 +21,7 @@ function hasAnyStaleSessions(sessions: SessionData[]): boolean {
   );
 }
 
-export function SessionList({ sessions, selectedIndex, dimmed }: SessionListProps) {
+export function SessionList({ sessions, selectedIndex, dimmed, expandedIndex, artifactIndex }: SessionListProps) {
   const blinkOn = useBlink(500);
   const anyStale = hasAnyStaleSessions(sessions);
 
@@ -49,14 +52,24 @@ export function SessionList({ sessions, selectedIndex, dimmed }: SessionListProp
       </Box>
       {/* Session rows */}
       {sessions.map((session, index) => (
-        <SessionRow
-          key={session.name}
-          session={session}
-          selected={index === selectedIndex}
-          dimmed={dimmed}
-          colWidths={colWidths}
-          blinkOn={anyStale ? blinkOn : true}
-        />
+        <React.Fragment key={session.name}>
+          <SessionRow
+            session={session}
+            selected={index === selectedIndex}
+            dimmed={dimmed}
+            expanded={index === expandedIndex}
+            colWidths={colWidths}
+            blinkOn={anyStale ? blinkOn : true}
+          />
+          {index === expandedIndex && (
+            <ArtifactList
+              sessionDir={session.sessionDir}
+              selectedIndex={artifactIndex ?? 0}
+              description={session.description}
+              colWidths={colWidths}
+            />
+          )}
+        </React.Fragment>
       ))}
     </Box>
   );

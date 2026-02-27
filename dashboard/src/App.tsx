@@ -16,6 +16,7 @@ import { useSessions } from "./hooks/useSessions.js";
 import { useSessionWatcher } from "./hooks/useSessionWatcher.js";
 import { useKeyboard } from "./hooks/useKeyboard.js";
 import { useTerminalSize } from "./hooks/useTerminalSize.js";
+import { useArtifacts } from "./components/ArtifactList.js";
 import { REPOS_DIR } from "./utils/types.js";
 import type { SessionData } from "./utils/types.js";
 
@@ -29,6 +30,8 @@ export function App() {
   const [screen, setScreen] = useState<Screen>("splash");
   const [message, setMessage] = useState<string | null>(null);
   const [createStep, setCreateStep] = useState<"workflow" | "repo" | "branch">("workflow");
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+  const [artifactIndex, setArtifactIndex] = useState(0);
   const [confirmingKill, setConfirmingKill] = useState(false);
   const [confirmingClean, setConfirmingClean] = useState(false);
   const [cleaning, setCleaning] = useState(false);
@@ -244,6 +247,15 @@ export function App() {
     [refresh, showMessage]
   );
 
+  // Artifacts for expanded session
+  const expandedSession = expandedIndex !== null ? sessions[expandedIndex] : undefined;
+  const expandedArtifacts = useArtifacts(expandedSession?.sessionDir ?? "");
+
+  // Collapse when expanded session disappears
+  if (expandedIndex !== null && !expandedSession) {
+    setExpandedIndex(null);
+  }
+
   // Global Ctrl+C double-press to quit
   useInput(
     (input, key) => {
@@ -259,6 +271,42 @@ export function App() {
       }
     },
     { isActive: !cleaning }
+  );
+
+  // Keyboard bindings for expanded artifact mode
+  useKeyboard(
+    {
+      onUp: () => {
+        setArtifactIndex((i) => Math.max(0, i - 1));
+      },
+      onDown: () => {
+        setArtifactIndex((i) => Math.min(expandedArtifacts.length - 1, i + 1));
+      },
+      onEnter: () => {
+        if (expandedSession && expandedArtifacts.length > 0) {
+          const artifactName = expandedArtifacts[artifactIndex]?.name;
+          if (!artifactName) return;
+          const artifactPath = path.join(expandedSession.sessionDir, "artifacts", artifactName);
+          try {
+            execSync(`nvim '${artifactPath}'`, { stdio: "inherit" });
+            // Restore terminal state after nvim exits
+            if (process.stdin.isTTY && process.stdin.setRawMode) {
+              process.stdin.setRawMode(true);
+            }
+            process.stdout.write("\x1b[2J\x1b[H");
+          } catch {
+            showMessage(`Failed to open ${artifactName}`);
+          }
+        }
+      },
+      onSpace: () => {
+        setExpandedIndex(null);
+      },
+      onBack: () => {
+        setExpandedIndex(null);
+      },
+    },
+    screen === "list" && expandedIndex !== null && !confirmingKill && !confirmingClean && !cleaning
   );
 
   // Keyboard bindings for list screen
@@ -289,8 +337,14 @@ export function App() {
       onPalette: () => {
         setScreen("palette");
       },
+      onSpace: () => {
+        if (selectedSession) {
+          setExpandedIndex(selectedIndex);
+          setArtifactIndex(0);
+        }
+      },
     },
-    screen === "list" && !confirmingKill && !confirmingClean && !cleaning
+    screen === "list" && expandedIndex === null && !confirmingKill && !confirmingClean && !cleaning
   );
 
   // Kill confirmation handler
@@ -361,6 +415,8 @@ export function App() {
               sessions={sessions}
               selectedIndex={selectedIndex}
               dimmed={screen === "create" || screen === "palette"}
+              expandedIndex={expandedIndex}
+              artifactIndex={artifactIndex}
             />
             {hasCleanRow && (
               <Box paddingX={1} paddingTop={1}>
@@ -466,6 +522,7 @@ export function App() {
         screen={screen}
         createStep={createStep}
         hasSelectedSession={!!selectedSession}
+        expanded={expandedIndex !== null}
         cleanRowSelected={cleanRowSelected}
         confirmingClean={confirmingClean}
         cleanableCount={cleanableCount}

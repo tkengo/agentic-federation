@@ -38,17 +38,8 @@ export function artifactWriteCommand(name: string): void {
 
   const filePath = path.join(dir, resolved);
 
-  // Read from stdin
-  const chunks: Buffer[] = [];
-  const fd = fs.openSync("/dev/stdin", "r");
-  const buf = Buffer.alloc(4096);
-  let bytesRead: number;
-  while ((bytesRead = fs.readSync(fd, buf, 0, buf.length, null)) > 0) {
-    chunks.push(buf.subarray(0, bytesRead));
-  }
-  fs.closeSync(fd);
-
-  const content = Buffer.concat(chunks).toString("utf-8");
+  // Read all content from stdin
+  const content = fs.readFileSync("/dev/stdin", "utf-8");
   fs.writeFileSync(filePath, content);
   console.error(`Written: ${resolved} (${content.length} bytes)`);
 }

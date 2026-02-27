@@ -9,6 +9,7 @@ interface SessionRowProps {
   session: SessionData;
   selected: boolean;
   dimmed?: boolean;
+  expanded?: boolean;
   blinkOn: boolean;
   colWidths: {
     repo: number;
@@ -18,16 +19,24 @@ interface SessionRowProps {
   };
 }
 
+const DESC_INLINE_MAX = 50;
+
 function isStale(session: SessionData): boolean {
   if (session.stateMtimeMs == null) return false;
   return (Date.now() - session.stateMtimeMs) / 1000 >= STALE_THRESHOLD_SEC;
 }
 
-export function SessionRow({ session, selected, dimmed, blinkOn, colWidths }: SessionRowProps) {
-  const cursor = !dimmed && selected ? ">" : " ";
+function truncate(text: string, max: number): string {
+  if (text.length <= max) return text;
+  return text.slice(0, max - 1) + "\u2026";
+}
+
+export function SessionRow({ session, selected, dimmed, expanded, blinkOn, colWidths }: SessionRowProps) {
+  const cursor = !dimmed && selected ? (expanded ? "\u25BC" : ">") : " ";
   const highlight = !dimmed && selected;
   const age = formatAge(session.meta.created_at);
   const stale = isStale(session);
+  const inlineDesc = session.description ? truncate(session.description, DESC_INLINE_MAX) : null;
 
   return (
     <Box>
@@ -64,6 +73,9 @@ export function SessionRow({ session, selected, dimmed, blinkOn, colWidths }: Se
       )}
       <Text dimColor={dimmed}>{`  `}</Text>
       <Text dimColor>{age.padStart(4)}</Text>
+      {inlineDesc && (
+        <Text dimColor>{`  ${inlineDesc}`}</Text>
+      )}
     </Box>
   );
 }

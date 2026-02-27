@@ -32,6 +32,7 @@ import { archiveCommand, archiveAllCompletedCommand } from "./commands/archive.j
 import { cleanCommand } from "./commands/clean.js";
 import { infoCommand } from "./commands/info.js";
 import { dashCommand } from "./commands/dash.js";
+import { describeSetCommand, describeShowCommand } from "./commands/describe.js";
 import {
   workflowListCommand,
   workflowShowCommand,
@@ -293,6 +294,25 @@ program
   .description("Show detailed session information")
   .action((sessionName?: string) => {
     infoCommand(sessionName);
+  });
+
+// --- describe ---
+const describe = program
+  .command("describe")
+  .description("Get or set session description");
+
+describe
+  .command("set <text>")
+  .description("Set session description")
+  .action((text: string) => {
+    describeSetCommand(text);
+  });
+
+describe
+  .command("show")
+  .description("Show current session description")
+  .action(() => {
+    describeShowCommand();
   });
 
 // --- dashboard ---

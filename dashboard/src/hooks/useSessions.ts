@@ -48,6 +48,15 @@ function readWaitingHuman(sessionDir: string): WaitingHumanData {
   }
 }
 
+function readDescription(sessionDir: string): string | undefined {
+  try {
+    const content = fs.readFileSync(path.join(sessionDir, "description.txt"), "utf-8").trim();
+    return content || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function readStatusConfig(sessionDir: string): Record<string, StatusConfig> | undefined {
   try {
     const wfPath = path.join(sessionDir, "workflow.yaml");
@@ -101,6 +110,7 @@ function loadSessions(): SessionData[] {
       pendingTasks: state?.pending_tasks ?? [],
       escalation: state?.escalation ?? { required: false, reason: null },
       waitingHuman: readWaitingHuman(sessionDir),
+      description: readDescription(sessionDir),
       stateMtimeMs,
       statusConfigMap: readStatusConfig(sessionDir),
     });

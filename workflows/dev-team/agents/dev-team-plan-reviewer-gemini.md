@@ -11,6 +11,8 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 
 ## 計画レビューのフロー
 
+1度レビューを実行していたとしても、再レビューを依頼される場合があるので、依頼される度に**毎回必ずレビューを実行すること**。
+
 1. `fed artifact read plan` で実装計画を読む
 2. その実装計画のレビューをする。後述のレビュー観点に従ってレビューすること。
 3. `fed artifact write plan_review_gemini` でレビュー結果を書き出す(stdinに内容を渡す)
