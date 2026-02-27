@@ -38,6 +38,11 @@ import {
   workflowShowCommand,
   workflowValidateCommand,
 } from "./commands/workflow.js";
+import {
+  scriptListCommand,
+  scriptShowCommand,
+  scriptRunCommand,
+} from "./commands/script.js";
 
 const program = new Command();
 
@@ -347,6 +352,32 @@ workflow
   .description("Validate a workflow definition")
   .action((name: string) => {
     workflowValidateCommand(name);
+  });
+
+// --- script ---
+const script = program
+  .command("script")
+  .description("Run workflow-defined scripts");
+
+script
+  .command("list")
+  .description("List available scripts")
+  .action(() => {
+    scriptListCommand();
+  });
+
+script
+  .command("show <name>")
+  .description("Show script details")
+  .action((name: string) => {
+    scriptShowCommand(name);
+  });
+
+script
+  .command("run <name>")
+  .description("Run a script")
+  .action((name: string) => {
+    scriptRunCommand(name);
   });
 
 program.parse();

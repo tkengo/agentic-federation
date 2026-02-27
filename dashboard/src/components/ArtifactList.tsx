@@ -15,7 +15,7 @@ interface ArtifactListProps {
   };
 }
 
-interface ArtifactEntry {
+export interface ArtifactEntry {
   name: string;
   sizeKB: string;
 }

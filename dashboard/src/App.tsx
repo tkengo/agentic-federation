@@ -1,8 +1,10 @@
-import React, { useState, useCallback, useMemo, useRef } from "react";
+import React, { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { Box, Text, useApp, useInput } from "ink";
 import fs from "node:fs";
 import path from "node:path";
-import { execSync } from "node:child_process";
+import crypto from "node:crypto";
+import { execSync, spawn } from "node:child_process";
+import type { ChildProcess } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { Header } from "./components/Header.js";
 import { SessionList } from "./components/SessionList.js";
@@ -12,6 +14,8 @@ import { CreateSession } from "./components/CreateSession.js";
 import { CommandPalette } from "./components/CommandPalette.js";
 import { Footer } from "./components/Footer.js";
 import { Splash } from "./components/Splash.js";
+import { DetailPanel, useScripts, LOG_MAX_VISIBLE } from "./components/DetailPanel.js";
+import type { DetailMode } from "./components/DetailPanel.js";
 import { useSessions } from "./hooks/useSessions.js";
 import { useSessionWatcher } from "./hooks/useSessionWatcher.js";
 import { useKeyboard } from "./hooks/useKeyboard.js";
@@ -31,12 +35,26 @@ export function App() {
   const [message, setMessage] = useState<string | null>(null);
   const [createStep, setCreateStep] = useState<"workflow" | "repo" | "branch">("workflow");
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
-  const [artifactIndex, setArtifactIndex] = useState(0);
+  const [detailIndex, setDetailIndex] = useState(0);
+  const [detailMode, setDetailMode] = useState<DetailMode>("browse");
+  const [confirmingScript, setConfirmingScript] = useState(false);
   const [confirmingKill, setConfirmingKill] = useState(false);
   const [confirmingClean, setConfirmingClean] = useState(false);
   const [cleaning, setCleaning] = useState(false);
   const lastCtrlCRef = useRef(0);
   const [ctrlCPending, setCtrlCPending] = useState(false);
+
+  // Script execution state
+  const [logLines, setLogLines] = useState<string[]>([]);
+  const [logScroll, setLogScroll] = useState(0);
+  const [scriptExitCode, setScriptExitCode] = useState<number | null>(null);
+  const [scriptKilled, setScriptKilled] = useState(false);
+  const [runningScriptName, setRunningScriptName] = useState<string | null>(null);
+  const scriptProcessRef = useRef<ChildProcess | null>(null);
+  const logBufferRef = useRef("");
+  const logFileRef = useRef<fs.WriteStream | null>(null);
+  const logUpdateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoScrollRef = useRef(true);
 
   // Read available repos from ~/.fed/repos/
   const repos = useMemo(() => {
@@ -95,6 +113,66 @@ export function App() {
   const showMessage = useCallback((msg: string) => {
     setMessage(msg);
     setTimeout(() => setMessage(null), 3000);
+  }, []);
+
+  // Data for expanded session
+  const expandedSession = expandedIndex !== null ? sessions[expandedIndex] : undefined;
+  const expandedArtifacts = useArtifacts(expandedSession?.sessionDir ?? "");
+  const expandedScripts = useScripts(expandedSession?.sessionDir ?? "");
+  const totalDetailItems = expandedArtifacts.length + expandedScripts.length;
+
+  // Collapse when expanded session disappears
+  if (expandedIndex !== null && !expandedSession) {
+    setExpandedIndex(null);
+  }
+
+  // Cleanup script state when expanding/collapsing
+  const prevExpandedRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (prevExpandedRef.current !== null && expandedIndex === null) {
+      // Collapsed: kill running script and cleanup
+      if (scriptProcessRef.current) {
+        scriptProcessRef.current.kill("SIGTERM");
+        scriptProcessRef.current = null;
+      }
+      if (logFileRef.current) {
+        logFileRef.current.end();
+        logFileRef.current = null;
+      }
+      if (logUpdateTimerRef.current) {
+        clearTimeout(logUpdateTimerRef.current);
+        logUpdateTimerRef.current = null;
+      }
+      logBufferRef.current = "";
+    }
+    if (expandedIndex !== null && expandedIndex !== prevExpandedRef.current) {
+      // Opened or switched session: reset detail state
+      setDetailIndex(0);
+      setDetailMode("browse");
+      setConfirmingScript(false);
+      setLogLines([]);
+      setLogScroll(0);
+      setRunningScriptName(null);
+      setScriptExitCode(null);
+      setScriptKilled(false);
+      autoScrollRef.current = true;
+    }
+    prevExpandedRef.current = expandedIndex;
+  }, [expandedIndex]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (scriptProcessRef.current) {
+        scriptProcessRef.current.kill("SIGTERM");
+      }
+      if (logFileRef.current) {
+        logFileRef.current.end();
+      }
+      if (logUpdateTimerRef.current) {
+        clearTimeout(logUpdateTimerRef.current);
+      }
+    };
   }, []);
 
   // Switch to tmux session (attach if outside tmux, switch-client if inside)
@@ -244,14 +322,136 @@ export function App() {
     [refresh, showMessage]
   );
 
-  // Artifacts for expanded session
-  const expandedSession = expandedIndex !== null ? sessions[expandedIndex] : undefined;
-  const expandedArtifacts = useArtifacts(expandedSession?.sessionDir ?? "");
+  // Run a script from the expanded session
+  const runScript = useCallback(() => {
+    if (!expandedSession) return;
+    const scriptIdx = detailIndex - expandedArtifacts.length;
+    const scriptDef = expandedScripts[scriptIdx];
+    if (!scriptDef) return;
 
-  // Collapse when expanded session disappears
-  if (expandedIndex !== null && !expandedSession) {
-    setExpandedIndex(null);
-  }
+    const sessionDir = expandedSession.sessionDir;
+
+    // Resolve script path (relative to worktree, or absolute)
+    const scriptPath = path.isAbsolute(scriptDef.path)
+      ? scriptDef.path
+      : path.resolve(expandedSession.meta.worktree, scriptDef.path);
+
+    // Resolve working directory
+    const cwd = scriptDef.cwd === "session"
+      ? sessionDir
+      : expandedSession.meta.worktree;
+
+    // Build environment
+    const env: Record<string, string> = {
+      ...process.env as Record<string, string>,
+      FED_SESSION_DIR: sessionDir,
+      FED_REPO_DIR: expandedSession.meta.worktree,
+      FED_BRANCH: expandedSession.meta.branch,
+      FED_REPO: expandedSession.meta.repo,
+      FED_WORKFLOW: expandedSession.workflow ?? "",
+    };
+    if (scriptDef.env) {
+      Object.assign(env, scriptDef.env);
+    }
+
+    // Create log file
+    const logsDir = path.join(sessionDir, "script-logs");
+    fs.mkdirSync(logsDir, { recursive: true });
+    const now = new Date();
+    const ts = [
+      now.getFullYear(),
+      String(now.getMonth() + 1).padStart(2, "0"),
+      String(now.getDate()).padStart(2, "0"),
+      String(now.getHours()).padStart(2, "0"),
+      String(now.getMinutes()).padStart(2, "0"),
+      String(now.getSeconds()).padStart(2, "0"),
+    ].join("");
+    const id = crypto.randomBytes(3).toString("hex");
+    const logFileName = `${ts}_${id}_${scriptDef.name}.log`;
+    const logFilePath = path.join(logsDir, logFileName);
+    const logStream = fs.createWriteStream(logFilePath);
+    logFileRef.current = logStream;
+
+    // Reset state
+    logBufferRef.current = "";
+    autoScrollRef.current = true;
+    setLogLines([]);
+    setLogScroll(0);
+    setScriptExitCode(null);
+    setScriptKilled(false);
+    setRunningScriptName(scriptDef.name);
+    setDetailMode("running");
+
+    // Spawn the script
+    const proc = spawn(scriptPath, {
+      cwd,
+      env,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    scriptProcessRef.current = proc;
+
+    const handleData = (data: Buffer) => {
+      const text = data.toString();
+      logStream.write(text);
+      logBufferRef.current += text;
+
+      // Debounce UI updates (50ms)
+      if (!logUpdateTimerRef.current) {
+        logUpdateTimerRef.current = setTimeout(() => {
+          logUpdateTimerRef.current = null;
+          const lines = logBufferRef.current.split("\n");
+          setLogLines(lines);
+          if (autoScrollRef.current) {
+            setLogScroll(Math.max(0, lines.length - LOG_MAX_VISIBLE));
+          }
+        }, 50);
+      }
+    };
+
+    proc.stdout?.on("data", handleData);
+    proc.stderr?.on("data", handleData);
+
+    proc.on("close", (code) => {
+      // Flush pending log update
+      if (logUpdateTimerRef.current) {
+        clearTimeout(logUpdateTimerRef.current);
+        logUpdateTimerRef.current = null;
+      }
+      const lines = logBufferRef.current.split("\n");
+      setLogLines(lines);
+
+      logStream.end();
+      logFileRef.current = null;
+      scriptProcessRef.current = null;
+      setScriptExitCode(code ?? 1);
+      setDetailMode("done");
+    });
+
+    proc.on("error", (err) => {
+      logBufferRef.current += `\nError: ${err.message}\n`;
+      const lines = logBufferRef.current.split("\n");
+      setLogLines(lines);
+
+      logStream.end();
+      logFileRef.current = null;
+      scriptProcessRef.current = null;
+      setScriptExitCode(1);
+      setDetailMode("done");
+    });
+  }, [expandedSession, detailIndex, expandedArtifacts.length, expandedScripts]);
+
+  // Kill a running script
+  const killScript = useCallback(() => {
+    if (scriptProcessRef.current) {
+      setScriptKilled(true);
+      scriptProcessRef.current.kill("SIGTERM");
+    }
+  }, []);
+
+  // Derive confirm script name for footer
+  const confirmScriptName = confirmingScript && expandedScripts.length > 0
+    ? expandedScripts[detailIndex - expandedArtifacts.length]?.name ?? ""
+    : "";
 
   // Global Ctrl+C double-press to quit
   useInput(
@@ -270,23 +470,24 @@ export function App() {
     { isActive: !cleaning }
   );
 
-  // Keyboard bindings for expanded artifact mode
+  // Keyboard bindings for expanded browse mode
   useKeyboard(
     {
       onUp: () => {
-        setArtifactIndex((i) => Math.max(0, i - 1));
+        setDetailIndex((i) => Math.max(0, i - 1));
       },
       onDown: () => {
-        setArtifactIndex((i) => Math.min(expandedArtifacts.length - 1, i + 1));
+        setDetailIndex((i) => Math.min(Math.max(0, totalDetailItems - 1), i + 1));
       },
       onEnter: () => {
-        if (expandedSession && expandedArtifacts.length > 0) {
-          const artifactName = expandedArtifacts[artifactIndex]?.name;
+        if (!expandedSession) return;
+        if (detailIndex < expandedArtifacts.length) {
+          // Open artifact in nvim
+          const artifactName = expandedArtifacts[detailIndex]?.name;
           if (!artifactName) return;
           const artifactPath = path.join(expandedSession.sessionDir, "artifacts", artifactName);
           try {
             execSync(`nvim '${artifactPath}'`, { stdio: "inherit" });
-            // Restore terminal state after nvim exits
             if (process.stdin.isTTY && process.stdin.setRawMode) {
               process.stdin.setRawMode(true);
             }
@@ -294,6 +495,9 @@ export function App() {
           } catch {
             showMessage(`Failed to open ${artifactName}`);
           }
+        } else {
+          // Confirm script execution
+          setConfirmingScript(true);
         }
       },
       onSpace: () => {
@@ -303,7 +507,87 @@ export function App() {
         setExpandedIndex(null);
       },
     },
-    screen === "list" && expandedIndex !== null && !confirmingKill && !confirmingClean && !cleaning
+    screen === "list" && expandedIndex !== null && detailMode === "browse"
+      && !confirmingScript && !confirmingKill && !confirmingClean && !cleaning
+  );
+
+  // Script confirmation handler
+  useInput(
+    (_input) => {
+      if (_input === "y" || _input === "Y") {
+        setConfirmingScript(false);
+        runScript();
+      } else {
+        setConfirmingScript(false);
+      }
+    },
+    { isActive: screen === "list" && expandedIndex !== null && confirmingScript }
+  );
+
+  // Script running mode keyboard handler
+  useInput(
+    (input, key) => {
+      const isUp = key.upArrow || input === "k" || (key.ctrl && input === "p");
+      const isDown = key.downArrow || input === "j" || (key.ctrl && input === "n");
+      const isPageUp = key.ctrl && input === "u";
+      const isPageDown = key.ctrl && input === "d";
+      const maxScroll = Math.max(0, logLines.length - LOG_MAX_VISIBLE);
+
+      if (key.escape) {
+        killScript();
+      } else if (isPageUp) {
+        autoScrollRef.current = false;
+        setLogScroll((s) => Math.max(0, s - LOG_MAX_VISIBLE));
+      } else if (isPageDown) {
+        setLogScroll((s) => {
+          const next = Math.min(maxScroll, s + LOG_MAX_VISIBLE);
+          if (next >= maxScroll) autoScrollRef.current = true;
+          return next;
+        });
+      } else if (isUp) {
+        autoScrollRef.current = false;
+        setLogScroll((s) => Math.max(0, s - 1));
+      } else if (isDown) {
+        setLogScroll((s) => {
+          const next = Math.min(maxScroll, s + 1);
+          if (next >= maxScroll) autoScrollRef.current = true;
+          return next;
+        });
+      }
+    },
+    { isActive: screen === "list" && expandedIndex !== null && detailMode === "running" }
+  );
+
+  // Script done mode keyboard handler
+  useInput(
+    (input, key) => {
+      const isUp = key.upArrow || input === "k" || (key.ctrl && input === "p");
+      const isDown = key.downArrow || input === "j" || (key.ctrl && input === "n");
+      const isPageUp = key.ctrl && input === "u";
+      const isPageDown = key.ctrl && input === "d";
+      const maxScroll = Math.max(0, logLines.length - LOG_MAX_VISIBLE);
+
+      if (key.escape) {
+        // Back to browse mode
+        setDetailMode("browse");
+        setLogLines([]);
+        setLogScroll(0);
+        setRunningScriptName(null);
+        setScriptExitCode(null);
+        setScriptKilled(false);
+        logBufferRef.current = "";
+        autoScrollRef.current = true;
+      } else if (isPageUp) {
+        setLogScroll((s) => Math.max(0, s - LOG_MAX_VISIBLE));
+      } else if (isPageDown) {
+        setLogScroll((s) => Math.min(maxScroll, s + LOG_MAX_VISIBLE));
+      } else if (isUp) {
+        setLogScroll((s) => Math.max(0, s - 1));
+      } else if (isDown) {
+        setLogScroll((s) => Math.min(maxScroll, s + 1));
+      }
+    },
+    { isActive: screen === "list" && expandedIndex !== null && detailMode === "done" }
   );
 
   // Keyboard bindings for list screen
@@ -337,7 +621,7 @@ export function App() {
       onSpace: () => {
         if (selectedSession) {
           setExpandedIndex(selectedIndex);
-          setArtifactIndex(0);
+          setDetailIndex(0);
         }
       },
     },
@@ -413,7 +697,21 @@ export function App() {
               selectedIndex={selectedIndex}
               dimmed={screen === "create" || screen === "palette"}
               expandedIndex={expandedIndex}
-              artifactIndex={artifactIndex}
+              renderDetail={(session, colWidths) => (
+                <DetailPanel
+                  colWidths={colWidths}
+                  description={session.description}
+                  mode={detailMode}
+                  artifacts={expandedArtifacts}
+                  scripts={expandedScripts}
+                  selectedIndex={detailIndex}
+                  scriptName={runningScriptName ?? undefined}
+                  scriptExitCode={scriptExitCode}
+                  scriptKilled={scriptKilled}
+                  logLines={logLines}
+                  logScroll={logScroll}
+                />
+              )}
             />
             {hasCleanRow && (
               <Box paddingX={1} paddingTop={1}>
@@ -527,6 +825,9 @@ export function App() {
         confirmingKill={confirmingKill}
         killTargetName={selectedSession?.name}
         ctrlCPending={ctrlCPending}
+        detailMode={detailMode}
+        confirmingScript={confirmingScript}
+        confirmScriptName={confirmScriptName}
       />
     </Box>
   );

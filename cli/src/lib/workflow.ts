@@ -5,11 +5,19 @@ import { WORKFLOWS_DIR } from "./paths.js";
 
 // ---- Type definitions ----
 
+export interface ScriptDef {
+  path: string;
+  description?: string;
+  env?: Record<string, string>;
+  cwd?: "repo" | "session";
+}
+
 export interface WorkflowDefinition {
   name: string;
   description: string;
   windows: WorkflowWindow[];
   states: Record<string, WorkflowState>;
+  scripts?: Record<string, ScriptDef>;
 }
 
 export interface WorkflowWindow {
