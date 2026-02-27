@@ -1,61 +1,81 @@
 name: dev-team
 description: "開発チームパイプライン: 計画策定 → 計画レビュー → 実装 → コードレビュー"
 
-panes:
-  - id: planner
-    name: Planner
-    pane: 1
-    command: 'yoloclaude --agent dev-team-planner'
-  - id: orchestrator
-    name: Orchestrator
-    pane: 2
-    command: 'yoloclaude --agent orchestrator'
-  - id: plan_revisor
-    name: "Plan Revisor"
-    pane: 3
-    command: 'yoloclaude --agent dev-team-plan-revisor'
-  - id: plan_reviewer_gemini
-    name: "Plan Reviewer (Gemini)"
-    pane: 4
-    command: yologemini
-  - id: code_reviewer_gemini
-    name: "Code Reviewer (Gemini)"
-    pane: 5
-    command: yologemini
-  - id: code_reviewer_codex
-    name: "Code Reviewer (Codex)"
-    pane: 6
-    command: yolocodex
-  - id: plan_reviewer_codex
-    name: "Plan Reviewer (Codex)"
-    pane: 7
-    command: yolocodex
-  - id: implementer
-    name: Implementer
-    pane: 8
-    command: 'yoloclaude --agent dev-team-implementer'
+windows:
+  - name: dev
+    panes:
+      - id: terminal
+        name: Terminal
+        pane: 1
+        command: null
+      - id: editor
+        name: Editor
+        pane: 2
+        command: nvim
+      - id: dev_server
+        name: Dev Server
+        pane: 3
+        command: "{{repo.extra.dev_server}}"
+    layout:
+      splits:
+        - { source: 1, direction: v, percent: 10 }
+        - { source: 1, direction: h, percent: 50 }
+      focus: 1
 
-# +---------------------+---------------------+
-# |                     |    orchestrator     |
-# |      planner        |      (pane 2)       |
-# |      (pane 1)       +----------+----------+
-# |                     |  revisor | pln-rev  |
-# |                     | (pane 3) | (pane 4) |
-# +----------+----------+----------+----------+
-# | code-rev | code-rev | pln-rev  | implmtr  |
-# | (pane 5) | (pane 6) | (pane 7) | (pane 8) |
-# +----------+----------+----------+----------+
-layout:
-  window_name: agent-team
-  splits:
-    - { source: 1, direction: v, percent: 25 }
-    - { source: 1, direction: h, percent: 50 }
-    - { source: 3, direction: h, percent: 50 }
-    - { source: 2, direction: v, percent: 35 }
-    - { source: 3, direction: h, percent: 50 }
-    - { source: 5, direction: h, percent: 50 }
-    - { source: 7, direction: h, percent: 50 }
-  focus: 1
+  - name: agent-team
+    panes:
+      - id: planner
+        name: Planner
+        pane: 1
+        command: 'yoloclaude --agent dev-team-planner'
+      - id: orchestrator
+        name: Orchestrator
+        pane: 2
+        command: 'yoloclaude --agent orchestrator'
+      - id: plan_revisor
+        name: "Plan Revisor"
+        pane: 3
+        command: 'yoloclaude --agent dev-team-plan-revisor'
+      - id: plan_reviewer_gemini
+        name: "Plan Reviewer (Gemini)"
+        pane: 4
+        command: yologemini
+      - id: code_reviewer_gemini
+        name: "Code Reviewer (Gemini)"
+        pane: 5
+        command: yologemini
+      - id: code_reviewer_codex
+        name: "Code Reviewer (Codex)"
+        pane: 6
+        command: yolocodex
+      - id: plan_reviewer_codex
+        name: "Plan Reviewer (Codex)"
+        pane: 7
+        command: yolocodex
+      - id: implementer
+        name: Implementer
+        pane: 8
+        command: 'yoloclaude --agent dev-team-implementer'
+    # +---------------------+---------------------+
+    # |                     |    orchestrator     |
+    # |      planner        |      (pane 2)       |
+    # |      (pane 1)       +----------+----------+
+    # |                     |  revisor | pln-rev  |
+    # |                     | (pane 3) | (pane 4) |
+    # +----------+----------+----------+----------+
+    # | code-rev | code-rev | pln-rev  | implmtr  |
+    # | (pane 5) | (pane 6) | (pane 7) | (pane 8) |
+    # +----------+----------+----------+----------+
+    layout:
+      splits:
+        - { source: 1, direction: v, percent: 25 }
+        - { source: 1, direction: h, percent: 50 }
+        - { source: 3, direction: h, percent: 50 }
+        - { source: 2, direction: v, percent: 35 }
+        - { source: 3, direction: h, percent: 50 }
+        - { source: 5, direction: h, percent: 50 }
+        - { source: 7, direction: h, percent: 50 }
+      focus: 1
 
 states:
   planning:

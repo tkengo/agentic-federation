@@ -4,6 +4,7 @@ import { REPOS_DIR } from "./paths.js";
 import type { RepoConfig } from "./types.js";
 
 // Load a repo config by name from ~/.fed/repos/<name>.json
+// Auto-migrates old format (dev_server at top level) to new format (extra.dev_server)
 export function loadRepoConfig(name: string): RepoConfig {
   const configPath = path.join(REPOS_DIR, `${name}.json`);
   if (!fs.existsSync(configPath)) {
@@ -11,7 +12,19 @@ export function loadRepoConfig(name: string): RepoConfig {
       `Repository '${name}' not found. Run 'fed repo list' to see available repos.`
     );
   }
-  return JSON.parse(fs.readFileSync(configPath, "utf-8")) as RepoConfig;
+  const config = JSON.parse(fs.readFileSync(configPath, "utf-8")) as RepoConfig;
+
+  // Auto-migrate: dev_server at top level -> extra.dev_server
+  if (!config.extra) {
+    config.extra = {};
+    if (config.dev_server) {
+      config.extra.dev_server = config.dev_server;
+    }
+    delete config.dev_server;
+    saveRepoConfig(name, config);
+  }
+
+  return config;
 }
 
 // List all repo config names

@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { WORKFLOWS_DIR } from "../lib/paths.js";
+import { getCurrentTmuxSession, resolveSession } from "../lib/session.js";
 import {
   listWorkflows,
   loadWorkflowByName,
@@ -19,8 +20,23 @@ export function workflowListCommand(): void {
   }
 }
 
-/** Show the YAML content of a workflow. */
+/** Show the YAML content of a workflow.
+ *  If inside a session, prefer the session-local expanded workflow.yaml. */
 export function workflowShowCommand(name: string): void {
+  // Try session-local expanded copy first
+  const tmuxSession = getCurrentTmuxSession();
+  if (tmuxSession) {
+    const sessionDir = resolveSession(tmuxSession);
+    if (sessionDir) {
+      const sessionWf = path.join(sessionDir, "workflow.yaml");
+      if (fs.existsSync(sessionWf)) {
+        process.stdout.write(fs.readFileSync(sessionWf, "utf-8"));
+        return;
+      }
+    }
+  }
+
+  // Fall back to source workflows directory
   const filePath = path.join(WORKFLOWS_DIR, name, "workflow.yaml");
   if (!fs.existsSync(filePath)) {
     console.error(`Workflow not found: ${name}`);

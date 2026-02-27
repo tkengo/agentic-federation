@@ -35,11 +35,16 @@ export async function repoAddCommand(name: string): Promise<void> {
   const copiesRaw = await prompt("  copies (comma-separated, e.g. '.env.local'): ");
   const cleanupPattern = await prompt("  cleanup_pattern (glob for Claude project dirs): ");
 
+  const extra: Record<string, unknown> = {};
+  if (devServer) {
+    extra.dev_server = devServer;
+  }
+
   const config: RepoConfig = {
     repo_root: repoRoot,
     worktree_base: worktreeBase,
     setup,
-    dev_server: devServer || null,
+    extra,
     symlinks: symlinksRaw ? symlinksRaw.split(",").map((s) => s.trim()) : [],
     copies: copiesRaw ? copiesRaw.split(",").map((s) => s.trim()) : [],
     cleanup_pattern: cleanupPattern,

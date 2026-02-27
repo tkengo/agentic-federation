@@ -1,10 +1,12 @@
 export interface MetaJson {
   repo: string;
   branch: string;
-  mode: "solo" | "team";
+  workflow: string;
   worktree: string;
   tmux_session: string;
   created_at: string;
+  /** @deprecated old format compat */
+  mode?: "solo" | "team";
 }
 
 export interface StateJson {
@@ -26,8 +28,10 @@ export interface RepoConfig {
   repo_root: string;
   worktree_base: string;
   setup: string;
-  dev_server: string | null;
+  extra: Record<string, unknown>;
   symlinks: string[];
   copies: string[];
   cleanup_pattern: string;
+  /** @deprecated old format — use extra.dev_server */
+  dev_server?: string | null;
 }

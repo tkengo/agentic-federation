@@ -17,7 +17,7 @@ interface CreatePanelProps {
   repos: string[];
   workflows: WorkflowInfo[];
   sessions: SessionData[];
-  onSubmit: (repo: string, branch: string, workflow?: string) => void;
+  onSubmit: (repo: string, branch: string, workflow: string) => void;
   onCancel: () => void;
   onStepChange: (step: Step) => void;
 }
@@ -33,26 +33,20 @@ export function CreateSession({
   const [step, setStep] = useState<Step>("workflow");
   const [workflowIndex, setWorkflowIndex] = useState(0);
   const [workflowQuery, setWorkflowQuery] = useState("");
-  const [selectedWorkflow, setSelectedWorkflow] = useState<string | null>(null);
+  const [selectedWorkflow, setSelectedWorkflow] = useState<string>("solo");
   const [repoIndex, setRepoIndex] = useState(0);
   const [repoQuery, setRepoQuery] = useState("");
   const [selectedRepo, setSelectedRepo] = useState("");
   const [branch, setBranch] = useState("");
   const [branchError, setBranchError] = useState("");
 
-  // Build workflow options: "solo" first, then workflow files
-  const allWorkflowOptions: WorkflowInfo[] = [
-    { name: "solo", description: "Terminal + editor only, no agent team" },
-    ...workflows,
-  ];
-
-  // Filter lists by query
+  // Filter lists by query (workflows come from filesystem, including solo)
   const workflowOptions = workflowQuery
-    ? allWorkflowOptions.filter((w) => {
+    ? workflows.filter((w) => {
         const q = workflowQuery.toLowerCase();
         return w.name.toLowerCase().includes(q) || w.description.toLowerCase().includes(q);
       })
-    : allWorkflowOptions;
+    : workflows;
 
   const filteredRepos = repoQuery
     ? repos.filter((r) => r.toLowerCase().includes(repoQuery.toLowerCase()))
@@ -94,7 +88,7 @@ export function CreateSession({
         } else if (key.return) {
           if (workflowOptions.length > 0) {
             const selected = workflowOptions[clampedWorkflowIndex]!;
-            setSelectedWorkflow(selected.name === "solo" ? null : selected.name);
+            setSelectedWorkflow(selected.name);
             setWorkflowQuery("");
             goToStep("repo");
           }
@@ -139,7 +133,7 @@ export function CreateSession({
   if (step === "workflow") {
     // No breadcrumb yet
   } else {
-    breadcrumbParts.push(selectedWorkflow ?? "solo");
+    breadcrumbParts.push(selectedWorkflow);
   }
   if (step === "branch") {
     breadcrumbParts.push(selectedRepo);
@@ -274,7 +268,7 @@ export function CreateSession({
                     const trimmed = text.trim();
                     if (validateBranch(selectedRepo, trimmed)) {
                       setBranch(trimmed);
-                      onSubmit(selectedRepo, trimmed, selectedWorkflow ?? undefined);
+                      onSubmit(selectedRepo, trimmed, selectedWorkflow);
                     }
                   } else {
                     goToStep("repo");

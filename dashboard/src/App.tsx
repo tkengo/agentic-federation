@@ -220,12 +220,9 @@ export function App() {
 
   // Create new session via fed start --no-attach
   const createSession = useCallback(
-    (repo: string, branch: string, workflow?: string) => {
+    (repo: string, branch: string, workflow: string) => {
       try {
-        const args = ["fed", "start", repo, branch, "--no-attach"];
-        if (workflow) {
-          args.push("--workflow", workflow);
-        }
+        const args = ["fed", "start", workflow, repo, branch, "--no-attach"];
         execSync(args.join(" "), { stdio: "inherit" });
         // Restore terminal state after fed start
         if (process.stdin.isTTY && process.stdin.setRawMode) {

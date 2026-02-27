@@ -96,12 +96,11 @@ repo
 
 // --- start ---
 program
-  .command("start <repo> <branch>")
-  .description("Start a development session")
-  .option("--workflow <name>", "Workflow to use (enables agent team)")
+  .command("start <workflow> <repo> <branch>")
+  .description("Start a development session with a workflow")
   .option("--no-attach", "Skip tmux attach after creation")
-  .action(async (repo: string, branch: string, options: { workflow?: string; attach?: boolean }) => {
-    await startCommand(repo, branch, options.workflow, options.attach === false);
+  .action(async (workflow: string, repo: string, branch: string, options: { attach?: boolean }) => {
+    await startCommand(workflow, repo, branch, options.attach === false);
   });
 
 // --- state ---

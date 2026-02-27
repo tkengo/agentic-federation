@@ -48,7 +48,7 @@ export function listCommand(): void {
   type Row = {
     repo: string;
     branch: string;
-    mode: string;
+    workflow: string;
     status: string;
     age: string;
   };
@@ -69,7 +69,7 @@ export function listCommand(): void {
         const state = JSON.parse(
           fs.readFileSync(statePath, "utf-8")
         ) as StateJson;
-        status = state.status;
+        status = state.status || "active";
       } catch {
         // Ignore parse errors
       }
@@ -78,7 +78,7 @@ export function listCommand(): void {
     rows.push({
       repo: meta.repo,
       branch: meta.branch,
-      mode: meta.mode,
+      workflow: meta.workflow ?? "solo",
       status,
       age: formatAge(meta.created_at),
     });
@@ -91,11 +91,11 @@ export function listCommand(): void {
   }
 
   // Calculate column widths
-  const headers = { repo: "REPO", branch: "BRANCH", mode: "MODE", status: "STATUS", age: "AGE" };
+  const headers = { repo: "REPO", branch: "BRANCH", workflow: "WORKFLOW", status: "STATUS", age: "AGE" };
   const widths = {
     repo: Math.max(headers.repo.length, ...rows.map((r) => r.repo.length)),
     branch: Math.max(headers.branch.length, ...rows.map((r) => r.branch.length)),
-    mode: Math.max(headers.mode.length, ...rows.map((r) => r.mode.length)),
+    workflow: Math.max(headers.workflow.length, ...rows.map((r) => r.workflow.length)),
     status: Math.max(headers.status.length, ...rows.map((r) => r.status.length)),
     age: Math.max(headers.age.length, ...rows.map((r) => r.age.length)),
   };
@@ -104,7 +104,7 @@ export function listCommand(): void {
   console.log(
     `  ${headers.repo.padEnd(widths.repo)}  ` +
     `${headers.branch.padEnd(widths.branch)}  ` +
-    `${headers.mode.padEnd(widths.mode)}  ` +
+    `${headers.workflow.padEnd(widths.workflow)}  ` +
     `${headers.status.padEnd(widths.status)}  ` +
     `${headers.age.padStart(widths.age)}`
   );
@@ -114,7 +114,7 @@ export function listCommand(): void {
     console.log(
       `  ${row.repo.padEnd(widths.repo)}  ` +
       `${row.branch.padEnd(widths.branch)}  ` +
-      `${row.mode.padEnd(widths.mode)}  ` +
+      `${row.workflow.padEnd(widths.workflow)}  ` +
       `${row.status.padEnd(widths.status)}  ` +
       `${row.age.padStart(widths.age)}`
     );

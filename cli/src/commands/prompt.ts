@@ -2,8 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { AGENTS_DIR, WORKFLOWS_DIR } from "../lib/paths.js";
-import { getCurrentTmuxSession, resolveSession } from "../lib/session.js";
-import type { StateJson } from "../lib/types.js";
+import { getCurrentTmuxSession, resolveSession, readMeta } from "../lib/session.js";
 
 /**
  * Resolve the workflow name from the current session, if any.
@@ -16,15 +15,8 @@ function getSessionWorkflow(): string | null {
   const sessionDir = resolveSession(tmuxSession);
   if (!sessionDir) return null;
 
-  const statePath = path.join(sessionDir, "state.json");
-  if (!fs.existsSync(statePath)) return null;
-
-  try {
-    const state = JSON.parse(fs.readFileSync(statePath, "utf-8")) as StateJson;
-    return state.workflow ?? null;
-  } catch {
-    return null;
-  }
+  const meta = readMeta(sessionDir);
+  return meta?.workflow ?? null;
 }
 
 /**

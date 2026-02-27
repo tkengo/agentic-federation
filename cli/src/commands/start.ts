@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import { execSync, spawn } from "node:child_process";
-import { SESSIONS_DIR, ACTIVE_DIR, AGENTS_DIR, CLAUDE_AGENTS_DIR, WORKFLOWS_DIR } from "../lib/paths.js";
+import { AGENTS_DIR, CLAUDE_AGENTS_DIR, WORKFLOWS_DIR } from "../lib/paths.js";
 import { loadRepoConfig } from "../lib/repo.js";
 import { createSessionDir, linkActiveSession, resolveSession } from "../lib/session.js";
 import * as tmux from "../lib/tmux.js";
@@ -11,13 +11,16 @@ import { initCommand } from "./init.js";
 import {
   loadWorkflowByName,
   getEntryPointState,
+  expandTemplateVariables,
   type WorkflowDefinition,
+  type WorkflowWindow,
 } from "../lib/workflow.js";
+import { parse as parseYaml } from "yaml";
 
 export async function startCommand(
+  workflowName: string,
   repoName: string,
   branch: string,
-  workflowName?: string,
   noAttach?: boolean
 ): Promise<void> {
   // ============================================================
@@ -99,20 +102,13 @@ export async function startCommand(
   // All checks passed - begin side effects
   // ============================================================
 
-  // Load workflow if specified
-  let workflow: WorkflowDefinition | undefined;
-  if (workflowName) {
-    workflow = loadWorkflowByName(workflowName);
-  }
-  const mode = workflow ? "team" : "solo";
+  // Load workflow source (for validation)
+  loadWorkflowByName(workflowName);
 
   console.log(`=== fed start ===`);
+  console.log(`Workflow: ${workflowName}`);
   console.log(`Repo:     ${repoName}`);
   console.log(`Branch:   ${branch}`);
-  console.log(`Mode:     ${mode}`);
-  if (workflow) {
-    console.log(`Workflow: ${workflow.name}`);
-  }
   console.log(`Worktree: ${worktreePath}`);
 
   // Cleanup old Claude project data
@@ -125,7 +121,7 @@ export async function startCommand(
   const meta: MetaJson = {
     repo: repoName,
     branch,
-    mode,
+    workflow: workflowName,
     worktree: worktreePath,
     tmux_session: tmuxSession,
     created_at: new Date().toISOString(),
@@ -136,38 +132,51 @@ export async function startCommand(
   // Active symlink
   linkActiveSession(tmuxSession, sessionPath);
 
-  // Team mode: create state.json, notifications/
-  if (workflow) {
-    initTeamSession(sessionPath, tmuxSession, workflow);
-  }
+  // Template-expand workflow YAML, save to session dir, and get expanded object
+  const workflow = expandAndSaveWorkflow(sessionPath, workflowName, config, meta);
+
+  // Always create session infrastructure
+  initSession(sessionPath, tmuxSession, workflow);
 
   // Sync commands (skills)
   syncCommands();
 
   // Sync agent prompts to ~/.claude/agents/
-  syncAgents(workflow?.name);
+  syncAgents(workflowName);
 
-  // Create tmux session with dev window
-  createDevWindow(tmuxSession, worktreePath, config);
+  // Create logs directory
+  const logsDir = path.join(sessionPath, "logs");
+  fs.mkdirSync(logsDir, { recursive: true });
 
-  // Set FED_SESSION in tmux session environment so agent panes can detect
-  // the session without needing tmux socket access (required for sandboxed
-  // agents like Codex CLI).
+  // Generic window creation loop
+  for (let i = 0; i < workflow.windows.length; i++) {
+    const win = workflow.windows[i]!;
+    if (i === 0) {
+      // First window: create tmux session
+      console.log(`Creating tmux session (window: ${win.name})...`);
+      tmux.newSession(tmuxSession, worktreePath, win.name);
+    } else {
+      // Subsequent windows
+      console.log(`Creating window: ${win.name}...`);
+      tmux.newWindow(tmuxSession, win.name, worktreePath);
+    }
+    createWindowLayout(tmuxSession, win, worktreePath);
+  }
+
+  // Set FED_SESSION in tmux session environment
   tmux.setEnvironment(tmuxSession, "FED_SESSION", tmuxSession);
 
-  // Team mode: create agent-team window
-  if (workflow) {
-    createAgentTeamWindow(tmuxSession, worktreePath, sessionPath, workflow);
-  }
+  // Start notification watcher (always - needed for stateful and useful for future stateless extensions)
+  startNotificationWatcher(sessionPath, tmuxSession);
 
   // Attach
   console.log("");
   console.log("=== Environment Ready ===");
   console.log("");
   console.log("Windows:");
-  console.log("  1. dev        - terminal, nvim" + (config.dev_server ? `, ${config.dev_server}` : ""));
-  if (workflow) {
-    console.log("  2. agent-team - Agent Team");
+  for (let i = 0; i < workflow.windows.length; i++) {
+    const win = workflow.windows[i]!;
+    console.log(`  ${i + 1}. ${win.name}`);
   }
   console.log("");
   if (noAttach) {
@@ -178,13 +187,34 @@ export async function startCommand(
   }
 }
 
-// --- 1-4. Worktree setup ---
+// --- Create window layout from WorkflowWindow definition ---
+function createWindowLayout(
+  session: string,
+  win: WorkflowWindow,
+  cwd: string
+): void {
+  const w = `${session}:${win.name}`;
+
+  // Execute layout splits
+  for (const split of win.layout.splits) {
+    tmux.splitWindow(`${w}.${split.source}`, split.direction, split.percent, cwd);
+  }
+  tmux.selectPane(`${w}.${win.layout.focus}`);
+
+  // Send commands to panes
+  for (const pane of win.panes) {
+    if (pane.command) {
+      tmux.sendKeys(`${w}.${pane.pane}`, pane.command);
+    }
+  }
+}
+
+// --- Worktree setup ---
 function setupWorktree(
   config: RepoConfig,
   branch: string,
   worktreePath: string
 ): void {
-  // Create worktree if it doesn't exist
   if (fs.existsSync(worktreePath)) {
     console.log(`Worktree already exists: ${worktreePath}`);
   } else {
@@ -216,7 +246,6 @@ function setupWorktree(
     if (fs.existsSync(dest)) {
       console.log(`  Skipped: ${copy} (already exists)`);
     } else if (fs.existsSync(src)) {
-      // Ensure parent directory exists
       fs.mkdirSync(path.dirname(dest), { recursive: true });
       fs.copyFileSync(src, dest);
       console.log(`  Copied: ${copy}`);
@@ -232,76 +261,46 @@ function setupWorktree(
   }
 }
 
-// --- 1-5. Dev window ---
-function createDevWindow(
-  session: string,
-  cwd: string,
-  config: RepoConfig
-): void {
-  console.log("Creating tmux session...");
-  tmux.newSession(session, cwd, "dev");
-
-  const devWindow = `${session}:dev`;
-
-  if (config.dev_server) {
-    // 3-pane layout: terminal | nvim / dev_server
-    tmux.splitWindow(`${devWindow}.1`, "v", 10, cwd);
-    tmux.splitWindow(`${devWindow}.1`, "h", 50, cwd);
-    tmux.sendKeys(`${devWindow}.2`, "nvim");
-    tmux.sendKeys(`${devWindow}.3`, config.dev_server);
-  } else {
-    // 2-pane layout: terminal | nvim
-    tmux.splitWindow(`${devWindow}.1`, "h", 50, cwd);
-    tmux.sendKeys(`${devWindow}.2`, "nvim");
-  }
-
-  tmux.selectPane(`${devWindow}.1`);
-}
-
-// --- 1-7. Agent team window ---
-function createAgentTeamWindow(
-  session: string,
-  cwd: string,
+// --- Session initialization (always runs) ---
+function initSession(
   sessionPath: string,
+  session: string,
   workflow: WorkflowDefinition
 ): void {
-  console.log("Creating agent-team window...");
+  fs.mkdirSync(path.join(sessionPath, "artifacts"), { recursive: true });
+  fs.mkdirSync(path.join(sessionPath, "notifications"), { recursive: true });
 
-  // Create logs directory in session
-  const logsDir = path.join(sessionPath, "logs");
-  fs.mkdirSync(logsDir, { recursive: true });
+  const entryPoint = getEntryPointState(workflow);
+  const state: StateJson = {
+    session_name: session,
+    status: entryPoint,
+    workflow: workflow.name,
+    retry_count: {},
+    pending_tasks: [],
+    escalation: { required: false, reason: null },
+    history: [],
+  };
+  fs.writeFileSync(
+    path.join(sessionPath, "state.json"),
+    JSON.stringify(state, null, 2) + "\n"
+  );
+}
 
-  // Copy workflow.yaml to session for runtime reference
-  // import.meta.dirname = cli/dist/commands/, go up 3 levels to repo root
+// --- Template-expand workflow YAML, save to session dir, return expanded object ---
+function expandAndSaveWorkflow(
+  sessionPath: string,
+  workflowName: string,
+  config: RepoConfig,
+  meta: MetaJson
+): WorkflowDefinition {
   const fedRepo = path.resolve(import.meta.dirname, "..", "..", "..");
-  const srcWorkflow = path.join(fedRepo, "workflows", workflow.name, "workflow.yaml");
-  if (fs.existsSync(srcWorkflow)) {
-    fs.copyFileSync(srcWorkflow, path.join(sessionPath, "workflow.yaml"));
-  }
+  const srcWorkflow = path.join(fedRepo, "workflows", workflowName, "workflow.yaml");
+  const rawYaml = fs.readFileSync(srcWorkflow, "utf-8");
+  const expandedYaml = expandTemplateVariables(rawYaml, { repo: config, meta });
+  fs.writeFileSync(path.join(sessionPath, "workflow.yaml"), expandedYaml);
 
-  // Create agent-team window with layout from workflow
-  const windowName = workflow.layout.window_name;
-  tmux.newWindow(session, windowName, cwd);
-  const w = `${session}:${windowName}`;
-
-  // Execute layout splits from workflow definition
-  for (const split of workflow.layout.splits) {
-    tmux.splitWindow(`${w}.${split.source}`, split.direction, split.percent, cwd);
-  }
-  tmux.selectPane(`${w}.${workflow.layout.focus}`);
-
-  // Start commands in panes from workflow pane definitions
-  console.log("Starting commands in all panes...");
-  for (const pane of workflow.panes) {
-    if (pane.command) {
-      tmux.sendKeys(`${w}.${pane.pane}`, pane.command);
-    }
-  }
-
-  // Start TypeScript notification watcher
-  startNotificationWatcher(sessionPath, session);
-
-  console.log("Agent Team ready.");
+  // Parse the expanded YAML to get the runtime workflow object
+  return parseYaml(expandedYaml) as WorkflowDefinition;
 }
 
 // --- Start TypeScript notification watcher as child process ---
@@ -333,33 +332,8 @@ function startNotificationWatcher(
   console.log(`Started notification watcher (PID: ${watcher.pid})`);
 }
 
-// --- 1-2. Team session initialization ---
-function initTeamSession(
-  sessionPath: string,
-  session: string,
-  workflow: WorkflowDefinition
-): void {
-  fs.mkdirSync(path.join(sessionPath, "artifacts"), { recursive: true });
-  fs.mkdirSync(path.join(sessionPath, "notifications"), { recursive: true });
-
-  const state: StateJson = {
-    session_name: session,
-    status: getEntryPointState(workflow),
-    workflow: workflow.name,
-    retry_count: {},
-    pending_tasks: [],
-    escalation: { required: false, reason: null },
-    history: [],
-  };
-  fs.writeFileSync(
-    path.join(sessionPath, "state.json"),
-    JSON.stringify(state, null, 2) + "\n"
-  );
-}
-
-// --- 1-6. Sync commands/skills ---
+// --- Sync commands/skills ---
 function syncCommands(): void {
-  // import.meta.dirname = cli/dist/commands/, go up 3 levels to repo root
   const fedRepo = path.resolve(import.meta.dirname, "..", "..", "..");
   const commandsDir = path.join(fedRepo, "commands");
   const claudeCommandsDir = path.join(os.homedir(), ".claude", "commands");
@@ -377,13 +351,13 @@ function syncCommands(): void {
   console.log(`Synced ${commands.length} commands to ~/.claude/commands/`);
 }
 
-// --- 1-6b. Sync agent prompts to ~/.claude/agents/ ---
-function syncAgents(workflowName?: string): void {
+// --- Sync agent prompts to ~/.claude/agents/ ---
+function syncAgents(workflowName: string): void {
   fs.mkdirSync(CLAUDE_AGENTS_DIR, { recursive: true });
 
   let count = 0;
 
-  // Global agents: agents/*.md → ~/.claude/agents/*.md
+  // Global agents: agents/*.md -> ~/.claude/agents/*.md
   if (fs.existsSync(AGENTS_DIR)) {
     const files = fs.readdirSync(AGENTS_DIR).filter((f) => f.endsWith(".md"));
     for (const file of files) {
@@ -394,17 +368,15 @@ function syncAgents(workflowName?: string): void {
     }
   }
 
-  // Workflow-specific agents: workflows/<name>/agents/*.md → ~/.claude/agents/*.md
-  if (workflowName) {
-    const wfAgentsDir = path.join(WORKFLOWS_DIR, workflowName, "agents");
-    if (fs.existsSync(wfAgentsDir)) {
-      const files = fs.readdirSync(wfAgentsDir).filter((f) => f.endsWith(".md"));
-      for (const file of files) {
-        const src = path.join(wfAgentsDir, file);
-        const dest = path.join(CLAUDE_AGENTS_DIR, file);
-        syncSymlink(src, dest);
-        count++;
-      }
+  // Workflow-specific agents: workflows/<name>/agents/*.md -> ~/.claude/agents/*.md
+  const wfAgentsDir = path.join(WORKFLOWS_DIR, workflowName, "agents");
+  if (fs.existsSync(wfAgentsDir)) {
+    const files = fs.readdirSync(wfAgentsDir).filter((f) => f.endsWith(".md"));
+    for (const file of files) {
+      const src = path.join(wfAgentsDir, file);
+      const dest = path.join(CLAUDE_AGENTS_DIR, file);
+      syncSymlink(src, dest);
+      count++;
     }
   }
 
@@ -421,7 +393,7 @@ function syncSymlink(src: string, dest: string): void {
   fs.symlinkSync(src, dest);
 }
 
-// --- 1-8. Cleanup old Claude project data ---
+// --- Cleanup old Claude project data ---
 function cleanupClaude(config: RepoConfig): void {
   if (!config.cleanup_pattern) {
     return;
@@ -430,7 +402,6 @@ function cleanupClaude(config: RepoConfig): void {
   console.log("Cleaning up old Claude data...");
   const homeDir = os.homedir();
 
-  // Clean old cache/debug files
   const cleanDirs = [
     path.join(homeDir, ".claude", "debug"),
     path.join(homeDir, ".claude", "cache"),
@@ -447,7 +418,6 @@ function cleanupClaude(config: RepoConfig): void {
     }
   }
 
-  // Delete Claude project data for non-existent worktrees
   try {
     const worktreeOutput = execSync(
       `git -C '${config.repo_root}' worktree list --porcelain`,
@@ -463,7 +433,6 @@ function cleanupClaude(config: RepoConfig): void {
 
     const pattern = config.cleanup_pattern;
     const projectDirs = fs.readdirSync(projectsBase).filter((d) => {
-      // Simple glob match: *pattern* -> contains pattern without asterisks
       const cleanPattern = pattern.replace(/\*/g, "");
       return d.includes(cleanPattern);
     });

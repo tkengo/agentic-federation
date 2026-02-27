@@ -5,10 +5,12 @@ import os from "node:os";
 export interface MetaJson {
   repo: string;
   branch: string;
-  mode: "solo" | "team";
+  workflow: string;
   worktree: string;
   tmux_session: string;
   created_at: string;
+  /** @deprecated old format compat */
+  mode?: "solo" | "team";
 }
 
 export interface StateJson {

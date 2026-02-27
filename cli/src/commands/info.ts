@@ -66,12 +66,12 @@ export function infoCommand(sessionName?: string): void {
   console.log("");
   console.log(`  Repo:        ${meta.repo}`);
   console.log(`  Branch:      ${meta.branch}`);
-  console.log(`  Mode:        ${meta.mode}`);
+  console.log(`  Workflow:    ${meta.workflow ?? "solo"}`);
   console.log(`  Worktree:    ${meta.worktree}`);
   console.log(`  Created:     ${formatTimestamp(meta.created_at)} (${formatAge(meta.created_at)} ago)`);
   console.log(`  Session dir: ${sessionDir}`);
 
-  // State (team mode)
+  // State
   const statePath = path.join(sessionDir, "state.json");
   if (fs.existsSync(statePath)) {
     try {
@@ -79,10 +79,9 @@ export function infoCommand(sessionName?: string): void {
         fs.readFileSync(statePath, "utf-8")
       ) as StateJson;
 
-      console.log("");
-      console.log("  Status:      " + state.status);
-      if (state.workflow) {
-        console.log("  Workflow:    " + state.workflow);
+      if (state.status) {
+        console.log("");
+        console.log("  Status:      " + state.status);
       }
       const retryParts = Object.entries(state.retry_count)
         .map(([k, v]) => `${k}=${v}`)

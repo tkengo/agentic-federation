@@ -8,9 +8,20 @@ import type { MetaJson, StateJson, SessionData, StatusConfig, WaitingHumanData }
 
 function readMeta(sessionDir: string): MetaJson | null {
   try {
-    return JSON.parse(
+    const meta = JSON.parse(
       fs.readFileSync(path.join(sessionDir, "meta.json"), "utf-8")
     ) as MetaJson;
+    // Backward compat: old format has mode, no workflow
+    if (!meta.workflow && meta.mode) {
+      if (meta.mode === "team") {
+        // Try to get workflow from state.json
+        const state = readState(sessionDir);
+        meta.workflow = state?.workflow ?? "dev-team";
+      } else {
+        meta.workflow = "solo";
+      }
+    }
+    return meta;
   } catch {
     return null;
   }
@@ -92,21 +103,25 @@ function loadSessions(): SessionData[] {
     const state = readState(sessionDir);
 
     // Read state.json mtime for staleness detection
+    // Skip staleness tracking when status is empty (stateless workflows)
     let stateMtimeMs: number | undefined;
-    try {
-      const stateFile = path.join(sessionDir, "state.json");
-      const stat = fs.statSync(stateFile);
-      stateMtimeMs = stat.mtimeMs;
-    } catch {
-      // state.json may not exist
+    const statusValue = state?.status ?? "";
+    if (statusValue) {
+      try {
+        const stateFile = path.join(sessionDir, "state.json");
+        const stat = fs.statSync(stateFile);
+        stateMtimeMs = stat.mtimeMs;
+      } catch {
+        // state.json may not exist
+      }
     }
 
     sessions.push({
       name: entry,
       sessionDir,
       meta,
-      status: state?.status ?? "active",
-      workflow: state?.workflow,
+      status: statusValue || "active",
+      workflow: meta.workflow,
       pendingTasks: state?.pending_tasks ?? [],
       escalation: state?.escalation ?? { required: false, reason: null },
       waitingHuman: readWaitingHuman(sessionDir),

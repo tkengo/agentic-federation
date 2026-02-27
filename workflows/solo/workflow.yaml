@@ -1,0 +1,25 @@
+name: solo
+description: "Terminal + editor only, no agent team"
+
+windows:
+  - name: dev
+    panes:
+      - id: terminal
+        name: Terminal
+        pane: 1
+        command: null
+      - id: editor
+        name: Editor
+        pane: 2
+        command: nvim
+      - id: dev_server
+        name: Dev Server
+        pane: 3
+        command: "{{repo.extra.dev_server}}"
+    layout:
+      splits:
+        - { source: 1, direction: v, percent: 10 }
+        - { source: 1, direction: h, percent: 50 }
+      focus: 1
+
+states: {}

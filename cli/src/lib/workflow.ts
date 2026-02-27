@@ -8,9 +8,17 @@ import { WORKFLOWS_DIR } from "./paths.js";
 export interface WorkflowDefinition {
   name: string;
   description: string;
-  panes: WorkflowPane[];
-  layout: WorkflowLayout;
+  windows: WorkflowWindow[];
   states: Record<string, WorkflowState>;
+}
+
+export interface WorkflowWindow {
+  name: string;
+  panes: WorkflowPane[];
+  layout: {
+    splits: LayoutSplit[];
+    focus: number;
+  };
 }
 
 export interface WorkflowPane {
@@ -18,12 +26,6 @@ export interface WorkflowPane {
   name: string;
   pane: number;
   command: string | null;
-}
-
-export interface WorkflowLayout {
-  window_name: string;
-  splits: LayoutSplit[];
-  focus: number;
 }
 
 export interface LayoutSplit {
@@ -105,8 +107,12 @@ export function listWorkflows(): string[] {
 
 // ---- Utility functions ----
 
-/** Get the entry point state name (the one with entry_point: true). */
+/** Get the entry point state name (the one with entry_point: true).
+ *  Returns "" for stateless workflows (states is empty). */
 export function getEntryPointState(wf: WorkflowDefinition): string {
+  if (Object.keys(wf.states).length === 0) {
+    return "";
+  }
   for (const [name, state] of Object.entries(wf.states)) {
     if (state.entry_point) {
       return name;
@@ -135,10 +141,9 @@ export function validateWorkflow(wf: WorkflowDefinition): string[] {
   // Check required top-level fields
   if (!wf.name) errors.push("Missing required field: name");
   if (!wf.description) errors.push("Missing required field: description");
-  if (!Array.isArray(wf.panes) || wf.panes.length === 0) {
-    errors.push("Missing or empty field: panes");
+  if (!Array.isArray(wf.windows) || wf.windows.length === 0) {
+    errors.push("Missing or empty field: windows");
   }
-  if (!wf.layout) errors.push("Missing required field: layout");
   if (!wf.states || typeof wf.states !== "object") {
     errors.push("Missing or invalid field: states");
   }
@@ -146,61 +151,94 @@ export function validateWorkflow(wf: WorkflowDefinition): string[] {
   // If basic structure is invalid, return early
   if (errors.length > 0) return errors;
 
-  const paneIds = new Set(wf.panes.map((p) => p.id));
+  // Collect pane IDs across all windows for uniqueness
+  const paneIds = new Set<string>();
+  const seenIds = new Set<string>();
+
+  for (const win of wf.windows) {
+    if (!win.name) errors.push("Window missing required field: name");
+    if (!Array.isArray(win.panes) || win.panes.length === 0) {
+      errors.push(`Window "${win.name}": missing or empty panes`);
+    }
+    if (!win.layout) {
+      errors.push(`Window "${win.name}": missing layout`);
+    }
+
+    for (const pane of win.panes) {
+      if (!pane.id) {
+        errors.push("Pane missing required field: id");
+      }
+      if (seenIds.has(pane.id)) {
+        errors.push(`Duplicate pane id: "${pane.id}"`);
+      }
+      seenIds.add(pane.id);
+      paneIds.add(pane.id);
+    }
+  }
+
   const stateNames = new Set(Object.keys(wf.states));
 
-  // Validate pane ids
-  for (const pane of wf.panes) {
-    if (!pane.id) {
-      errors.push("Pane missing required field: id");
-    }
-  }
+  // Skip entry_point check when states is empty (stateless workflow)
+  if (stateNames.size > 0) {
+    let entryPointCount = 0;
+    for (const [stateName, state] of Object.entries(wf.states)) {
+      if (state.entry_point) entryPointCount++;
 
-  // Validate duplicate pane ids
-  const seenIds = new Set<string>();
-  for (const pane of wf.panes) {
-    if (seenIds.has(pane.id)) {
-      errors.push(`Duplicate pane id: "${pane.id}"`);
-    }
-    seenIds.add(pane.id);
-  }
+      // Validate transitions reference existing states
+      if (state.transitions) {
+        for (const target of state.transitions) {
+          if (!stateNames.has(target)) {
+            errors.push(
+              `State "${stateName}": transition target "${target}" not found in states`
+            );
+          }
+        }
+      }
 
-  // Validate states
-  let entryPointCount = 0;
-  for (const [stateName, state] of Object.entries(wf.states)) {
-    if (state.entry_point) entryPointCount++;
-
-    // Validate transitions reference existing states
-    if (state.transitions) {
-      for (const target of state.transitions) {
-        if (!stateNames.has(target)) {
-          errors.push(
-            `State "${stateName}": transition target "${target}" not found in states`
-          );
+      // Validate tasks reference existing panes (global pane ID set)
+      if (state.tasks) {
+        for (const task of state.tasks) {
+          if (!paneIds.has(task.pane)) {
+            errors.push(
+              `State "${stateName}": task pane "${task.pane}" not found in panes`
+            );
+          }
         }
       }
     }
 
-    // Validate tasks reference existing panes
-    if (state.tasks) {
-      for (const task of state.tasks) {
-        if (!paneIds.has(task.pane)) {
-          errors.push(
-            `State "${stateName}": task pane "${task.pane}" not found in panes`
-          );
-        }
-      }
+    if (entryPointCount === 0) {
+      errors.push("No state has entry_point: true");
+    } else if (entryPointCount > 1) {
+      errors.push(
+        `Multiple states have entry_point: true (expected exactly 1, found ${entryPointCount})`
+      );
     }
-  }
-
-  // Exactly one entry point
-  if (entryPointCount === 0) {
-    errors.push("No state has entry_point: true");
-  } else if (entryPointCount > 1) {
-    errors.push(
-      `Multiple states have entry_point: true (expected exactly 1, found ${entryPointCount})`
-    );
   }
 
   return errors;
+}
+
+// ---- Template expansion ----
+
+/** Resolve a dotted path like "repo.extra.dev_server" against a bindings object. */
+function resolveBinding(keyPath: string, bindings: Record<string, unknown>): string {
+  const parts = keyPath.split(".");
+  let current: unknown = bindings;
+  for (const part of parts) {
+    if (current == null || typeof current !== "object") return "";
+    current = (current as Record<string, unknown>)[part];
+  }
+  if (current == null) return "";
+  return String(current);
+}
+
+/** Expand {{path.to.value}} template variables in YAML content. */
+export function expandTemplateVariables(
+  yamlContent: string,
+  bindings: Record<string, unknown>
+): string {
+  return yamlContent.replace(/\{\{([^}]+)\}\}/g, (_match, keyPath: string) => {
+    return resolveBinding(keyPath.trim(), bindings);
+  });
 }
