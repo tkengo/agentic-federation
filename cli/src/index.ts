@@ -19,11 +19,6 @@ import {
 import { notifyCommand } from "./commands/notify.js";
 import { feedbackReadCommand, feedbackWriteCommand } from "./commands/feedback.js";
 import { promptReadCommand, promptListCommand } from "./commands/prompt.js";
-import {
-  stalePauseCommand,
-  staleResumeCommand,
-  staleStatusCommand,
-} from "./commands/stale.js";
 import { notifyHumanCommand } from "./commands/notify-human.js";
 import { listCommand } from "./commands/list.js";
 import { stopCommand } from "./commands/stop.js";
@@ -89,8 +84,9 @@ program
   .command("start <repo> <branch>")
   .description("Start a development session")
   .option("--workflow <name>", "Workflow to use (enables agent team)")
-  .action(async (repo: string, branch: string, options: { workflow?: string }) => {
-    await startCommand(repo, branch, options.workflow);
+  .option("--no-attach", "Skip tmux attach after creation")
+  .action(async (repo: string, branch: string, options: { workflow?: string; attach?: boolean }) => {
+    await startCommand(repo, branch, options.workflow, options.attach === false);
   });
 
 // --- state ---
@@ -190,32 +186,6 @@ prompt
   .description("List available prompts")
   .action(() => {
     promptListCommand();
-  });
-
-// --- stale ---
-const stale = program
-  .command("stale")
-  .description("Control stale state watcher");
-
-stale
-  .command("pause")
-  .description("Pause stale notifications")
-  .action(() => {
-    stalePauseCommand();
-  });
-
-stale
-  .command("resume")
-  .description("Resume stale notifications")
-  .action(() => {
-    staleResumeCommand();
-  });
-
-stale
-  .command("status")
-  .description("Show stale watcher status")
-  .action(() => {
-    staleStatusCommand();
   });
 
 // --- notify-human ---

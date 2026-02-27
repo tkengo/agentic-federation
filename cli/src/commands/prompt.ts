@@ -1,11 +1,53 @@
 import fs from "node:fs";
 import path from "node:path";
-import { PROMPTS_DIR } from "../lib/paths.js";
+import { AGENTS_DIR, WORKFLOWS_DIR } from "../lib/paths.js";
+import { getCurrentTmuxSession, resolveSession } from "../lib/session.js";
+import type { StateJson } from "../lib/types.js";
+
+/**
+ * Resolve the workflow name from the current session, if any.
+ * Returns null if not in tmux, no active session, or no workflow set.
+ */
+function getSessionWorkflow(): string | null {
+  const tmuxSession = getCurrentTmuxSession();
+  if (!tmuxSession) return null;
+
+  const sessionDir = resolveSession(tmuxSession);
+  if (!sessionDir) return null;
+
+  const statePath = path.join(sessionDir, "state.json");
+  if (!fs.existsSync(statePath)) return null;
+
+  try {
+    const state = JSON.parse(fs.readFileSync(statePath, "utf-8")) as StateJson;
+    return state.workflow ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Resolve the path to a prompt file.
+ * 1. If in a workflow session, try workflows/<workflow>/agents/<name>.md
+ * 2. Fall back to prompts/<name>.md
+ */
+function resolvePromptPath(name: string): string | null {
+  const workflow = getSessionWorkflow();
+  if (workflow) {
+    const wfPath = path.join(WORKFLOWS_DIR, workflow, "agents", `${name}.md`);
+    if (fs.existsSync(wfPath)) return wfPath;
+  }
+
+  const globalPath = path.join(AGENTS_DIR, `${name}.md`);
+  if (fs.existsSync(globalPath)) return globalPath;
+
+  return null;
+}
 
 export function promptReadCommand(name: string): void {
-  const filePath = path.join(PROMPTS_DIR, `${name}.md`);
+  const filePath = resolvePromptPath(name);
 
-  if (!fs.existsSync(filePath)) {
+  if (!filePath) {
     console.error(
       `Error: Prompt '${name}' not found. Run 'fed prompt list' to see available prompts.`
     );
@@ -16,23 +58,37 @@ export function promptReadCommand(name: string): void {
 }
 
 export function promptListCommand(): void {
-  if (!fs.existsSync(PROMPTS_DIR)) {
-    console.log("No prompts directory found.");
-    return;
+  const prompts = new Set<string>();
+
+  // Workflow-specific agents (if in a workflow session)
+  const workflow = getSessionWorkflow();
+  if (workflow) {
+    const agentsDir = path.join(WORKFLOWS_DIR, workflow, "agents");
+    if (fs.existsSync(agentsDir)) {
+      for (const f of fs.readdirSync(agentsDir)) {
+        if (f.endsWith(".md")) {
+          prompts.add(f.replace(/\.md$/, ""));
+        }
+      }
+    }
   }
 
-  const prompts = fs
-    .readdirSync(PROMPTS_DIR)
-    .filter((f) => f.endsWith(".md"))
-    .map((f) => f.replace(/\.md$/, ""));
+  // Global prompts
+  if (fs.existsSync(AGENTS_DIR)) {
+    for (const f of fs.readdirSync(AGENTS_DIR)) {
+      if (f.endsWith(".md")) {
+        prompts.add(f.replace(/\.md$/, ""));
+      }
+    }
+  }
 
-  if (prompts.length === 0) {
+  if (prompts.size === 0) {
     console.log("No prompts found.");
     return;
   }
 
   console.log("Prompts:");
-  for (const name of prompts) {
+  for (const name of [...prompts].sort()) {
     console.log(`  ${name}`);
   }
 }

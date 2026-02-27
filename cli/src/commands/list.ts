@@ -3,6 +3,7 @@ import path from "node:path";
 import { ACTIVE_DIR } from "../lib/paths.js";
 import { resolveSession, readMeta } from "../lib/session.js";
 import type { StateJson } from "../lib/types.js";
+import { findCleanTargets } from "./clean.js";
 
 // Format elapsed time as human-readable string
 function formatAge(createdAt: string): string {
@@ -22,15 +23,25 @@ function formatAge(createdAt: string): string {
   return `${days}d`;
 }
 
+function printCleanableSummary(): void {
+  const cleanTargets = findCleanTargets();
+  if (cleanTargets.length > 0) {
+    console.log();
+    console.log(`  ${cleanTargets.length} worktree(s) to clean (fed clean --dry-run to preview)`);
+  }
+}
+
 export function listCommand(): void {
   if (!fs.existsSync(ACTIVE_DIR)) {
     console.log("No active sessions.");
+    printCleanableSummary();
     return;
   }
 
   const entries = fs.readdirSync(ACTIVE_DIR);
   if (entries.length === 0) {
     console.log("No active sessions.");
+    printCleanableSummary();
     return;
   }
 
@@ -75,6 +86,7 @@ export function listCommand(): void {
 
   if (rows.length === 0) {
     console.log("No active sessions.");
+    printCleanableSummary();
     return;
   }
 
@@ -107,4 +119,6 @@ export function listCommand(): void {
       `${row.age.padStart(widths.age)}`
     );
   }
+
+  printCleanableSummary();
 }

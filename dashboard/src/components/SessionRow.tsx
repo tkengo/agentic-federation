@@ -3,48 +3,62 @@ import { Box, Text } from "ink";
 import { StatusBadge } from "./StatusBadge.js";
 import { formatAge } from "../utils/format.js";
 import type { SessionData } from "../utils/types.js";
+import { STALE_THRESHOLD_SEC } from "../utils/types.js";
 
 interface SessionRowProps {
   session: SessionData;
   selected: boolean;
+  dimmed?: boolean;
+  blinkOn: boolean;
   colWidths: {
     repo: number;
     branch: number;
-    mode: number;
+    workflow: number;
     status: number;
   };
 }
 
-export function SessionRow({ session, selected, colWidths }: SessionRowProps) {
-  const cursor = selected ? ">" : " ";
+function isStale(session: SessionData): boolean {
+  if (session.stateMtimeMs == null) return false;
+  return (Date.now() - session.stateMtimeMs) / 1000 >= STALE_THRESHOLD_SEC;
+}
+
+export function SessionRow({ session, selected, dimmed, blinkOn, colWidths }: SessionRowProps) {
+  const cursor = !dimmed && selected ? ">" : " ";
+  const highlight = !dimmed && selected;
   const age = formatAge(session.meta.created_at);
+  const stale = isStale(session);
 
   return (
     <Box>
-      <Text color={selected ? "cyan" : undefined} bold={selected}>
+      <Text color={highlight ? "cyan" : undefined} bold={highlight} dimColor={dimmed}>
         {` ${cursor} `}
       </Text>
-      <Text color={selected ? "cyan" : undefined} bold={selected}>
+      <Text color={highlight ? "cyan" : undefined} bold={highlight} dimColor={dimmed}>
         {session.meta.repo.padEnd(colWidths.repo)}
       </Text>
-      <Text>{`  `}</Text>
-      <Text color={selected ? "cyan" : undefined} bold={selected}>
+      <Text dimColor={dimmed}>{`  `}</Text>
+      <Text color={highlight ? "cyan" : undefined} bold={highlight} dimColor={dimmed}>
         {session.meta.branch.padEnd(colWidths.branch)}
       </Text>
-      <Text>{`  `}</Text>
-      <Text dimColor>{session.meta.mode.padEnd(colWidths.mode)}</Text>
-      <Text>{`  `}</Text>
-      <Box width={colWidths.status + 2}>
-        <StatusBadge status={session.status} />
-      </Box>
-      <Text>{`  `}</Text>
-      <Text dimColor>{age.padStart(4)}</Text>
-      {session.workflow && (
-        <>
-          <Text>{`  `}</Text>
-          <Text dimColor>[{session.workflow}]</Text>
-        </>
+      <Text dimColor={dimmed}>{`  `}</Text>
+      <Text color={highlight ? "cyan" : undefined} bold={highlight} dimColor={dimmed}>{(session.workflow ?? "solo").padEnd(colWidths.workflow)}</Text>
+      <Text dimColor={dimmed}>{`  `}</Text>
+      {dimmed ? (
+        <Text dimColor>{`- ${session.status}`.padEnd(colWidths.status + 2)}</Text>
+      ) : (
+        <Box width={colWidths.status + 2}>
+          <StatusBadge
+            status={session.status}
+            stale={stale}
+            blinkOn={blinkOn}
+            statusConfigMap={session.statusConfigMap}
+            stateMtimeMs={session.stateMtimeMs}
+          />
+        </Box>
       )}
+      <Text dimColor={dimmed}>{`  `}</Text>
+      <Text dimColor>{age.padStart(4)}</Text>
     </Box>
   );
 }

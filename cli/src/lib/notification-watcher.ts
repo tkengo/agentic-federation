@@ -67,10 +67,14 @@ function processNotification(filePath: string): void {
     if (target && message) {
       log(`Sending to ${target}: ${message.slice(0, 50)}...`);
       try {
-        execSync(
-          `tmux send-keys -t '${target}' '${message.replace(/'/g, "'\\''")}' Enter`,
-          { stdio: "ignore" }
-        );
+        const q = (s: string) => `'${s.replace(/'/g, "'\\''")}'`;
+        execSync(`tmux send-keys -t ${q(target)} ${q(message)}`, {
+          stdio: "ignore",
+        });
+        execSync("sleep 1");
+        execSync(`tmux send-keys -t ${q(target)} Enter`, {
+          stdio: "ignore",
+        });
         log("Sent successfully");
       } catch {
         log(`Failed to send to ${target}`);

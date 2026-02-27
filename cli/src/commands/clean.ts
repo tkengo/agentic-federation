@@ -2,54 +2,95 @@ import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import { execSync } from "node:child_process";
-import { ARCHIVE_DIR } from "../lib/paths.js";
-import { readMeta } from "../lib/session.js";
+import { ACTIVE_DIR } from "../lib/paths.js";
+import { resolveSession, readMeta } from "../lib/session.js";
 import type { RepoConfig } from "../lib/types.js";
-import { loadRepoConfig } from "../lib/repo.js";
+import { loadRepoConfig, listRepoConfigs } from "../lib/repo.js";
 
 interface CleanTarget {
-  sessionDir: string;
   worktreePath: string;
   repoRoot: string;
   branch: string;
   label: string;
 }
 
-function findCleanTargets(): CleanTarget[] {
-  const targets: CleanTarget[] = [];
+// Collect worktree paths currently used by active sessions
+function getActiveWorktreePaths(): Set<string> {
+  const active = new Set<string>();
+  if (!fs.existsSync(ACTIVE_DIR)) return active;
 
-  if (!fs.existsSync(ARCHIVE_DIR)) return targets;
+  for (const entry of fs.readdirSync(ACTIVE_DIR)) {
+    const sessionDir = resolveSession(entry);
+    if (!sessionDir) continue;
+    const meta = readMeta(sessionDir);
+    if (meta?.worktree) active.add(meta.worktree);
+  }
+  return active;
+}
 
-  const repos = fs.readdirSync(ARCHIVE_DIR);
-  for (const repo of repos) {
-    const repoDir = path.join(ARCHIVE_DIR, repo);
-    if (!fs.statSync(repoDir).isDirectory()) continue;
+// Parse `git worktree list --porcelain` output into worktree entries
+function parseWorktreeList(
+  repoRoot: string
+): Array<{ path: string; branch: string }> {
+  const entries: Array<{ path: string; branch: string }> = [];
+  let output: string;
+  try {
+    output = execSync(`git -C '${repoRoot}' worktree list --porcelain`, {
+      encoding: "utf-8",
+    });
+  } catch {
+    return entries;
+  }
 
-    const sessions = fs.readdirSync(repoDir);
-    for (const sessionDirName of sessions) {
-      const sessionDir = path.join(repoDir, sessionDirName);
-      if (!fs.statSync(sessionDir).isDirectory()) continue;
-
-      const meta = readMeta(sessionDir);
-      if (!meta) continue;
-      if (!meta.worktree || !fs.existsSync(meta.worktree)) continue;
-
-      // Load repo config to get repo_root for git worktree remove
-      let config: RepoConfig | null = null;
-      try {
-        config = loadRepoConfig(meta.repo);
-      } catch {
-        // Repo config might not exist anymore
+  // Each worktree block is separated by a blank line
+  const blocks = output.trim().split("\n\n");
+  for (const block of blocks) {
+    const lines = block.split("\n");
+    let wtPath = "";
+    let branch = "";
+    let bare = false;
+    for (const line of lines) {
+      if (line.startsWith("worktree ")) {
+        wtPath = line.slice("worktree ".length);
+      } else if (line.startsWith("branch ")) {
+        // e.g. "branch refs/heads/feat-x" -> "feat-x"
+        branch = line.slice("branch ".length).replace(/^refs\/heads\//, "");
+      } else if (line === "bare") {
+        bare = true;
       }
+    }
+    if (wtPath && !bare) {
+      entries.push({ path: wtPath, branch });
+    }
+  }
+  return entries;
+}
 
-      if (!config) continue;
+export function findCleanTargets(): CleanTarget[] {
+  const targets: CleanTarget[] = [];
+  const activeWorktrees = getActiveWorktreePaths();
+  const repoNames = listRepoConfigs();
+
+  for (const repoName of repoNames) {
+    let config: RepoConfig;
+    try {
+      config = loadRepoConfig(repoName);
+    } catch {
+      continue;
+    }
+
+    const worktrees = parseWorktreeList(config.repo_root);
+    for (const wt of worktrees) {
+      // Skip the main worktree (repo_root itself)
+      if (wt.path === config.repo_root) continue;
+      // Skip worktrees that belong to active sessions
+      if (activeWorktrees.has(wt.path)) continue;
 
       targets.push({
-        sessionDir,
-        worktreePath: meta.worktree,
+        worktreePath: wt.path,
         repoRoot: config.repo_root,
-        branch: meta.branch,
-        label: `${meta.repo}/${meta.branch}`,
+        branch: wt.branch,
+        label: `${repoName}/${wt.branch}`,
       });
     }
   }
@@ -67,6 +108,10 @@ export function cleanCommand(dryRun: boolean, force: boolean): void {
 
   console.log(`Found ${targets.length} worktree(s) to clean:`);
 
+  let cleaned = 0;
+  let skipped = 0;
+  let failed = 0;
+
   for (const target of targets) {
     console.log(`  ${target.label}: ${target.worktreePath}`);
 
@@ -80,6 +125,7 @@ export function cleanCommand(dryRun: boolean, force: boolean): void {
 
       if (status && !force) {
         console.log(`    Skipped: uncommitted changes (use --force to override)`);
+        skipped++;
         continue;
       }
     } catch {
@@ -87,6 +133,7 @@ export function cleanCommand(dryRun: boolean, force: boolean): void {
     }
 
     // Remove worktree via git
+    let worktreeRemoved = false;
     try {
       const forceFlag = force ? " --force" : "";
       execSync(
@@ -94,6 +141,7 @@ export function cleanCommand(dryRun: boolean, force: boolean): void {
         { stdio: "inherit" }
       );
       console.log(`    Removed worktree`);
+      worktreeRemoved = true;
     } catch {
       console.error(`    Warning: git worktree remove failed for ${target.worktreePath}`);
       // Fallback: try to remove the directory directly with force
@@ -105,10 +153,16 @@ export function cleanCommand(dryRun: boolean, force: boolean): void {
             stdio: "ignore",
           });
           console.log(`    Force-removed directory and pruned`);
+          worktreeRemoved = true;
         } catch (err) {
           console.error(`    Error: ${err}`);
         }
       }
+    }
+
+    if (!worktreeRemoved) {
+      failed++;
+      continue;
     }
 
     // Delete the branch associated with the worktree
@@ -125,12 +179,20 @@ export function cleanCommand(dryRun: boolean, force: boolean): void {
 
     // Cleanup Claude project data for this worktree
     cleanupClaudeProject(target.worktreePath);
+    cleaned++;
   }
 
   if (dryRun) {
     console.log("\n(dry run - no changes made)");
   } else {
-    console.log("Done.");
+    const parts: string[] = [];
+    if (cleaned > 0) parts.push(`${cleaned} cleaned`);
+    if (skipped > 0) parts.push(`${skipped} skipped`);
+    if (failed > 0) parts.push(`${failed} failed`);
+    console.log(`Done. ${parts.join(", ")}.`);
+    if (failed > 0) {
+      process.exit(1);
+    }
   }
 }
 

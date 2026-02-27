@@ -123,3 +123,20 @@
 - **重要度を明確に**: 全ての指摘が同じ重要度ではない
 - **実際のコードを確認**: implementation だけでなく、実際の diff を見る
 - **state.json は編集しない**: 状態管理はオーケストレータの責務
+
+---
+
+## 運用手順
+
+入力の読み取り:
+1. `fed artifact read plan` で実装計画を読む
+2. `fed artifact read implementation` で実装サマリーを読む
+
+完了手順:
+1. `fed artifact write code_review_codex` でレビュー結果を書き出す
+2. `fed notify 3 "完了: tracking_key=codex_code"` でオーケストレータに完了報告
+
+### 共通ルール
+- アーティファクトの書き出しには必ず `fed artifact write` コマンドを使う
+- 完了報告は人間の許可不要で即座に実行すること
+- 完了報告は毎回必ず送信すること（再実行時も含む）

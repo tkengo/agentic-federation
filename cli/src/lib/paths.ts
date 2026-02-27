@@ -8,13 +8,25 @@ export const ACTIVE_DIR = path.join(FED_HOME, "active");
 export const ARCHIVE_DIR = path.join(FED_HOME, "archive");
 export const KNOWLEDGE_DIR = path.join(FED_HOME, "knowledge");
 
-// Prompts directory in the agentic-federation repo
-export const PROMPTS_DIR = path.resolve(
+// Agents directory in the agentic-federation repo
+export const AGENTS_DIR = path.resolve(
   import.meta.dirname,
   "..",
   "..",
   "..",
-  "prompts"
+  "agents"
+);
+
+// Claude Code agents directory (~/.claude/agents/)
+export const CLAUDE_AGENTS_DIR = path.join(os.homedir(), ".claude", "agents");
+
+// Workflows directory in the agentic-federation repo
+export const WORKFLOWS_DIR = path.resolve(
+  import.meta.dirname,
+  "..",
+  "..",
+  "..",
+  "workflows"
 );
 
 export const ALL_DIRS = [

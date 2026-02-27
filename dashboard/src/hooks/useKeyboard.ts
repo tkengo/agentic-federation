@@ -8,9 +8,10 @@ export interface KeyboardActions {
   onApprove?: () => void;
   onFeedback?: () => void;
   onLongFeedback?: () => void;
-  onKill?: () => void;
+  onStop?: () => void;
   onQuit?: () => void;
   onBack?: () => void;
+  onCreate?: () => void;
 }
 
 export function useKeyboard(actions: KeyboardActions, active = true) {
@@ -18,9 +19,9 @@ export function useKeyboard(actions: KeyboardActions, active = true) {
     (input, key) => {
       if (key.return) {
         actions.onEnter?.();
-      } else if (key.upArrow) {
+      } else if (key.upArrow || input === "k") {
         actions.onUp?.();
-      } else if (key.downArrow) {
+      } else if (key.downArrow || input === "j") {
         actions.onDown?.();
       } else if (input === "p") {
         actions.onPreview?.();
@@ -30,8 +31,10 @@ export function useKeyboard(actions: KeyboardActions, active = true) {
         actions.onFeedback?.();
       } else if (input === "F") {
         actions.onLongFeedback?.();
-      } else if (input === "k") {
-        actions.onKill?.();
+      } else if (input === "s") {
+        actions.onStop?.();
+      } else if (input === "n") {
+        actions.onCreate?.();
       } else if (input === "q") {
         actions.onQuit?.();
       } else if (key.escape) {

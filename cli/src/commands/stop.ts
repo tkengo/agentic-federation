@@ -97,7 +97,6 @@ export function stopCommand(sessionName?: string): void {
 function stopWatcherProcesses(sessionDir: string): void {
   const pidFiles = [
     "notification-watcher.pid",
-    "stale-watcher.pid",
   ];
 
   for (const pidFile of pidFiles) {

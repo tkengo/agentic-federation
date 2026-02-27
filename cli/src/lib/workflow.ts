@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { parse as parseYaml } from "yaml";
+import { WORKFLOWS_DIR } from "./paths.js";
 
 // ---- Type definitions ----
 
@@ -41,6 +42,8 @@ export interface TaskDef {
 
 export interface WorkflowState {
   description: string;
+  icon?: string;
+  color?: string;
   entry_point?: boolean;
   terminal?: boolean;
   on_enter?: string;
@@ -50,16 +53,6 @@ export interface WorkflowState {
   cleanup_artifacts?: string[];
   transitions: string[];
 }
-
-// ---- Paths ----
-
-const WORKFLOWS_DIR = path.resolve(
-  import.meta.dirname,
-  "..",
-  "..",
-  "..",
-  "workflows"
-);
 
 // ---- Loader functions ----
 
@@ -81,7 +74,7 @@ export function loadWorkflow(filePath: string): WorkflowDefinition {
 
 /** Load a workflow by name from the workflows/ directory. */
 export function loadWorkflowByName(name: string): WorkflowDefinition {
-  const filePath = path.join(WORKFLOWS_DIR, `${name}.yaml`);
+  const filePath = path.join(WORKFLOWS_DIR, name, "workflow.yaml");
   return loadWorkflow(filePath);
 }
 
@@ -103,8 +96,11 @@ export function listWorkflows(): string[] {
   }
   return fs
     .readdirSync(WORKFLOWS_DIR)
-    .filter((f) => f.endsWith(".yaml"))
-    .map((f) => f.replace(/\.yaml$/, ""));
+    .filter((d) => {
+      const dirPath = path.join(WORKFLOWS_DIR, d);
+      return fs.statSync(dirPath).isDirectory()
+        && fs.existsSync(path.join(dirPath, "workflow.yaml"));
+    });
 }
 
 // ---- Utility functions ----

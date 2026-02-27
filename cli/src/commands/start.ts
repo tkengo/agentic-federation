@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import { execSync, spawn } from "node:child_process";
-import { SESSIONS_DIR, ACTIVE_DIR } from "../lib/paths.js";
+import { SESSIONS_DIR, ACTIVE_DIR, AGENTS_DIR, CLAUDE_AGENTS_DIR, WORKFLOWS_DIR } from "../lib/paths.js";
 import { loadRepoConfig } from "../lib/repo.js";
 import { createSessionDir, linkActiveSession, resolveSession } from "../lib/session.js";
 import * as tmux from "../lib/tmux.js";
@@ -17,7 +17,8 @@ import {
 export async function startCommand(
   repoName: string,
   branch: string,
-  workflowName?: string
+  workflowName?: string,
+  noAttach?: boolean
 ): Promise<void> {
   // ============================================================
   // Preflight checks (no side effects - fail fast before any mutation)
@@ -143,6 +144,9 @@ export async function startCommand(
   // Sync commands (skills)
   syncCommands();
 
+  // Sync agent prompts to ~/.claude/agents/
+  syncAgents(workflow?.name);
+
   // Create tmux session with dev window
   createDevWindow(tmuxSession, worktreePath, config);
 
@@ -161,8 +165,12 @@ export async function startCommand(
     console.log("  2. agent-team - Agent Team");
   }
   console.log("");
-  console.log("Attaching to tmux session...");
-  execSync(`tmux attach -t '${tmuxSession}'`, { stdio: "inherit" });
+  if (noAttach) {
+    console.log("Session created (--no-attach). Skipping tmux attach.");
+  } else {
+    console.log("Attaching to tmux session...");
+    execSync(`tmux attach -t '${tmuxSession}'`, { stdio: "inherit" });
+  }
 }
 
 // --- 1-4. Worktree setup ---
@@ -259,8 +267,9 @@ function createAgentTeamWindow(
   fs.mkdirSync(logsDir, { recursive: true });
 
   // Copy workflow.yaml to session for runtime reference
-  const fedRepo = path.resolve(import.meta.dirname, "..", "..");
-  const srcWorkflow = path.join(fedRepo, "workflows", `${workflow.name}.yaml`);
+  // import.meta.dirname = cli/dist/commands/, go up 3 levels to repo root
+  const fedRepo = path.resolve(import.meta.dirname, "..", "..", "..");
+  const srcWorkflow = path.join(fedRepo, "workflows", workflow.name, "workflow.yaml");
   if (fs.existsSync(srcWorkflow)) {
     fs.copyFileSync(srcWorkflow, path.join(sessionPath, "workflow.yaml"));
   }
@@ -286,19 +295,6 @@ function createAgentTeamWindow(
 
   // Start TypeScript notification watcher
   startNotificationWatcher(sessionPath, session);
-
-  // Start TypeScript stale watcher
-  startStaleWatcherTS(sessionPath, session);
-
-  // Auto-start orchestrator after a delay for agents to initialize
-  const orchestratorPane = workflow.panes.find((p) => p.id === "orchestrator");
-  if (orchestratorPane) {
-    const w = `${session}:${workflow.layout.window_name}`;
-    setTimeout(() => {
-      tmux.sendKeys(`${w}.${orchestratorPane.pane}`, "/start_orchestrator");
-    }, 5000);
-    console.log(`Orchestrator will auto-start in pane ${orchestratorPane.pane} after 5s delay.`);
-  }
 
   console.log("Agent Team ready.");
 }
@@ -332,38 +328,6 @@ function startNotificationWatcher(
   console.log(`Started notification watcher (PID: ${watcher.pid})`);
 }
 
-// --- Start TypeScript stale watcher as child process ---
-function startStaleWatcherTS(
-  sessionPath: string,
-  session: string
-): void {
-  const watcherScript = path.resolve(
-    import.meta.dirname,
-    "..",
-    "lib",
-    "stale-watcher.js"
-  );
-  if (!fs.existsSync(watcherScript)) {
-    console.error("Warning: stale-watcher.js not found, skipping.");
-    return;
-  }
-
-  // Pause stale watcher initially
-  fs.writeFileSync(path.join(sessionPath, ".pause_stale_watcher"), "");
-
-  const logFile = path.join(sessionPath, "logs", "stale-watcher.log");
-  const watcher = spawn("node", [watcherScript, sessionPath, session], {
-    stdio: [
-      "ignore",
-      fs.openSync(logFile, "a"),
-      fs.openSync(logFile, "a"),
-    ],
-    detached: true,
-  });
-  watcher.unref();
-  console.log(`Started stale watcher (PID: ${watcher.pid})`);
-}
-
 // --- 1-2. Team session initialization ---
 function initTeamSession(
   sessionPath: string,
@@ -390,7 +354,8 @@ function initTeamSession(
 
 // --- 1-6. Sync commands/skills ---
 function syncCommands(): void {
-  const fedRepo = path.resolve(import.meta.dirname, "..", "..");
+  // import.meta.dirname = cli/dist/commands/, go up 3 levels to repo root
+  const fedRepo = path.resolve(import.meta.dirname, "..", "..", "..");
   const commandsDir = path.join(fedRepo, "commands");
   const claudeCommandsDir = path.join(os.homedir(), ".claude", "commands");
 
@@ -402,20 +367,53 @@ function syncCommands(): void {
 
   const commands = fs.readdirSync(commandsDir).filter((f) => f.endsWith(".md"));
   for (const cmd of commands) {
-    const src = path.join(commandsDir, cmd);
-    const dest = path.join(claudeCommandsDir, cmd);
-
-    // Remove existing symlink/file before creating new one
-    try {
-      fs.lstatSync(dest);
-      fs.unlinkSync(dest);
-    } catch {
-      // Does not exist
-    }
-
-    fs.symlinkSync(src, dest);
+    syncSymlink(path.join(commandsDir, cmd), path.join(claudeCommandsDir, cmd));
   }
   console.log(`Synced ${commands.length} commands to ~/.claude/commands/`);
+}
+
+// --- 1-6b. Sync agent prompts to ~/.claude/agents/ ---
+function syncAgents(workflowName?: string): void {
+  fs.mkdirSync(CLAUDE_AGENTS_DIR, { recursive: true });
+
+  let count = 0;
+
+  // Global agents: agents/*.md → ~/.claude/agents/*.md
+  if (fs.existsSync(AGENTS_DIR)) {
+    const files = fs.readdirSync(AGENTS_DIR).filter((f) => f.endsWith(".md"));
+    for (const file of files) {
+      const src = path.join(AGENTS_DIR, file);
+      const dest = path.join(CLAUDE_AGENTS_DIR, file);
+      syncSymlink(src, dest);
+      count++;
+    }
+  }
+
+  // Workflow-specific agents: workflows/<name>/agents/*.md → ~/.claude/agents/<name>-<agent>.md
+  if (workflowName) {
+    const wfAgentsDir = path.join(WORKFLOWS_DIR, workflowName, "agents");
+    if (fs.existsSync(wfAgentsDir)) {
+      const files = fs.readdirSync(wfAgentsDir).filter((f) => f.endsWith(".md"));
+      for (const file of files) {
+        const src = path.join(wfAgentsDir, file);
+        const dest = path.join(CLAUDE_AGENTS_DIR, `${workflowName}-${file}`);
+        syncSymlink(src, dest);
+        count++;
+      }
+    }
+  }
+
+  console.log(`Synced ${count} agents to ~/.claude/agents/`);
+}
+
+function syncSymlink(src: string, dest: string): void {
+  try {
+    fs.lstatSync(dest);
+    fs.unlinkSync(dest);
+  } catch {
+    // Does not exist
+  }
+  fs.symlinkSync(src, dest);
 }
 
 // --- 1-8. Cleanup old Claude project data ---

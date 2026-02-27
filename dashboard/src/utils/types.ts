@@ -31,6 +31,7 @@ export const FED_HOME = path.join(os.homedir(), ".fed");
 export const SESSIONS_DIR = path.join(FED_HOME, "sessions");
 export const ACTIVE_DIR = path.join(FED_HOME, "active");
 export const ARCHIVE_DIR = path.join(FED_HOME, "archive");
+export const REPOS_DIR = path.join(FED_HOME, "repos");
 
 // Status -> preview artifact mapping
 export const STATUS_PREVIEW_MAP: Record<string, string[]> = {
@@ -41,6 +42,15 @@ export const STATUS_PREVIEW_MAP: Record<string, string[]> = {
   waiting_human: ["human_feedback"],
 };
 
+// Stale threshold in seconds (must match stale-watcher.ts)
+export const STALE_THRESHOLD_SEC = 600;
+
+// Status display config (icon + color) per state
+export interface StatusConfig {
+  icon: string;
+  color: string;
+}
+
 // Session data used by the dashboard
 export interface SessionData {
   name: string;
@@ -50,4 +60,6 @@ export interface SessionData {
   workflow?: string;
   pendingTasks: string[];
   escalation: { required: boolean; reason: string | null };
+  stateMtimeMs?: number;
+  statusConfigMap?: Record<string, StatusConfig>;
 }

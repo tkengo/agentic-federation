@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { WORKFLOWS_DIR } from "../lib/paths.js";
 import {
   listWorkflows,
   loadWorkflowByName,
@@ -20,14 +21,7 @@ export function workflowListCommand(): void {
 
 /** Show the YAML content of a workflow. */
 export function workflowShowCommand(name: string): void {
-  const WORKFLOWS_DIR = path.resolve(
-    import.meta.dirname,
-    "..",
-    "..",
-    "..",
-    "workflows"
-  );
-  const filePath = path.join(WORKFLOWS_DIR, `${name}.yaml`);
+  const filePath = path.join(WORKFLOWS_DIR, name, "workflow.yaml");
   if (!fs.existsSync(filePath)) {
     console.error(`Workflow not found: ${name}`);
     process.exit(1);

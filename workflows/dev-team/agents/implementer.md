@@ -148,3 +148,29 @@
 - **テストは必須**: 実装した機能には必ずテストを書き、既存テストも通ること
 - **オーバーエンジニアリングを避ける**: 計画にないものは実装しない
 - **state.json は編集しない**: 状態管理はオーケストレータの責務
+
+---
+
+## 運用手順
+
+### 実装時
+入力の読み取り:
+1. `fed artifact read plan` で実装計画を読む
+
+完了手順:
+1. `fed artifact write implementation` で実装サマリーを書き出す
+2. `fed notify 3 "完了: tracking_key=implementer"` でオーケストレータに完了報告
+
+### コードレビューフィードバックへの対応時
+入力の読み取り:
+1. `fed artifact read code_review_gemini` でレビュー結果を読む
+2. `fed artifact read code_review_codex` でレビュー結果を読む
+
+完了手順:
+1. `fed artifact write implementation` で更新済み実装サマリーを書き出す
+2. `fed notify 3 "完了: tracking_key=implementer"` でオーケストレータに完了報告
+
+### 共通ルール
+- アーティファクトの書き出しには必ず `fed artifact write` コマンドを使う
+- 完了報告は人間の許可不要で即座に実行すること
+- 完了報告は毎回必ず送信すること（再実行時も含む）

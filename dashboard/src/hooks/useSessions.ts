@@ -1,8 +1,10 @@
 import { useState, useCallback } from "react";
 import fs from "node:fs";
 import path from "node:path";
+import { execSync } from "node:child_process";
+import { parse as parseYaml } from "yaml";
 import { ACTIVE_DIR } from "../utils/types.js";
-import type { MetaJson, StateJson, SessionData } from "../utils/types.js";
+import type { MetaJson, StateJson, SessionData, StatusConfig } from "../utils/types.js";
 
 function readMeta(sessionDir: string): MetaJson | null {
   try {
@@ -35,6 +37,25 @@ function resolveSession(name: string): string | null {
   return null;
 }
 
+function readStatusConfig(sessionDir: string): Record<string, StatusConfig> | undefined {
+  try {
+    const wfPath = path.join(sessionDir, "workflow.yaml");
+    if (!fs.existsSync(wfPath)) return undefined;
+    const raw = fs.readFileSync(wfPath, "utf-8");
+    const wf = parseYaml(raw) as { states?: Record<string, { icon?: string; color?: string }> };
+    if (!wf.states) return undefined;
+    const map: Record<string, StatusConfig> = {};
+    for (const [name, state] of Object.entries(wf.states)) {
+      if (state.icon && state.color) {
+        map[name] = { icon: state.icon, color: state.color };
+      }
+    }
+    return Object.keys(map).length > 0 ? map : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function loadSessions(): SessionData[] {
   if (!fs.existsSync(ACTIVE_DIR)) return [];
 
@@ -50,6 +71,16 @@ function loadSessions(): SessionData[] {
 
     const state = readState(sessionDir);
 
+    // Read state.json mtime for staleness detection
+    let stateMtimeMs: number | undefined;
+    try {
+      const stateFile = path.join(sessionDir, "state.json");
+      const stat = fs.statSync(stateFile);
+      stateMtimeMs = stat.mtimeMs;
+    } catch {
+      // state.json may not exist
+    }
+
     sessions.push({
       name: entry,
       sessionDir,
@@ -58,18 +89,32 @@ function loadSessions(): SessionData[] {
       workflow: state?.workflow,
       pendingTasks: state?.pending_tasks ?? [],
       escalation: state?.escalation ?? { required: false, reason: null },
+      stateMtimeMs,
+      statusConfigMap: readStatusConfig(sessionDir),
     });
   }
 
   return sessions;
 }
 
+function countCleanableWorktrees(): number {
+  try {
+    const output = execSync("fed clean --dry-run", { encoding: "utf-8" });
+    const match = output.match(/^Found (\d+) worktree/m);
+    return match ? parseInt(match[1], 10) : 0;
+  } catch {
+    return 0;
+  }
+}
+
 export function useSessions() {
   const [sessions, setSessions] = useState<SessionData[]>(() => loadSessions());
+  const [cleanableCount, setCleanableCount] = useState<number>(() => countCleanableWorktrees());
 
   const refresh = useCallback(() => {
     setSessions(loadSessions());
+    setCleanableCount(countCleanableWorktrees());
   }, []);
 
-  return { sessions, refresh };
+  return { sessions, refresh, cleanableCount };
 }

@@ -1,5 +1,4 @@
 import { Box, Text } from "ink";
-import { formatTime } from "../utils/format.js";
 
 const LOGO = [
   " ⠀⠀⠀⠀⡇⠀⠀⡶⠀⠀⠐⢿⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⡟⡀⢀⡞⠁⠀⠀⠀⠀⢸⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀  ",
@@ -25,12 +24,10 @@ const LOGO = [
 
 interface HeaderProps {
   sessionCount: number;
-  title?: string;
+  cleanableCount: number;
 }
 
-export function Header({ sessionCount, title }: HeaderProps) {
-  const displayTitle = title ?? "fed dashboard";
-
+export function Header({ sessionCount, cleanableCount }: HeaderProps) {
   return (
     <Box flexDirection="column">
       <Box flexDirection="column" paddingX={1}>
@@ -42,13 +39,11 @@ export function Header({ sessionCount, title }: HeaderProps) {
         borderStyle="single"
         borderBottom={false}
         paddingX={1}
-        justifyContent="space-between"
+        justifyContent="flex-end"
       >
-        <Text bold>{displayTitle}</Text>
-        <Text>
-          <Text dimColor>{sessionCount} sessions</Text>
-          {"  "}
-          <Text>{formatTime()}</Text>
+        <Text dimColor>
+          {sessionCount} sessions
+          {cleanableCount > 0 ? ` · ${cleanableCount} cleanable worktrees` : ""}
         </Text>
       </Box>
     </Box>
