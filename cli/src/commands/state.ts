@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 import { requireSessionDir } from "../lib/session.js";
 import type { StateJson } from "../lib/types.js";
 import { loadSessionWorkflow } from "../lib/workflow.js";
@@ -45,13 +46,18 @@ function parseValue(raw: string): unknown {
   return raw;
 }
 
-export function stateReadCommand(field?: string): void {
+export function stateReadCommand(field?: string, nvim?: boolean): void {
   const sessionDir = requireSessionDir();
   const statePath = path.join(sessionDir, "state.json");
 
   if (!fs.existsSync(statePath)) {
     console.error("Error: state.json not found in session directory.");
     process.exit(1);
+  }
+
+  if (nvim) {
+    spawnSync("nvim", [statePath], { stdio: "inherit" });
+    return;
   }
 
   const state = JSON.parse(fs.readFileSync(statePath, "utf-8")) as StateJson;

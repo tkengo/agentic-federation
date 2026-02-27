@@ -1,7 +1,7 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import fs from "node:fs";
 import path from "node:path";
-import { execSync } from "node:child_process";
+import { exec } from "node:child_process";
 import { parse as parseYaml } from "yaml";
 import { ACTIVE_DIR } from "../utils/types.js";
 import type { MetaJson, StateJson, SessionData, StatusConfig, WaitingHumanData } from "../utils/types.js";
@@ -109,24 +109,42 @@ function loadSessions(): SessionData[] {
   return sessions;
 }
 
-function countCleanableWorktrees(): number {
-  try {
-    const output = execSync("fed clean --dry-run", { encoding: "utf-8" });
-    const match = output.match(/^Found (\d+) worktree/m);
-    return match ? parseInt(match[1], 10) : 0;
-  } catch {
-    return 0;
-  }
+// Async version - runs in background without blocking the event loop
+function countCleanableWorktreesAsync(callback: (count: number) => void): void {
+  exec("fed clean --dry-run", { encoding: "utf-8" }, (err, stdout) => {
+    if (err) {
+      callback(0);
+      return;
+    }
+    const match = stdout.match(/^Found (\d+) worktree/m);
+    callback(match ? parseInt(match[1], 10) : 0);
+  });
 }
 
 export function useSessions() {
   const [sessions, setSessions] = useState<SessionData[]>(() => loadSessions());
-  const [cleanableCount, setCleanableCount] = useState<number>(() => countCleanableWorktrees());
+  const [cleanableCount, setCleanableCount] = useState<number>(0);
 
-  const refresh = useCallback(() => {
-    setSessions(loadSessions());
-    setCleanableCount(countCleanableWorktrees());
+  // Fetch cleanable count asynchronously on mount
+  useEffect(() => {
+    countCleanableWorktreesAsync(setCleanableCount);
   }, []);
 
-  return { sessions, refresh, cleanableCount };
+  // Fast refresh: only reload session list (sync file reads, very fast)
+  const refreshSessions = useCallback(() => {
+    setSessions(loadSessions());
+  }, []);
+
+  // Slow refresh: update cleanable count in background (non-blocking)
+  const refreshCleanableCount = useCallback(() => {
+    countCleanableWorktreesAsync(setCleanableCount);
+  }, []);
+
+  // Full refresh: fast session reload + background cleanable count
+  const refresh = useCallback(() => {
+    setSessions(loadSessions());
+    countCleanableWorktreesAsync(setCleanableCount);
+  }, []);
+
+  return { sessions, refresh, refreshSessions, refreshCleanableCount, cleanableCount };
 }

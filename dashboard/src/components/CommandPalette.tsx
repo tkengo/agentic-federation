@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from "react";
 import { Box, Text, useInput } from "ink";
-import TextInput from "ink-text-input";
+import { EmacsTextInput } from "./EmacsTextInput.js";
 import { execSync } from "node:child_process";
 import { filterCommands } from "../utils/commands.js";
 import { computeScrollOffset } from "../utils/scroll.js";
@@ -83,15 +83,17 @@ export function CommandPalette({
   // Search mode input
   useInput(
     (input, key) => {
+      const isUp = key.upArrow || (key.ctrl && input === 'p');
+      const isDown = key.downArrow || (key.ctrl && input === 'n');
       if (key.escape) {
         onClose();
       } else if (key.return) {
         if (filtered.length > 0) {
           executeCommand(filtered[clampedIndex]!);
         }
-      } else if (key.upArrow) {
+      } else if (isUp) {
         setSelectedIndex((i) => Math.max(0, i - 1));
-      } else if (key.downArrow) {
+      } else if (isDown) {
         setSelectedIndex((i) => Math.min(filtered.length - 1, i + 1));
       }
     },
@@ -209,7 +211,7 @@ export function CommandPalette({
         {/* Search input */}
         <Box>
           <Text bold>{": "}</Text>
-          <TextInput value={query} onChange={(val) => { setQuery(val); setSelectedIndex(0); }} />
+          <EmacsTextInput value={query} onChange={(val) => { setQuery(val); setSelectedIndex(0); }} />
         </Box>
 
         {/* Command list */}

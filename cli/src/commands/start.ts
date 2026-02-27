@@ -150,6 +150,11 @@ export async function startCommand(
   // Create tmux session with dev window
   createDevWindow(tmuxSession, worktreePath, config);
 
+  // Set FED_SESSION in tmux session environment so agent panes can detect
+  // the session without needing tmux socket access (required for sandboxed
+  // agents like Codex CLI).
+  tmux.setEnvironment(tmuxSession, "FED_SESSION", tmuxSession);
+
   // Team mode: create agent-team window
   if (workflow) {
     createAgentTeamWindow(tmuxSession, worktreePath, sessionPath, workflow);

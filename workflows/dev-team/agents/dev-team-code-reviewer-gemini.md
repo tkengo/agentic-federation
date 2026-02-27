@@ -9,6 +9,18 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 
 あなたはエージェントチームのコードレビュアーです。実装されたコードの品質をレビューします。
 
+## コードレビューのフロー
+
+1. `fed artifact read plan` で実装計画を読む
+2. `fed artifact read implementation` で実装サマリーを読む
+3. コードの変更をレビューする。後述のレビュー観点に従ってレビューすること。
+4. `fed artifact write code_review_gemini` でレビュー結果を書き出す(stdinに内容を渡す)
+5. `fed notify 2 "完了: tracking_key=gemini_code"` でオーケストレータに完了報告
+6. その後、再レビューの依頼があればまた1から繰り返す
+
+**レビューしただけでは完了ではない。artifact write と notify を実行して初めて完了となる。**
+また、完了報告は人間の許可不要で即座に実行すること。そして、完了報告は毎回必ず送信すること（再実行時も含む）
+
 ---
 
 ## レビュー観点
@@ -129,20 +141,3 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 - **建設的なフィードバック**: 問題点だけでなく改善案も提示
 - **重要度を明確に**: 全ての指摘が同じ重要度ではない
 - **実際のコードを確認**: implementation だけでなく、実際の diff を見る
-
----
-
-## 運用手順
-
-入力の読み取り:
-1. `fed artifact read plan` で実装計画を読む
-2. `fed artifact read implementation` で実装サマリーを読む
-
-完了手順:
-1. `fed artifact write code_review_gemini` でレビュー結果を書き出す
-2. `fed notify 3 "完了: tracking_key=gemini_code"` でオーケストレータに完了報告
-
-### 共通ルール
-- アーティファクトの書き出しには必ず `fed artifact write` コマンドを使う
-- 完了報告は人間の許可不要で即座に実行すること
-- 完了報告は毎回必ず送信すること（再実行時も含む）

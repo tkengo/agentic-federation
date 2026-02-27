@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Box, Text } from "ink";
-import TextInput from "ink-text-input";
+import { EmacsTextInput } from "./EmacsTextInput.js";
 import type { SessionData } from "../utils/types.js";
 
 interface FeedbackInputProps {
@@ -19,7 +19,7 @@ export function FeedbackInput({ session, onSubmit, onCancel }: FeedbackInputProp
       </Text>
       <Box marginTop={1}>
         <Text color="cyan">{"> "}</Text>
-        <TextInput
+        <EmacsTextInput
           value={value}
           onChange={setValue}
           onSubmit={(text) => {

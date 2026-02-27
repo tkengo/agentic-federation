@@ -67,9 +67,27 @@ export function resolveSession(tmuxSession: string): string | null {
   return null;
 }
 
+// CLI --session override (set via preAction hook in index.ts)
+let _sessionOverride: string | null = null;
+
+export function setSessionOverride(name: string): void {
+  _sessionOverride = name;
+}
+
 // Get current tmux session name from the environment
 export function getCurrentTmuxSession(): string | null {
-  // TMUX env var is set when running inside tmux
+  // Highest priority: explicit --session CLI flag
+  if (_sessionOverride) {
+    return _sessionOverride;
+  }
+
+  // FED_SESSION is set by `fed start` in tmux session environment.
+  // This avoids needing tmux socket access (required for sandboxed agents like Codex).
+  if (process.env.FED_SESSION) {
+    return process.env.FED_SESSION;
+  }
+
+  // Fallback: query tmux directly via socket
   if (!process.env.TMUX) {
     return null;
   }

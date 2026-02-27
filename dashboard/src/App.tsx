@@ -24,7 +24,7 @@ type Screen = "splash" | "list" | "preview" | "feedback" | "create" | "palette";
 export function App() {
   const { exit } = useApp();
   const { columns, rows } = useTerminalSize();
-  const { sessions, refresh, cleanableCount } = useSessions();
+  const { sessions, refresh, refreshSessions, cleanableCount } = useSessions();
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [screen, setScreen] = useState<Screen>("splash");
   const [message, setMessage] = useState<string | null>(null);
@@ -75,8 +75,8 @@ export function App() {
     }
   }, []);
 
-  // Watch for file changes
-  useSessionWatcher(refresh);
+  // Watch for file changes (lightweight: session list only, no cleanable count)
+  useSessionWatcher(refreshSessions);
 
   // Clean row is an extra selectable item after the session list
   const hasCleanRow = cleanableCount > 0;

@@ -62,6 +62,12 @@ export function selectPane(target: string): void {
   tmux(`select-pane -t ${quote(target)}`);
 }
 
+// Set an environment variable in a tmux session.
+// New panes/windows created after this call inherit the variable.
+export function setEnvironment(session: string, name: string, value: string): void {
+  tmux(`set-environment -t ${quote(session)} ${quote(name)} ${quote(value)}`);
+}
+
 // Quote a tmux argument for shell safety
 function quote(s: string): string {
   return `'${s.replace(/'/g, "'\\''")}'`;

@@ -18,7 +18,14 @@ export interface KeyboardActions {
 export function useKeyboard(actions: KeyboardActions, active = true) {
   useInput(
     (input, key) => {
-      if (key.return) {
+      // Ctrl+N/P for up/down navigation (takes priority)
+      if (key.ctrl && input === "p") {
+        actions.onUp?.();
+      } else if (key.ctrl && input === "n") {
+        actions.onDown?.();
+      } else if (key.ctrl) {
+        // Ignore other ctrl combos to avoid triggering single-key actions
+      } else if (key.return) {
         actions.onEnter?.();
       } else if (key.upArrow || input === "k") {
         actions.onUp?.();

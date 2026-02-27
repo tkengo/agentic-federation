@@ -6,14 +6,14 @@ panes:
     name: Planner
     pane: 1
     command: 'yoloclaude --agent dev-team-planner'
-  - id: human
-    name: Human
-    pane: 2
-    command: null
   - id: orchestrator
     name: Orchestrator
-    pane: 3
+    pane: 2
     command: 'yoloclaude --agent orchestrator'
+  - id: plan_revisor
+    name: "Plan Revisor"
+    pane: 3
+    command: 'yoloclaude --agent dev-team-plan-revisor'
   - id: plan_reviewer_gemini
     name: "Plan Reviewer (Gemini)"
     pane: 4
@@ -36,10 +36,10 @@ panes:
     command: 'yoloclaude --agent dev-team-implementer'
 
 # +---------------------+---------------------+
-# |                     |       human         |
+# |                     |    orchestrator     |
 # |      planner        |      (pane 2)       |
-# |      (pane 1)       |-----+-----+--------+
-# |                     | orch.    | pln-rev  |
+# |      (pane 1)       +----------+----------+
+# |                     |  revisor | pln-rev  |
 # |                     | (pane 3) | (pane 4) |
 # +----------+----------+----------+----------+
 # | code-rev | code-rev | pln-rev  | implmtr  |
@@ -101,16 +101,15 @@ states:
       retry_count.plan_review をインクリメントする。
       fed state update retry_count.plan_review <current+1>
     tasks:
-      - pane: planner
-        tracking_key: planner
+      - pane: plan_revisor
+        tracking_key: plan_revisor
         message: >
           レビューフィードバックがあります。
-          プロンプトの「レビューフィードバックに基づく計画修正」セクションに従って
-          計画を修正してください。
+          プロンプトに従って計画を修正してください。
         input_artifacts: [plan, plan_review_gemini, plan_review_codex]
         output_artifact: plan
     decision_logic: |
-      planner の完了通知を受け取ったら:
+      plan_revisor の完了通知を受け取ったら:
       - retry_count.plan_review が 3 未満 → plan_review に遷移（再レビュー）
       - retry_count.plan_review が 3 以上 → waiting_human に遷移
     transitions: [plan_review, waiting_human]

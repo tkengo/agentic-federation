@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Box, Text, useInput } from "ink";
-import TextInput from "ink-text-input";
+import { EmacsTextInput } from "./EmacsTextInput.js";
 import { computeScrollOffset } from "../utils/scroll.js";
 import type { SessionData } from "../utils/types.js";
 
@@ -32,17 +32,38 @@ export function CreateSession({
 }: CreatePanelProps) {
   const [step, setStep] = useState<Step>("workflow");
   const [workflowIndex, setWorkflowIndex] = useState(0);
+  const [workflowQuery, setWorkflowQuery] = useState("");
   const [selectedWorkflow, setSelectedWorkflow] = useState<string | null>(null);
   const [repoIndex, setRepoIndex] = useState(0);
+  const [repoQuery, setRepoQuery] = useState("");
   const [selectedRepo, setSelectedRepo] = useState("");
   const [branch, setBranch] = useState("");
   const [branchError, setBranchError] = useState("");
 
   // Build workflow options: "solo" first, then workflow files
-  const workflowOptions: WorkflowInfo[] = [
+  const allWorkflowOptions: WorkflowInfo[] = [
     { name: "solo", description: "Terminal + editor only, no agent team" },
     ...workflows,
   ];
+
+  // Filter lists by query
+  const workflowOptions = workflowQuery
+    ? allWorkflowOptions.filter((w) => {
+        const q = workflowQuery.toLowerCase();
+        return w.name.toLowerCase().includes(q) || w.description.toLowerCase().includes(q);
+      })
+    : allWorkflowOptions;
+
+  const filteredRepos = repoQuery
+    ? repos.filter((r) => r.toLowerCase().includes(repoQuery.toLowerCase()))
+    : repos;
+
+  // Clamp selected index when filtered list shrinks
+  const clampedWorkflowIndex = Math.min(workflowIndex, Math.max(0, workflowOptions.length - 1));
+  if (clampedWorkflowIndex !== workflowIndex) setWorkflowIndex(clampedWorkflowIndex);
+
+  const clampedRepoIndex = Math.min(repoIndex, Math.max(0, filteredRepos.length - 1));
+  if (clampedRepoIndex !== repoIndex) setRepoIndex(clampedRepoIndex);
 
   const goToStep = (next: Step) => {
     setStep(next);
@@ -63,27 +84,36 @@ export function CreateSession({
 
   useInput(
     (input, key) => {
+      const isUp = key.upArrow || (key.ctrl && input === 'p');
+      const isDown = key.downArrow || (key.ctrl && input === 'n');
       if (step === "workflow") {
-        if (key.upArrow || input === "k") {
+        if (isUp) {
           setWorkflowIndex((i) => Math.max(0, i - 1));
-        } else if (key.downArrow || input === "j") {
+        } else if (isDown) {
           setWorkflowIndex((i) => Math.min(workflowOptions.length - 1, i + 1));
         } else if (key.return) {
-          const selected = workflowOptions[workflowIndex]!;
-          setSelectedWorkflow(selected.name === "solo" ? null : selected.name);
-          goToStep("repo");
+          if (workflowOptions.length > 0) {
+            const selected = workflowOptions[clampedWorkflowIndex]!;
+            setSelectedWorkflow(selected.name === "solo" ? null : selected.name);
+            setWorkflowQuery("");
+            goToStep("repo");
+          }
         } else if (key.escape) {
           onCancel();
         }
       } else if (step === "repo") {
-        if (key.upArrow || input === "k") {
+        if (isUp) {
           setRepoIndex((i) => Math.max(0, i - 1));
-        } else if (key.downArrow || input === "j") {
-          setRepoIndex((i) => Math.min(repos.length - 1, i + 1));
+        } else if (isDown) {
+          setRepoIndex((i) => Math.min(filteredRepos.length - 1, i + 1));
         } else if (key.return) {
-          setSelectedRepo(repos[repoIndex]!);
-          goToStep("branch");
+          if (filteredRepos.length > 0) {
+            setSelectedRepo(filteredRepos[clampedRepoIndex]!);
+            setRepoQuery("");
+            goToStep("branch");
+          }
         } else if (key.escape) {
+          setRepoQuery("");
           goToStep("workflow");
         }
       } else if (step === "branch") {
@@ -192,14 +222,38 @@ export function CreateSession({
         {/* List steps: header + scrollable list */}
         {(step === "workflow" || step === "repo") && (
           <>
-            <Text bold>{`  ${stepLabel}`}</Text>
-            {step === "workflow" && renderScrollableList(
-              workflowOptions.map((w) => ({ label: w.name, desc: w.description })),
-              workflowIndex,
+            <Box marginLeft={2}>
+              <Text bold>{`${stepLabel} `}</Text>
+              {step === "workflow" && (
+                <EmacsTextInput value={workflowQuery} onChange={(val) => { setWorkflowQuery(val); setWorkflowIndex(0); }} />
+              )}
+              {step === "repo" && (
+                <EmacsTextInput value={repoQuery} onChange={(val) => { setRepoQuery(val); setRepoIndex(0); }} />
+              )}
+            </Box>
+            {step === "workflow" && (workflowOptions.length > 0
+              ? renderScrollableList(
+                  workflowOptions.map((w) => ({ label: w.name, desc: w.description })),
+                  clampedWorkflowIndex,
+                )
+              : <Box flexDirection="column">
+                  <Text dimColor>{"    No matching workflows"}</Text>
+                  {Array.from({ length: MAX_VISIBLE - 1 }, (_, i) => (
+                    <Box key={`wf-empty-${i}`}><Text>{" "}</Text></Box>
+                  ))}
+                </Box>
             )}
-            {step === "repo" && renderScrollableList(
-              repos.map((r) => ({ label: r })),
-              repoIndex,
+            {step === "repo" && (filteredRepos.length > 0
+              ? renderScrollableList(
+                  filteredRepos.map((r) => ({ label: r })),
+                  clampedRepoIndex,
+                )
+              : <Box flexDirection="column">
+                  <Text dimColor>{"    No matching repos"}</Text>
+                  {Array.from({ length: MAX_VISIBLE - 1 }, (_, i) => (
+                    <Box key={`repo-empty-${i}`}><Text>{" "}</Text></Box>
+                  ))}
+                </Box>
             )}
           </>
         )}
@@ -209,7 +263,7 @@ export function CreateSession({
           <Box flexDirection="column">
             <Box marginLeft={2}>
               <Text bold>{"Branch: "}</Text>
-              <TextInput
+              <EmacsTextInput
                 value={branch}
                 onChange={(text) => {
                   setBranch(text);

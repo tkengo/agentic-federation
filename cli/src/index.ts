@@ -8,6 +8,7 @@ import {
   repoShowCommand,
   repoEditCommand,
 } from "./commands/repo.js";
+import { setSessionOverride } from "./lib/session.js";
 import { startCommand } from "./commands/start.js";
 import { stateReadCommand, stateUpdateCommand } from "./commands/state.js";
 import {
@@ -42,7 +43,15 @@ const program = new Command();
 program
   .name("fed")
   .description("Agentic Federation CLI - unified development session manager")
-  .version("0.1.0");
+  .version("0.1.0")
+  .option("--session <name>", "Override tmux session name for session resolution");
+
+program.hook("preAction", (thisCommand) => {
+  const opts = program.opts();
+  if (opts.session) {
+    setSessionOverride(opts.session);
+  }
+});
 
 program
   .command("init")
@@ -102,8 +111,9 @@ const state = program
 state
   .command("read [field]")
   .description("Read state.json (optionally a specific field, e.g. 'status')")
-  .action((field?: string) => {
-    stateReadCommand(field);
+  .option("--nvim", "Open the file in nvim instead of printing to stdout")
+  .action((field: string | undefined, options: { nvim?: boolean }) => {
+    stateReadCommand(field, options.nvim);
   });
 
 state
@@ -122,8 +132,9 @@ const artifact = program
 artifact
   .command("read <name>")
   .description("Read an artifact to stdout")
-  .action((name: string) => {
-    artifactReadCommand(name);
+  .option("--nvim", "Open the file in nvim instead of printing to stdout")
+  .action((name: string, options: { nvim?: boolean }) => {
+    artifactReadCommand(name, options.nvim);
   });
 
 artifact
@@ -182,8 +193,9 @@ const prompt = program
 prompt
   .command("read <name>")
   .description("Read a prompt by name")
-  .action((name: string) => {
-    promptReadCommand(name);
+  .option("--nvim", "Open the file in nvim instead of printing to stdout")
+  .action((name: string, options: { nvim?: boolean }) => {
+    promptReadCommand(name, options.nvim);
   });
 
 prompt

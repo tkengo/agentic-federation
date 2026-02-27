@@ -131,29 +131,6 @@ fed workflow validate dev-team
 
 `--workflow dev-team` で起動すると、YAML に基づいて tmux ペインが作成され、オーケストレータが自動起動する。
 
-### dev-team ワークフロー
-
-デフォルトの開発チームパイプライン:
-
-```
-planning → plan_review → implementing → code_review → completed → approved
-```
-
-8 ペイン構成:
-
-```
-+---------------------+---------------------+
-|                     |       human         |
-|      planner        |      (pane 2)       |
-|      (pane 1)       |-----+-----+--------+
-|                     | orch.    | pln-rev  |
-|                     | (pane 3) | (pane 4) |
-+----------+----------+----------+----------+
-| code-rev | code-rev | pln-rev  | implmtr  |
-| (pane 5) | (pane 6) | (pane 7) | (pane 8) |
-+----------+----------+----------+----------+
-```
-
 ## Session Modes
 
 **Solo mode** (default): terminal + nvim (+ dev server)

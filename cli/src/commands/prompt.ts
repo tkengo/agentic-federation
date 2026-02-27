@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 import { AGENTS_DIR, WORKFLOWS_DIR } from "../lib/paths.js";
 import { getCurrentTmuxSession, resolveSession } from "../lib/session.js";
 import type { StateJson } from "../lib/types.js";
@@ -44,7 +45,7 @@ function resolvePromptPath(name: string): string | null {
   return null;
 }
 
-export function promptReadCommand(name: string): void {
+export function promptReadCommand(name: string, nvim?: boolean): void {
   const filePath = resolvePromptPath(name);
 
   if (!filePath) {
@@ -52,6 +53,11 @@ export function promptReadCommand(name: string): void {
       `Error: Prompt '${name}' not found. Run 'fed prompt list' to see available prompts.`
     );
     process.exit(1);
+  }
+
+  if (nvim) {
+    spawnSync("nvim", [filePath], { stdio: "inherit" });
+    return;
   }
 
   process.stdout.write(fs.readFileSync(filePath, "utf-8"));

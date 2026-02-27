@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 import { requireSessionDir } from "../lib/session.js";
 
 /** Resolve the artifacts directory for the current session. */
@@ -7,24 +8,35 @@ function artifactsDir(sessionDir: string): string {
   return path.join(sessionDir, "artifacts");
 }
 
-export function artifactReadCommand(name: string): void {
+/** Append .md if the name has no file extension. */
+function resolveArtifactName(name: string): string {
+  return path.extname(name) === "" ? name + ".md" : name;
+}
+
+export function artifactReadCommand(name: string, nvim?: boolean): void {
   const sessionDir = requireSessionDir();
-  const filePath = path.join(artifactsDir(sessionDir), name);
+  const filePath = path.join(artifactsDir(sessionDir), resolveArtifactName(name));
 
   if (!fs.existsSync(filePath)) {
     console.error(`Error: Artifact '${name}' does not exist yet.`);
     process.exit(1);
   }
 
+  if (nvim) {
+    spawnSync("nvim", [filePath], { stdio: "inherit" });
+    return;
+  }
+
   process.stdout.write(fs.readFileSync(filePath, "utf-8"));
 }
 
 export function artifactWriteCommand(name: string): void {
+  const resolved = resolveArtifactName(name);
   const sessionDir = requireSessionDir();
   const dir = artifactsDir(sessionDir);
   fs.mkdirSync(dir, { recursive: true });
 
-  const filePath = path.join(dir, name);
+  const filePath = path.join(dir, resolved);
 
   // Read from stdin
   const chunks: Buffer[] = [];
@@ -38,7 +50,7 @@ export function artifactWriteCommand(name: string): void {
 
   const content = Buffer.concat(chunks).toString("utf-8");
   fs.writeFileSync(filePath, content);
-  console.error(`Written: ${name} (${content.length} bytes)`);
+  console.error(`Written: ${resolved} (${content.length} bytes)`);
 }
 
 export function artifactListCommand(): void {
@@ -71,7 +83,7 @@ export function artifactListCommand(): void {
 
 export function artifactDeleteCommand(name: string): void {
   const sessionDir = requireSessionDir();
-  const filePath = path.join(artifactsDir(sessionDir), name);
+  const filePath = path.join(artifactsDir(sessionDir), resolveArtifactName(name));
 
   if (!fs.existsSync(filePath)) {
     console.error(`Error: Artifact '${name}' does not exist.`);
