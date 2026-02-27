@@ -57,6 +57,11 @@ export function SessionRow({ session, selected, dimmed, blinkOn, colWidths }: Se
           />
         </Box>
       )}
+      {!dimmed && session.waitingHuman.waiting ? (
+        <Text color="magenta" dimColor={!blinkOn}>{` [!]`}</Text>
+      ) : (
+        <Text>{`    `}</Text>
+      )}
       <Text dimColor={dimmed}>{`  `}</Text>
       <Text dimColor>{age.padStart(4)}</Text>
     </Box>

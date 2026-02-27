@@ -51,6 +51,12 @@ export interface StatusConfig {
   color: string;
 }
 
+// Waiting-for-human state
+export interface WaitingHumanData {
+  waiting: boolean;
+  reason: string | null;
+}
+
 // Session data used by the dashboard
 export interface SessionData {
   name: string;
@@ -60,6 +66,7 @@ export interface SessionData {
   workflow?: string;
   pendingTasks: string[];
   escalation: { required: boolean; reason: string | null };
+  waitingHuman: WaitingHumanData;
   stateMtimeMs?: number;
   statusConfigMap?: Record<string, StatusConfig>;
 }

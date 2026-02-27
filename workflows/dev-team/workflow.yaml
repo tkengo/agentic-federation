@@ -74,13 +74,13 @@ states:
       - pane: plan_reviewer_gemini
         tracking_key: gemini_plan
         message: >
-           `fed prompt read plan_reviewer_gemini` の出力を読んで、計画をレビューしてください。
+           `fed prompt read dev-team-plan-reviewer-gemini` の出力を読んで、計画をレビューしてください。
         input_artifacts: [plan]
         output_artifact: plan_review_gemini
       - pane: plan_reviewer_codex
         tracking_key: codex_plan
         message: >
-           `fed prompt read plan_reviewer_codex` の出力を読んで、計画をレビューしてください。
+           `fed prompt read dev-team-plan-reviewer-codex` の出力を読んで、計画をレビューしてください。
         input_artifacts: [plan]
         output_artifact: plan_review_codex
     on_task_complete: |
@@ -138,13 +138,13 @@ states:
       - pane: code_reviewer_gemini
         tracking_key: gemini_code
         message: >
-          `fed prompt read code_reviewer_gemini` の出力を読んで、コードをレビューしてください。
+          `fed prompt read dev-team-code-reviewer-gemini` の出力を読んで、コードをレビューしてください。
         input_artifacts: [plan, implementation]
         output_artifact: code_review_gemini
       - pane: code_reviewer_codex
         tracking_key: codex_code
         message: >
-          `fed prompt read code_reviewer_codex` の出力を読んで、コードをレビューしてください。
+          `fed prompt read dev-team-code-reviewer-codex` の出力を読んで、コードをレビューしてください。
         input_artifacts: [plan, implementation]
         output_artifact: code_review_codex
     on_task_complete: |

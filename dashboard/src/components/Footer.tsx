@@ -2,7 +2,7 @@ import React from "react";
 import { Box, Text } from "ink";
 
 interface FooterProps {
-  screen: "list" | "preview" | "feedback" | "create";
+  screen: "list" | "preview" | "feedback" | "create" | "palette";
   createStep?: "workflow" | "repo" | "branch";
   hasSelectedSession?: boolean;
   cleanRowSelected?: boolean;
@@ -42,6 +42,17 @@ export function Footer({ screen, createStep, hasSelectedSession, cleanRowSelecte
       <Box borderStyle="single" borderTop={false} paddingX={1}>
         <Text color="yellow">
           Stop session &quot;{killTargetName}&quot;? [y] Yes  [any key] Cancel
+        </Text>
+      </Box>
+    );
+  }
+
+  if (screen === "palette") {
+    return (
+      <Box borderStyle="single" borderTop={false} paddingX={1}>
+        <Text>
+          <Text dimColor>{"[Enter] Execute  [Up/Down] Navigate  [Esc] Close  "}</Text>
+          {quitHint}
         </Text>
       </Box>
     );
@@ -93,7 +104,7 @@ export function Footer({ screen, createStep, hasSelectedSession, cleanRowSelecte
     return (
       <Box borderStyle="single" borderTop={false} paddingX={1}>
         <Text>
-          <Text dimColor>{"[Enter] Clean  [n] New  "}</Text>
+          <Text dimColor>{"[Enter] Clean  [n] New  [:] Commands  "}</Text>
           {quitHint}
         </Text>
       </Box>
@@ -105,7 +116,7 @@ export function Footer({ screen, createStep, hasSelectedSession, cleanRowSelecte
     return (
       <Box borderStyle="single" borderTop={false} paddingX={1}>
         <Text>
-          <Text dimColor>{"[Enter] Switch  [n] New  [p] Preview  [a] Approve  [f] Feedback  [s] Stop  "}</Text>
+          <Text dimColor>{"[Enter] Switch  [n] New  [p] Preview  [a] Approve  [f] Feedback  [s] Stop  [:] Commands  "}</Text>
           {quitHint}
         </Text>
       </Box>
@@ -115,7 +126,7 @@ export function Footer({ screen, createStep, hasSelectedSession, cleanRowSelecte
   return (
     <Box borderStyle="single" borderTop={false} paddingX={1}>
       <Text>
-        <Text dimColor>{"[n] New  "}</Text>
+        <Text dimColor>{"[n] New  [:] Commands  "}</Text>
         {quitHint}
       </Text>
     </Box>

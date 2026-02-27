@@ -9,6 +9,7 @@ import { SessionList } from "./components/SessionList.js";
 import { Preview } from "./components/Preview.js";
 import { FeedbackInput } from "./components/FeedbackInput.js";
 import { CreateSession } from "./components/CreateSession.js";
+import { CommandPalette } from "./components/CommandPalette.js";
 import { Footer } from "./components/Footer.js";
 import { Splash } from "./components/Splash.js";
 import { useSessions } from "./hooks/useSessions.js";
@@ -18,7 +19,7 @@ import { useTerminalSize } from "./hooks/useTerminalSize.js";
 import { REPOS_DIR } from "./utils/types.js";
 import type { SessionData } from "./utils/types.js";
 
-type Screen = "splash" | "list" | "preview" | "feedback" | "create";
+type Screen = "splash" | "list" | "preview" | "feedback" | "create" | "palette";
 
 export function App() {
   const { exit } = useApp();
@@ -163,6 +164,30 @@ export function App() {
     }
   }, [selectedSession, showMessage, refresh]);
 
+  // Archive session
+  const archiveSession = useCallback(() => {
+    if (!selectedSession) return;
+    try {
+      execSync(`fed archive '${selectedSession.name}'`, { stdio: "ignore" });
+      showMessage(`Archived: ${selectedSession.name}`);
+      refresh();
+    } catch {
+      showMessage(`Failed to archive ${selectedSession.name}`);
+    }
+  }, [selectedSession, showMessage, refresh]);
+
+  // Archive all completed sessions
+  const archiveAllCompleted = useCallback(() => {
+    try {
+      const output = execSync("fed archive --completed", { encoding: "utf-8" });
+      const count = (output.match(/Archived/g) ?? []).length;
+      showMessage(count > 0 ? `Archived ${count} sessions` : "No completed sessions to archive");
+      refresh();
+    } catch {
+      showMessage("Failed to archive completed sessions");
+    }
+  }, [showMessage, refresh]);
+
   // Run fed clean
   const runClean = useCallback(() => {
     setCleaning(true);
@@ -261,6 +286,9 @@ export function App() {
         setCreateStep("workflow");
         setScreen("create");
       },
+      onPalette: () => {
+        setScreen("palette");
+      },
     },
     screen === "list" && !confirmingKill && !confirmingClean && !cleaning
   );
@@ -326,13 +354,13 @@ export function App() {
         flexGrow={1}
         overflow="hidden"
       >
-        {/* Session list - visible on list and create screens */}
-        {(screen === "list" || screen === "create") && (
+        {/* Session list - visible on list, create, and palette screens */}
+        {(screen === "list" || screen === "create" || screen === "palette") && (
           <>
             <SessionList
               sessions={sessions}
               selectedIndex={selectedIndex}
-              dimmed={screen === "create"}
+              dimmed={screen === "create" || screen === "palette"}
             />
             {hasCleanRow && (
               <Box paddingX={1} paddingTop={1}>
@@ -357,8 +385,57 @@ export function App() {
           />
         )}
 
-        {/* Spacer pushes create panel to bottom */}
-        {screen === "create" && <Box flexGrow={1} />}
+        {/* Spacer pushes panels to bottom */}
+        {(screen === "create" || screen === "palette") && <Box flexGrow={1} />}
+
+        {/* Command palette - bottom-aligned */}
+        {screen === "palette" && (
+          <CommandPalette
+            sessionName={selectedSession?.name}
+            hasSession={!!selectedSession}
+            onClose={() => setScreen("list")}
+            onAction={(cmdId) => {
+              setScreen("list");
+              switch (cmdId) {
+                case "attach":
+                  switchToSession();
+                  break;
+                case "approve":
+                  approveSession();
+                  break;
+                case "stop":
+                  killSession();
+                  break;
+                case "clean":
+                  runClean();
+                  break;
+                case "archive":
+                  archiveSession();
+                  break;
+                case "archive-completed":
+                  archiveAllCompleted();
+                  break;
+              }
+            }}
+            onScreenTransition={(cmdId) => {
+              switch (cmdId) {
+                case "preview":
+                  if (selectedSession) setScreen("preview");
+                  break;
+                case "feedback":
+                  if (selectedSession) setScreen("feedback");
+                  break;
+                case "new":
+                  setCreateStep("workflow");
+                  setScreen("create");
+                  break;
+                default:
+                  setScreen("list");
+              }
+            }}
+            showMessage={showMessage}
+          />
+        )}
 
         {/* Create panel - bottom-aligned */}
         {screen === "create" && (

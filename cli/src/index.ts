@@ -20,6 +20,11 @@ import { notifyCommand } from "./commands/notify.js";
 import { feedbackReadCommand, feedbackWriteCommand } from "./commands/feedback.js";
 import { promptReadCommand, promptListCommand } from "./commands/prompt.js";
 import { notifyHumanCommand } from "./commands/notify-human.js";
+import {
+  waitingHumanSetCommand,
+  waitingHumanClearCommand,
+  waitingHumanShowCommand,
+} from "./commands/waiting-human.js";
 import { listCommand } from "./commands/list.js";
 import { stopCommand } from "./commands/stop.js";
 import { archiveCommand, archiveAllCompletedCommand } from "./commands/archive.js";
@@ -194,6 +199,34 @@ program
   .description("Send macOS notification to human")
   .action((title: string, message: string) => {
     notifyHumanCommand(title, message);
+  });
+
+// --- waiting-human ---
+const waitingHuman = program
+  .command("waiting-human")
+  .description("Manage waiting-for-human state");
+
+waitingHuman
+  .command("set")
+  .description("Set waiting-for-human state with a reason")
+  .requiredOption("--reason <reason>", "Reason for waiting")
+  .option("--notify", "Also send macOS notification")
+  .action((options: { reason: string; notify?: boolean }) => {
+    waitingHumanSetCommand(options.reason, options.notify ?? false);
+  });
+
+waitingHuman
+  .command("clear")
+  .description("Clear waiting-for-human state")
+  .action(() => {
+    waitingHumanClearCommand();
+  });
+
+waitingHuman
+  .command("show")
+  .description("Show current waiting-for-human state")
+  .action(() => {
+    waitingHumanShowCommand();
   });
 
 // --- list ---

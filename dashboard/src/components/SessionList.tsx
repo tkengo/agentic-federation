@@ -44,7 +44,7 @@ export function SessionList({ sessions, selectedIndex, dimmed }: SessionListProp
       {/* Header row */}
       <Box>
         <Text dimColor>
-          {`    ${"REPO".padEnd(colWidths.repo)}  ${"BRANCH".padEnd(colWidths.branch)}  ${"WORKFLOW".padEnd(colWidths.workflow)}  ${"STATUS".padEnd(colWidths.status + 2)}   AGE`}
+          {`    ${"REPO".padEnd(colWidths.repo)}  ${"BRANCH".padEnd(colWidths.branch)}  ${"WORKFLOW".padEnd(colWidths.workflow)}  ${"STATUS".padEnd(colWidths.status + 2)}       AGE`}
         </Text>
       </Box>
       {/* Session rows */}

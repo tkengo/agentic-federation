@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Box, Text, useInput } from "ink";
 import TextInput from "ink-text-input";
+import { computeScrollOffset } from "../utils/scroll.js";
 import type { SessionData } from "../utils/types.js";
 
 type Step = "workflow" | "repo" | "branch";
@@ -19,14 +20,6 @@ interface CreatePanelProps {
   onSubmit: (repo: string, branch: string, workflow?: string) => void;
   onCancel: () => void;
   onStepChange: (step: Step) => void;
-}
-
-// Compute visible window start for scrollable list
-function computeScrollOffset(selectedIndex: number, totalItems: number): number {
-  if (totalItems <= MAX_VISIBLE) return 0;
-  if (selectedIndex === 0) return 0;
-  if (selectedIndex >= totalItems - 1) return totalItems - MAX_VISIBLE;
-  return Math.max(0, Math.min(selectedIndex - 1, totalItems - MAX_VISIBLE));
 }
 
 export function CreateSession({
@@ -132,7 +125,7 @@ export function CreateSession({
     selectedIdx: number,
   ) => {
     const total = items.length;
-    const offset = computeScrollOffset(selectedIdx, total);
+    const offset = computeScrollOffset(selectedIdx, total, MAX_VISIBLE);
     const visible = items.slice(offset, offset + MAX_VISIBLE);
     const hasMore = total > MAX_VISIBLE;
     const showUp = hasMore && offset > 0;

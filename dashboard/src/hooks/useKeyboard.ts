@@ -12,6 +12,7 @@ export interface KeyboardActions {
   onQuit?: () => void;
   onBack?: () => void;
   onCreate?: () => void;
+  onPalette?: () => void;
 }
 
 export function useKeyboard(actions: KeyboardActions, active = true) {
@@ -35,6 +36,8 @@ export function useKeyboard(actions: KeyboardActions, active = true) {
         actions.onStop?.();
       } else if (input === "n") {
         actions.onCreate?.();
+      } else if (input === ":") {
+        actions.onPalette?.();
       } else if (input === "q") {
         actions.onQuit?.();
       } else if (key.escape) {

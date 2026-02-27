@@ -389,14 +389,14 @@ function syncAgents(workflowName?: string): void {
     }
   }
 
-  // Workflow-specific agents: workflows/<name>/agents/*.md → ~/.claude/agents/<name>-<agent>.md
+  // Workflow-specific agents: workflows/<name>/agents/*.md → ~/.claude/agents/*.md
   if (workflowName) {
     const wfAgentsDir = path.join(WORKFLOWS_DIR, workflowName, "agents");
     if (fs.existsSync(wfAgentsDir)) {
       const files = fs.readdirSync(wfAgentsDir).filter((f) => f.endsWith(".md"));
       for (const file of files) {
         const src = path.join(wfAgentsDir, file);
-        const dest = path.join(CLAUDE_AGENTS_DIR, `${workflowName}-${file}`);
+        const dest = path.join(CLAUDE_AGENTS_DIR, file);
         syncSymlink(src, dest);
         count++;
       }
