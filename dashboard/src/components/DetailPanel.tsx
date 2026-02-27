@@ -7,10 +7,10 @@ import { computeScrollOffset } from "../utils/scroll.js";
 import { useBlink } from "../hooks/useBlink.js";
 import type { ArtifactEntry } from "./ArtifactList.js";
 
-// Nerd Font icons (Material Design)
-const ICON_ARTIFACT = "\u{F0219}"; // 󰈙 nf-md-file_document_outline
-const ICON_SCRIPT = "\u{F070E}";   // 󰜎 nf-md-script_text_outline
-const ICON_PLAY = "\u{F040A}";     // 󰐊 nf-md-play
+// Unicode emoji icons (string-width correctly reports 2 for these)
+const ICON_ARTIFACT = "\u{1F4C4}"; // 📄
+const ICON_SCRIPT = "\u{1F4DC}";   // 📜
+const ICON_PLAY = "\u{25B6}\uFE0F"; // ▶️
 
 const MAX_VISIBLE = 10;
 export const LOG_MAX_VISIBLE = 9; // 10 total - 1 header line
@@ -204,8 +204,9 @@ function BrowseView({
   return (
     <>
       {truncatedDesc && (
-        <Box width={innerWidth} marginBottom={hasItems ? 1 : 0}>
+        <Box width={innerWidth} flexDirection="column">
           <Text>{truncatedDesc}</Text>
+          <Text>{" "}</Text>
         </Box>
       )}
       {visibleRows.map((row, i) => {
@@ -236,8 +237,8 @@ function BrowseView({
         if (row.type === "artifact") {
           const selected = row.itemIndex === selectedIndex;
           const cursor = selected ? "> " : "  ";
-          // cursor(2) + icon(1) + space(1) + name + space(1) + sizeKB
-          const nameMax = innerWidth - 2 - 2 - 1 - row.sizeKB.length;
+          // cursor(2) + icon(2) + space(1) + name + space(1) + sizeKB
+          const nameMax = innerWidth - 2 - 3 - 1 - row.sizeKB.length;
           const displayName = row.name.length > nameMax
             ? row.name.slice(0, nameMax - 1) + "\u2026"
             : row.name.padEnd(nameMax);
@@ -259,8 +260,8 @@ function BrowseView({
           const displayName = row.name.length > maxScriptNameLen
             ? row.name.slice(0, maxScriptNameLen - 1) + "\u2026"
             : row.name.padEnd(maxScriptNameLen);
-          // Remaining space for description
-          const descSpace = innerWidth - 2 - 2 - maxScriptNameLen - 1;
+          // cursor(2) + icon(2) + space(1) + scriptName + space(1)
+          const descSpace = innerWidth - 2 - 3 - maxScriptNameLen - 1;
           const desc = row.description
             ? (row.description.length > descSpace
               ? row.description.slice(0, descSpace - 1) + "\u2026"
