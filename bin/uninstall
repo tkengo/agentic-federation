@@ -42,8 +42,7 @@ if [ "$DEV_MODE" = true ]; then
     echo "Removed: $CMD_NAME"
     echo "  was -> $LINK_TARGET"
   else
-    echo "Not found: $CMD_NAME ($LINK_PATH)" >&2
-    exit 1
+    echo "Already removed: $CMD_NAME (no symlink at $LINK_PATH)"
   fi
 else
   # Normal mode: npm uninstall global
