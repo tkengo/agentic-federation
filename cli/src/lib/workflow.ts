@@ -61,7 +61,6 @@ export interface WorkflowState {
   tasks?: TaskDef[];
   decision_logic: string;
   cleanup_artifacts?: string[];
-  transitions: string[];
 }
 
 // ---- Loader functions ----
@@ -191,17 +190,6 @@ export function validateWorkflow(wf: WorkflowDefinition): string[] {
     let entryPointCount = 0;
     for (const [stateName, state] of Object.entries(wf.states)) {
       if (state.entry_point) entryPointCount++;
-
-      // Validate transitions reference existing states
-      if (state.transitions) {
-        for (const target of state.transitions) {
-          if (!stateNames.has(target)) {
-            errors.push(
-              `State "${stateName}": transition target "${target}" not found in states`
-            );
-          }
-        }
-      }
 
       // Validate tasks reference existing panes (global pane ID set)
       if (state.tasks) {

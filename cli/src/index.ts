@@ -124,9 +124,8 @@ state
 state
   .command("update <field> <value>")
   .description("Update a field in state.json (e.g. 'status plan_review')")
-  .option("--force", "Force update even if transition is invalid")
-  .action((field: string, value: string, options: { force?: boolean }) => {
-    stateUpdateCommand(field, value, options.force ?? false);
+  .action((field: string, value: string) => {
+    stateUpdateCommand(field, value);
   });
 
 // --- artifact ---

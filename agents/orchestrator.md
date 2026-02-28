@@ -87,7 +87,6 @@ fed notify <pane番号> "<メッセージ>"
 | `on_task_complete` | タスク完了通知を受け取った時の処理 |
 | `decision_logic` | 次のステートへの遷移判定ロジック |
 | `cleanup_artifacts` | 再実行前に削除すべきアーティファクト一覧 |
-| `transitions` | 遷移可能なステート名の一覧 |
 
 ### `tasks` の各タスク
 

@@ -99,7 +99,6 @@ states:
     entry_point: true
     decision_logic: |
       planner から完了通知を受け取ったら plan_review に遷移する。
-    transitions: [plan_review]
 
   plan_review:
     description: "複数レビュアーによる並列計画レビュー"
@@ -131,7 +130,6 @@ states:
       - いずれかが ESCALATE → waiting_human に遷移
       REQUEST_CHANGES と ESCALATE が混在する場合は ESCALATE を優先する。
     cleanup_artifacts: [plan_review_gemini, plan_review_codex]
-    transitions: [implementing, plan_revision, waiting_human]
 
   plan_revision:
     description: "レビューフィードバックに基づく計画修正"
@@ -152,7 +150,6 @@ states:
       plan_revisor の完了通知を受け取ったら:
       - retry_count.plan_review が 3 未満 → plan_review に遷移（再レビュー）
       - retry_count.plan_review が 3 以上 → waiting_human に遷移
-    transitions: [plan_review, waiting_human]
 
   implementing:
     description: "計画に基づく実装フェーズ"
@@ -168,7 +165,6 @@ states:
     decision_logic: |
       implementer から完了通知を受け取ったら code_review に遷移する。
       implementer からエスカレーション通知を受け取ったら waiting_human に遷移する。
-    transitions: [code_review, waiting_human]
 
   code_review:
     description: "複数レビュアーによる並列コードレビュー"
@@ -200,7 +196,6 @@ states:
       - いずれかが ESCALATE → waiting_human に遷移
       REQUEST_CHANGES と ESCALATE が混在する場合は ESCALATE を優先する。
     cleanup_artifacts: [code_review_gemini, code_review_codex]
-    transitions: [completed, code_revision, waiting_human]
 
   code_revision:
     description: "レビューフィードバックに基づくコード修正"
@@ -220,7 +215,6 @@ states:
       implementer から完了通知を受け取ったら:
       - retry_count.code_review が 5 未満 → code_review に遷移（再レビュー）
       - retry_count.code_review が 5 以上 → waiting_human に遷移
-    transitions: [code_review, waiting_human]
 
   completed:
     description: "全レビュー通過、人間の最終承認待ち"
@@ -232,7 +226,6 @@ states:
       - 「承認」→ approved に遷移（ワークフロー完了）
       - 「計画を修正して」→ plan_revision に遷移（計画修正ループに戻る）
       - 「実装を修正して」→ implementing に遷移（実装ループに戻る）
-    transitions: [approved, plan_revision, implementing]
 
   approved:
     description: "ワークフロー完了"
@@ -241,7 +234,6 @@ states:
     terminal: true
     decision_logic: |
       最終状態。遷移なし。
-    transitions: []
 
   waiting_human:
     description: "エスカレーション - 人間の判断待ち"
@@ -251,4 +243,3 @@ states:
       fed notify-human でエスカレーション理由を人間に通知する。
       人間の指示に応じて任意の状態に遷移する。
       人間が具体的な遷移先を指示しない場合は、状況に応じて最適な遷移先を提案する。
-    transitions: [planning, plan_review, plan_revision, implementing, code_review, code_revision]
