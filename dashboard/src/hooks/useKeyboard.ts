@@ -4,7 +4,7 @@ export interface KeyboardActions {
   onEnter?: () => void;
   onUp?: () => void;
   onDown?: () => void;
-  onPreview?: () => void;
+
   onFeedback?: () => void;
   onLongFeedback?: () => void;
   onStop?: () => void;
@@ -32,8 +32,6 @@ export function useKeyboard(actions: KeyboardActions, active = true) {
         actions.onUp?.();
       } else if (key.downArrow || input === "j") {
         actions.onDown?.();
-      } else if (input === "p") {
-        actions.onPreview?.();
       } else if (input === "a") {
         actions.onAddRepo?.();
       } else if (input === "f") {

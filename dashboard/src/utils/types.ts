@@ -36,15 +36,6 @@ export const ACTIVE_DIR = path.join(FED_HOME, "active");
 export const ARCHIVE_DIR = path.join(FED_HOME, "archive");
 export const REPOS_DIR = path.join(FED_HOME, "repos");
 
-// Status -> preview artifact mapping
-export const STATUS_PREVIEW_MAP: Record<string, string[]> = {
-  plan_review: ["plan"],
-  plan_revision: ["plan_review_gemini", "plan_review_codex"],
-  code_review: ["implementation"],
-  code_revision: ["code_review_gemini", "code_review_codex"],
-  waiting_human: ["human_feedback"],
-};
-
 // Stale threshold in seconds (must match stale-watcher.ts)
 export const STALE_THRESHOLD_SEC = 600;
 

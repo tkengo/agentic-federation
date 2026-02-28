@@ -77,8 +77,8 @@ function readStatusConfig(sessionDir: string): Record<string, StatusConfig> | un
     if (!wf.states) return undefined;
     const map: Record<string, StatusConfig> = {};
     for (const [name, state] of Object.entries(wf.states)) {
-      if (state.mark && state.color) {
-        map[name] = { mark: state.mark, color: state.color };
+      if (state.color) {
+        map[name] = { mark: state.mark ?? "●", color: state.color };
       }
     }
     return Object.keys(map).length > 0 ? map : undefined;

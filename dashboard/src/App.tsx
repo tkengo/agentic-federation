@@ -8,7 +8,7 @@ import type { ChildProcess } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { Header } from "./components/Header.js";
 import { SessionList } from "./components/SessionList.js";
-import { Preview } from "./components/Preview.js";
+
 import { FeedbackInput } from "./components/FeedbackInput.js";
 import { CreateSession } from "./components/CreateSession.js";
 import { CommandPalette } from "./components/CommandPalette.js";
@@ -27,7 +27,7 @@ import { useArtifacts } from "./components/ArtifactList.js";
 import { REPOS_DIR } from "./utils/types.js";
 import type { SessionData, RepoInfo } from "./utils/types.js";
 
-type Screen = "splash" | "list" | "preview" | "feedback" | "create" | "palette" | "add-repo";
+type Screen = "splash" | "list" | "feedback" | "create" | "palette" | "add-repo";
 
 export function App() {
   const { exit } = useApp();
@@ -607,9 +607,6 @@ export function App() {
         setSelectedIndex((i) => Math.min(maxIndex, i + 1));
       },
       onEnter: cleanRowSelected ? () => setConfirmingClean(true) : switchToSession,
-      onPreview: () => {
-        if (selectedSession) setScreen("preview");
-      },
       onFeedback: () => {
         if (selectedSession) setScreen("feedback");
       },
@@ -661,17 +658,6 @@ export function App() {
       }
     },
     { isActive: screen === "list" && confirmingClean && !cleaning }
-  );
-
-  // Keyboard bindings for preview screen
-  useKeyboard(
-    {
-      onBack: () => setScreen("list"),
-      onQuit: () => setScreen("list"),
-      onFeedback: () => setScreen("feedback"),
-      onEnter: switchToSession,
-    },
-    screen === "preview"
   );
 
   if (screen === "splash") {
@@ -750,10 +736,6 @@ export function App() {
           </>
         )}
 
-        {screen === "preview" && selectedSession && (
-          <Preview session={selectedSession} />
-        )}
-
         {screen === "feedback" && selectedSession && (
           <FeedbackInput
             session={selectedSession}
@@ -793,9 +775,6 @@ export function App() {
             }}
             onScreenTransition={(cmdId) => {
               switch (cmdId) {
-                case "preview":
-                  if (selectedSession) setScreen("preview");
-                  break;
                 case "feedback":
                   if (selectedSession) setScreen("feedback");
                   break;

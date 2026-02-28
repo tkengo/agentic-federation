@@ -18,14 +18,6 @@ export const PALETTE_COMMANDS: PaletteCommand[] = [
     resultType: "action",
   },
   {
-    id: "preview",
-    name: "preview",
-    description: "Preview session details",
-    requiresSession: true,
-    needsConfirmation: false,
-    resultType: "screen-transition",
-  },
-  {
     id: "approve",
     name: "approve",
     description: "Send /start_orchestrator to session",
