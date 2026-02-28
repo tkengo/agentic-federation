@@ -26,9 +26,10 @@ interface HeaderProps {
   sessionCount: number;
   cleanableCount: number;
   repoCount: number;
+  workflowCount: number;
 }
 
-export function Header({ sessionCount, cleanableCount, repoCount }: HeaderProps) {
+export function Header({ sessionCount, cleanableCount, repoCount, workflowCount }: HeaderProps) {
   return (
     <Box flexDirection="column">
       <Box flexDirection="column" paddingX={1}>
@@ -43,7 +44,7 @@ export function Header({ sessionCount, cleanableCount, repoCount }: HeaderProps)
         justifyContent="flex-end"
       >
         <Text dimColor>
-          {sessionCount} {sessionCount === 1 ? "session" : "sessions"} · {repoCount} {repoCount === 1 ? "repo" : "repos"}
+          {sessionCount} {sessionCount === 1 ? "session" : "sessions"} · {repoCount} {repoCount === 1 ? "repo" : "repos"} · {workflowCount} {workflowCount === 1 ? "workflow" : "workflows"}
           {cleanableCount > 0 ? ` · ${cleanableCount} cleanable worktrees` : ""}
         </Text>
       </Box>

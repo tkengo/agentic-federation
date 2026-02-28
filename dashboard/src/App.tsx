@@ -18,6 +18,7 @@ import { DetailPanel, useScripts, LOG_MAX_VISIBLE } from "./components/DetailPan
 import type { DetailMode } from "./components/DetailPanel.js";
 import { AddRepo } from "./components/AddRepo.js";
 import { RepoList } from "./components/RepoList.js";
+import { WorkflowList } from "./components/WorkflowList.js";
 import { useSessions } from "./hooks/useSessions.js";
 import { useSessionWatcher } from "./hooks/useSessionWatcher.js";
 import { useKeyboard } from "./hooks/useKeyboard.js";
@@ -702,7 +703,7 @@ export function App() {
 
   return (
     <Box flexDirection="column" width={columns} height={rows}>
-      <Header sessionCount={sessions.length} cleanableCount={cleanableCount} repoCount={repos.length} />
+      <Header sessionCount={sessions.length} cleanableCount={cleanableCount} repoCount={repos.length} workflowCount={workflows.length} />
 
       <Box
         borderStyle="single"
@@ -752,6 +753,15 @@ export function App() {
 
             <RepoList
               repos={repos}
+              dimmed={screen === "create" || screen === "palette" || screen === "add-repo"}
+            />
+
+            {/* Section margin (2 empty lines between repos and workflows) */}
+            <Text>{" "}</Text>
+            <Text>{" "}</Text>
+
+            <WorkflowList
+              workflows={workflows}
               dimmed={screen === "create" || screen === "palette" || screen === "add-repo"}
             />
           </>
