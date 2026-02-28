@@ -68,8 +68,7 @@ export type DetailMode = "browse" | "running" | "done";
 
 interface DetailPanelProps {
   colWidths: {
-    repo: number;
-    branch: number;
+    repoBranch: number;
     workflow: number;
     status: number;
   };
@@ -111,7 +110,7 @@ export function DetailPanel({
   const blinkOn = useBlink(500);
 
   // Box width (same formula as ArtifactList)
-  const boxWidth = 4 + colWidths.repo + 2 + colWidths.branch + 2 + colWidths.workflow + 2 + colWidths.status + 2 + 4 + 2 + 4;
+  const boxWidth = 4 + colWidths.repoBranch + 2 + colWidths.workflow + 2 + colWidths.status + 2 + 4 + 2 + 4;
   const innerWidth = boxWidth - 4;
 
   if (mode === "running" || mode === "done") {

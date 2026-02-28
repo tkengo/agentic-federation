@@ -8,8 +8,7 @@ interface ArtifactListProps {
   selectedIndex: number;
   description?: string;
   colWidths: {
-    repo: number;
-    branch: number;
+    repoBranch: number;
     workflow: number;
     status: number;
   };
@@ -64,8 +63,8 @@ function truncateLines(text: string, lineWidth: number, maxLines: number): strin
 export function ArtifactList({ sessionDir, selectedIndex, description, colWidths }: ArtifactListProps) {
   const artifacts = useArtifacts(sessionDir);
 
-  // Box width: cursor(4) + repo + 2 + branch + 2 + workflow + 2 + status + 2 + [!](4) + 2 + age(4)
-  const boxWidth = 4 + colWidths.repo + 2 + colWidths.branch + 2 + colWidths.workflow + 2 + colWidths.status + 2 + 4 + 2 + 4;
+  // Box width: cursor(4) + repoBranch + 2 + workflow + 2 + status + 2 + [!](4) + 2 + age(4)
+  const boxWidth = 4 + colWidths.repoBranch + 2 + colWidths.workflow + 2 + colWidths.status + 2 + 4 + 2 + 4;
   // Inner width accounts for border (2 chars) and padding (2 chars)
   const innerWidth = boxWidth - 4;
 

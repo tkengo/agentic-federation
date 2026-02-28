@@ -1,3 +1,13 @@
+import os from "node:os";
+
+// Replace home directory prefix with ~/
+export function shortenHome(filepath: string): string {
+  const home = os.homedir();
+  if (filepath === home) return "~";
+  if (filepath.startsWith(home + "/")) return "~/" + filepath.slice(home.length + 1);
+  return filepath;
+}
+
 // Format elapsed time as human-readable short string
 export function formatAge(createdAt: string): string {
   const created = new Date(createdAt).getTime();

@@ -6,8 +6,7 @@ import type { SessionData } from "../utils/types.js";
 import { STALE_THRESHOLD_SEC } from "../utils/types.js";
 
 export interface ColWidths {
-  repo: number;
-  branch: number;
+  repoBranch: number;
   workflow: number;
   status: number;
 }
@@ -52,8 +51,7 @@ export function SessionList({ sessions, selectedIndex, dimmed, expandedIndex, re
   // Calculate column widths (add space for stale elapsed time suffix)
   const staleExtra = anyStale ? 6 : 0;
   const colWidths: ColWidths = {
-    repo: Math.max(4, ...sessions.map((s) => s.meta.repo.length)),
-    branch: Math.max(6, ...sessions.map((s) => s.meta.branch.length)),
+    repoBranch: Math.max(11, ...sessions.map((s) => `${s.meta.repo}/${s.meta.branch}`.length)),
     workflow: Math.max(8, ...sessions.map((s) => (s.workflow ?? "solo").length)),
     status: Math.max(6, ...sessions.map((s) => s.status.length + 2)) + staleExtra,
   };
@@ -71,7 +69,7 @@ export function SessionList({ sessions, selectedIndex, dimmed, expandedIndex, re
       {/* Header row */}
       <Box>
         <Text dimColor>
-          {`    ${"REPO".padEnd(colWidths.repo)}  ${"BRANCH".padEnd(colWidths.branch)}  ${"WORKFLOW".padEnd(colWidths.workflow)}  ${"STATUS".padEnd(colWidths.status + 2)}       AGE`}
+          {`    ${"REPO/BRANCH".padEnd(colWidths.repoBranch)}  ${"WORKFLOW".padEnd(colWidths.workflow)}  ${"STATUS".padEnd(colWidths.status + 2)}       AGE  WORKTREE`}
         </Text>
       </Box>
       {/* Session rows */}

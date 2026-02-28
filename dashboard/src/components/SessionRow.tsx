@@ -1,7 +1,7 @@
 import React from "react";
 import { Box, Text } from "ink";
 import { StatusBadge } from "./StatusBadge.js";
-import { formatAge } from "../utils/format.js";
+import { formatAge, shortenHome } from "../utils/format.js";
 import type { SessionData } from "../utils/types.js";
 import { STALE_THRESHOLD_SEC } from "../utils/types.js";
 
@@ -12,8 +12,7 @@ interface SessionRowProps {
   expanded?: boolean;
   blinkOn: boolean;
   colWidths: {
-    repo: number;
-    branch: number;
+    repoBranch: number;
     workflow: number;
     status: number;
   };
@@ -44,11 +43,7 @@ export function SessionRow({ session, selected, dimmed, expanded, blinkOn, colWi
         {` ${cursor} `}
       </Text>
       <Text color={highlight ? "cyan" : undefined} bold={highlight} dimColor={dimmed}>
-        {session.meta.repo.padEnd(colWidths.repo)}
-      </Text>
-      <Text dimColor={dimmed}>{`  `}</Text>
-      <Text color={highlight ? "cyan" : undefined} bold={highlight} dimColor={dimmed}>
-        {session.meta.branch.padEnd(colWidths.branch)}
+        {`${session.meta.repo}/${session.meta.branch}`.padEnd(colWidths.repoBranch)}
       </Text>
       <Text dimColor={dimmed}>{`  `}</Text>
       <Text color={highlight ? "cyan" : undefined} bold={highlight} dimColor={dimmed}>{(session.workflow ?? "solo").padEnd(colWidths.workflow)}</Text>
@@ -73,6 +68,7 @@ export function SessionRow({ session, selected, dimmed, expanded, blinkOn, colWi
       )}
       <Text dimColor={dimmed}>{`  `}</Text>
       <Text dimColor>{age.padStart(4)}</Text>
+      <Text dimColor>{`  ${shortenHome(session.meta.worktree)}`}</Text>
       {inlineDesc && (
         <Text dimColor>{`  ${inlineDesc}`}</Text>
       )}
