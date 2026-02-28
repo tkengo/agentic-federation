@@ -33,8 +33,18 @@ export function SessionList({ sessions, selectedIndex, dimmed, expandedIndex, re
 
   if (sessions.length === 0) {
     return (
-      <Box paddingX={2} paddingY={1}>
-        <Text dimColor>No active sessions.</Text>
+      <Box flexDirection="column" paddingX={1}>
+        {/* Section title */}
+        <Text dimColor>
+          {"  ── Sessions ────────────────────────────────────────────────"}
+        </Text>
+
+        {/* Spacer between title and list */}
+        <Text>{" "}</Text>
+
+        <Box paddingX={2}>
+          <Text dimColor>No active sessions.</Text>
+        </Box>
       </Box>
     );
   }
@@ -50,6 +60,14 @@ export function SessionList({ sessions, selectedIndex, dimmed, expandedIndex, re
 
   return (
     <Box flexDirection="column" paddingX={1}>
+      {/* Section title */}
+      <Text dimColor>
+        {"  ── Sessions ────────────────────────────────────────────────"}
+      </Text>
+
+      {/* Spacer between title and list */}
+      <Text>{" "}</Text>
+
       {/* Header row */}
       <Box>
         <Text dimColor>

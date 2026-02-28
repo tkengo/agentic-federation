@@ -171,7 +171,7 @@ export function Footer({
     return (
       <Box borderStyle="single" borderTop={false} paddingX={1}>
         <Text>
-          <Text dimColor>{"[Enter] Clean  [n] New  [a] Add Repo  [:] Commands  "}</Text>
+          <Text dimColor>{"[Enter] Clean  [n] Add Session  [a] Add Repo  [:] Commands  "}</Text>
           {quitHint}
         </Text>
       </Box>
@@ -183,7 +183,7 @@ export function Footer({
     return (
       <Box borderStyle="single" borderTop={false} paddingX={1}>
         <Text>
-          <Text dimColor>{"[Enter] Switch  [Space] Expand  [n] New  [a] Add Repo  [s] Stop  [:] Commands  "}</Text>
+          <Text dimColor>{"[Enter] Switch  [Space] Expand  [n] Add Session  [a] Add Repo  [s] Stop  [:] Commands  "}</Text>
           {quitHint}
         </Text>
       </Box>
@@ -193,7 +193,7 @@ export function Footer({
   return (
     <Box borderStyle="single" borderTop={false} paddingX={1}>
       <Text>
-        <Text dimColor>{"[n] New  [a] Add Repo  [:] Commands  "}</Text>
+        <Text dimColor>{"[n] Add Session  [a] Add Repo  [:] Commands  "}</Text>
         {quitHint}
       </Text>
     </Box>

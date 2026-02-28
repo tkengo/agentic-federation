@@ -60,6 +60,12 @@ export interface WaitingHumanData {
   reason: string | null;
 }
 
+// Repository info for dashboard display
+export interface RepoInfo {
+  name: string;
+  repoRoot: string;
+}
+
 // Session data used by the dashboard
 export interface SessionData {
   name: string;

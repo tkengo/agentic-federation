@@ -17,13 +17,14 @@ import { Splash } from "./components/Splash.js";
 import { DetailPanel, useScripts, LOG_MAX_VISIBLE } from "./components/DetailPanel.js";
 import type { DetailMode } from "./components/DetailPanel.js";
 import { AddRepo } from "./components/AddRepo.js";
+import { RepoList } from "./components/RepoList.js";
 import { useSessions } from "./hooks/useSessions.js";
 import { useSessionWatcher } from "./hooks/useSessionWatcher.js";
 import { useKeyboard } from "./hooks/useKeyboard.js";
 import { useTerminalSize } from "./hooks/useTerminalSize.js";
 import { useArtifacts } from "./components/ArtifactList.js";
 import { REPOS_DIR } from "./utils/types.js";
-import type { SessionData } from "./utils/types.js";
+import type { SessionData, RepoInfo } from "./utils/types.js";
 
 type Screen = "splash" | "list" | "preview" | "feedback" | "create" | "palette" | "add-repo";
 
@@ -57,18 +58,33 @@ export function App() {
   const logUpdateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoScrollRef = useRef(true);
 
-  // Read available repos from ~/.fed/repos/
-  const repos = useMemo(() => {
+  // Load repos from ~/.fed/repos/ with config details
+  const loadRepos = useCallback((): RepoInfo[] => {
     try {
       if (!fs.existsSync(REPOS_DIR)) return [];
       return fs
         .readdirSync(REPOS_DIR)
         .filter((f) => f.endsWith(".json"))
-        .map((f) => f.replace(/\.json$/, ""));
+        .map((f) => {
+          const name = f.replace(/\.json$/, "");
+          try {
+            const raw = JSON.parse(fs.readFileSync(path.join(REPOS_DIR, f), "utf-8"));
+            const repoRoot = path.join(raw.base_path, `${raw.repo_name}-workspace`, "main");
+            return { name, repoRoot };
+          } catch {
+            return { name, repoRoot: "" };
+          }
+        });
     } catch {
       return [];
     }
   }, []);
+
+  const [repos, setRepos] = useState<RepoInfo[]>(loadRepos);
+
+  const refreshRepos = useCallback(() => {
+    setRepos(loadRepos());
+  }, [loadRepos]);
 
   // Read available workflows from workflows/ directory with descriptions
   const workflows = useMemo(() => {
@@ -322,6 +338,7 @@ export function App() {
           process.stdin.setRawMode(true);
         }
         process.stdout.write("\x1b[2J\x1b[H");
+        refreshRepos();
         showMessage("Repository added successfully");
       } catch {
         if (process.stdin.isTTY && process.stdin.setRawMode) {
@@ -332,7 +349,7 @@ export function App() {
       }
       setScreen("list");
     },
-    [showMessage]
+    [showMessage, refreshRepos]
   );
 
   // Run a script from the expanded session
@@ -685,7 +702,7 @@ export function App() {
 
   return (
     <Box flexDirection="column" width={columns} height={rows}>
-      <Header sessionCount={sessions.length} cleanableCount={cleanableCount} />
+      <Header sessionCount={sessions.length} cleanableCount={cleanableCount} repoCount={repos.length} />
 
       <Box
         borderStyle="single"
@@ -728,6 +745,15 @@ export function App() {
                 </Text>
               </Box>
             )}
+
+            {/* Section margin (2 empty lines between sessions and repos) */}
+            <Text>{" "}</Text>
+            <Text>{" "}</Text>
+
+            <RepoList
+              repos={repos}
+              dimmed={screen === "create" || screen === "palette" || screen === "add-repo"}
+            />
           </>
         )}
 
@@ -803,7 +829,7 @@ export function App() {
         {/* Create panel - bottom-aligned */}
         {screen === "create" && (
           <CreateSession
-            repos={repos}
+            repos={repos.map((r) => r.name)}
             workflows={workflows}
             sessions={sessions}
             onSubmit={createSession}

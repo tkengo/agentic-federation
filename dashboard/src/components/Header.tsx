@@ -25,9 +25,10 @@ const LOGO = [
 interface HeaderProps {
   sessionCount: number;
   cleanableCount: number;
+  repoCount: number;
 }
 
-export function Header({ sessionCount, cleanableCount }: HeaderProps) {
+export function Header({ sessionCount, cleanableCount, repoCount }: HeaderProps) {
   return (
     <Box flexDirection="column">
       <Box flexDirection="column" paddingX={1}>
@@ -42,7 +43,7 @@ export function Header({ sessionCount, cleanableCount }: HeaderProps) {
         justifyContent="flex-end"
       >
         <Text dimColor>
-          {sessionCount} sessions
+          {sessionCount} {sessionCount === 1 ? "session" : "sessions"} · {repoCount} {repoCount === 1 ? "repo" : "repos"}
           {cleanableCount > 0 ? ` · ${cleanableCount} cleanable worktrees` : ""}
         </Text>
       </Box>
