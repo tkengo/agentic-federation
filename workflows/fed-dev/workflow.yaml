@@ -1,0 +1,51 @@
+name: fed-dev
+description: "agentic-federationの開発用"
+
+windows:
+  - name: fed-dev
+    panes:
+      - id: terminal
+        name: Terminal
+        pane: 1
+        command: 'yoloclaude --agent fed-dev-developer-agent'
+      - id: editor
+        name: Editor
+        pane: 2
+        command: nvim
+    layout:
+      splits:
+        - { source: 1, direction: h, percent: 50 }
+      focus: 1
+
+scripts:
+  install:
+    path: ./scripts/install.sh
+    description: "Install fed-<branch> dev command for this worktree"
+    cwd: "{{meta.worktree}}"
+    env:
+      FED_REPO_DIR: "{{meta.worktree}}"
+      FED_BRANCH: "{{meta.branch}}"
+
+  merge-and-cleanup:
+    path: ./scripts/merge-and-cleanup.sh
+    description: "Merge worktree branch into main and uninstall dev command"
+    cwd: "{{meta.worktree}}"
+    env:
+      FED_SESSION: "{{meta.tmux_session}}"
+      FED_SESSION_DIR: "{{meta.session_dir}}"
+      FED_REPO_DIR: "{{meta.worktree}}"
+      FED_BRANCH: "{{meta.branch}}"
+      FED_REPO: "{{meta.repo}}"
+      FED_WORKFLOW: "{{meta.workflow}}"
+      FED_REPO_ROOT: "{{repo.repo_root}}"
+
+states:
+  planning:
+    description: "人間と対話しながら計画を策定する"
+    entry_point: true
+  plan_review:
+    description: "人間に計画をレビューしてもらう"
+  implement:
+    description: "計画を元に実装する"
+  code_review:
+    description: "人間にコードレビューしてもらう"
