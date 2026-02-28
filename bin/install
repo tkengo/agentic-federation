@@ -3,6 +3,27 @@ set -e
 
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
+# Parse arguments
+DEV_MODE=false
+DEV_NAME=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --dev)
+      DEV_MODE=true
+      if [[ -n "${2:-}" && "${2:0:1}" != "-" ]]; then
+        DEV_NAME="$2"
+        shift
+      fi
+      shift
+      ;;
+    *)
+      echo "Unknown option: $1" >&2
+      exit 1
+      ;;
+  esac
+done
+
 echo "=== Agentic Federation Install ==="
 echo ""
 
@@ -11,8 +32,30 @@ echo "Installing CLI..."
 cd "$REPO_DIR/cli"
 npm install
 npm run build
-npm link
-echo "  fed command installed globally."
+
+if [ "$DEV_MODE" = true ]; then
+  # Dev mode: create symlink with branch-specific name
+  if [ -z "$DEV_NAME" ]; then
+    DEV_NAME="$(git -C "$REPO_DIR" rev-parse --abbrev-ref HEAD)"
+  fi
+  CMD_NAME="fed-${DEV_NAME}"
+  NODE_BIN="$(npm prefix -g)/bin"
+  TARGET="$REPO_DIR/cli/dist/index.js"
+
+  chmod +x "$TARGET"
+  ln -sf "$TARGET" "$NODE_BIN/$CMD_NAME"
+
+  if command -v asdf &>/dev/null; then
+    asdf reshim nodejs
+  fi
+
+  echo "  $CMD_NAME command installed globally."
+  echo "  -> $TARGET"
+else
+  # Normal mode: npm link
+  npm link
+  echo "  fed command installed globally."
+fi
 echo ""
 
 # Dashboard
@@ -23,17 +66,24 @@ npm run build
 echo "  Dashboard built."
 echo ""
 
-# PATH hint
-if ! echo "$PATH" | tr ':' '\n' | grep -qx "$REPO_DIR/bin"; then
-  echo "Add this to your shell profile (~/.zshrc or ~/.bashrc):"
-  echo ""
-  echo "  export PATH=\"$REPO_DIR/bin:\$PATH\""
-  echo ""
+# PATH hint (normal mode only)
+if [ "$DEV_MODE" = false ]; then
+  if ! echo "$PATH" | tr ':' '\n' | grep -qx "$REPO_DIR/bin"; then
+    echo "Add this to your shell profile (~/.zshrc or ~/.bashrc):"
+    echo ""
+    echo "  export PATH=\"$REPO_DIR/bin:\$PATH\""
+    echo ""
+  fi
 fi
 
 echo "=== Done ==="
 echo ""
-echo "Quick start:"
-echo "  fed init"
-echo "  fed repo add <name>"
-echo "  fed start <repo> <branch>"
+if [ "$DEV_MODE" = true ]; then
+  echo "Dev command installed: $CMD_NAME"
+  echo "To uninstall: bin/uninstall --dev ${DEV_NAME}"
+else
+  echo "Quick start:"
+  echo "  fed init"
+  echo "  fed repo add <name>"
+  echo "  fed start <repo> <branch>"
+fi

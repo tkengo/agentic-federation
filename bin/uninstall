@@ -1,0 +1,53 @@
+#!/bin/bash
+set -e
+
+REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+
+# Parse arguments
+DEV_MODE=false
+DEV_NAME=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --dev)
+      DEV_MODE=true
+      if [[ -n "${2:-}" && "${2:0:1}" != "-" ]]; then
+        DEV_NAME="$2"
+        shift
+      fi
+      shift
+      ;;
+    *)
+      echo "Unknown option: $1" >&2
+      exit 1
+      ;;
+  esac
+done
+
+if [ "$DEV_MODE" = true ]; then
+  # Dev mode: remove symlink
+  if [ -z "$DEV_NAME" ]; then
+    DEV_NAME="$(git -C "$REPO_DIR" rev-parse --abbrev-ref HEAD)"
+  fi
+  CMD_NAME="fed-${DEV_NAME}"
+  NODE_BIN="$(npm prefix -g)/bin"
+  LINK_PATH="$NODE_BIN/$CMD_NAME"
+
+  if [ -L "$LINK_PATH" ]; then
+    LINK_TARGET="$(readlink "$LINK_PATH")"
+    rm "$LINK_PATH"
+    if command -v asdf &>/dev/null; then
+      asdf reshim nodejs
+    fi
+    echo "Removed: $CMD_NAME"
+    echo "  was -> $LINK_TARGET"
+  else
+    echo "Not found: $CMD_NAME ($LINK_PATH)" >&2
+    exit 1
+  fi
+else
+  # Normal mode: npm uninstall global
+  cd "$REPO_DIR/cli"
+  npm uninstall -g fed
+  echo "Removed: fed (global)"
+fi
