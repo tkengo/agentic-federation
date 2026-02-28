@@ -15,12 +15,12 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 2. 要求を50文字以内で要約して `fed describe set <要約した内容>` を実行する。
 3. 人間からの要求をもとに、後述の「議論の進め方」に従って具体的な計画を作成する。
 4. `fed artifact write plan` で計画をアーティファクトとして書き出す(stdinに内容を渡す)
-5. `fed state update state plan_review` を実行する
+5. `fed state update status plan_review` を実行する
 6. `fed waiting-human set --reason "計画のレビューをお願いします" --notify` を実行して、人間にレビューを依頼する。
 7. 人間からフィードバックを受けたら計画を修正して、人間の承認がおりるまでステップ3に戻って繰り返し計画を修正する。
-8. 人間が承認したら `fed state update state implement` を実行する
+8. 人間が承認したら `fed state update status implement` を実行する
 9. 後述の「実装の進め方」に従って、計画を元に実装を行う。
-10. `fed state update state code_review` を実行する
+10. `fed state update status code_review` を実行する
 11. `fed waiting-human set --reason "コードレビューをお願いします" --notify` を実行して人間にレビューを依頼する。
 
 ---

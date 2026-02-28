@@ -10,24 +10,13 @@ interface StatusBadgeProps {
   stateMtimeMs?: number;
 }
 
-const DEFAULT_STATUS_CONFIG: Record<string, StatusConfig> = {
-  planning: { icon: "~", color: "blue" },
-  plan_review: { icon: "*", color: "yellow" },
-  plan_revision: { icon: "~", color: "yellow" },
-  implementing: { icon: "~", color: "blue" },
-  code_review: { icon: "*", color: "yellow" },
-  code_revision: { icon: "~", color: "yellow" },
-  waiting_human: { icon: "!", color: "magenta" },
-  completed: { icon: "+", color: "green" },
-  approved: { icon: "+", color: "green" },
-  active: { icon: "-", color: "cyan" },
-};
+const DEFAULT_MARK: StatusConfig = { mark: "●", color: "white" };
 
 // Terminal statuses that should never show as stale
 const TERMINAL_STATUSES = new Set(["completed", "approved", "waiting_human"]);
 
 export function StatusBadge({ status, stale, blinkOn, statusConfigMap, stateMtimeMs }: StatusBadgeProps) {
-  const config = statusConfigMap?.[status] ?? DEFAULT_STATUS_CONFIG[status] ?? { icon: "?", color: "white" };
+  const config = statusConfigMap?.[status] ?? DEFAULT_MARK;
   const isStale = stale && !TERMINAL_STATUSES.has(status);
 
   if (isStale) {
@@ -46,14 +35,14 @@ export function StatusBadge({ status, stale, blinkOn, statusConfigMap, stateMtim
     // Red text, dims on blink-off cycle to create blink effect
     return (
       <Text color="red" bold dimColor={!blinkOn}>
-        {config.icon} {status}{elapsed}
+        {config.mark} {status}{elapsed}
       </Text>
     );
   }
 
   return (
     <Text color={config.color}>
-      {config.icon} {status}
+      {config.mark} {status}
     </Text>
   );
 }

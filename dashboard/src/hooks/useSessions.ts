@@ -73,12 +73,12 @@ function readStatusConfig(sessionDir: string): Record<string, StatusConfig> | un
     const wfPath = path.join(sessionDir, "workflow.yaml");
     if (!fs.existsSync(wfPath)) return undefined;
     const raw = fs.readFileSync(wfPath, "utf-8");
-    const wf = parseYaml(raw) as { states?: Record<string, { icon?: string; color?: string }> };
+    const wf = parseYaml(raw) as { states?: Record<string, { mark?: string; color?: string }> };
     if (!wf.states) return undefined;
     const map: Record<string, StatusConfig> = {};
     for (const [name, state] of Object.entries(wf.states)) {
-      if (state.icon && state.color) {
-        map[name] = { icon: state.icon, color: state.color };
+      if (state.mark && state.color) {
+        map[name] = { mark: state.mark, color: state.color };
       }
     }
     return Object.keys(map).length > 0 ? map : undefined;

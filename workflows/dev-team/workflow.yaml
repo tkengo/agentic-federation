@@ -94,6 +94,8 @@ scripts:
 states:
   planning:
     description: "人間と対話しながら計画を策定する"
+    mark: "~"
+    color: blue
     entry_point: true
     decision_logic: |
       planner から完了通知を受け取ったら plan_review に遷移する。
@@ -101,6 +103,8 @@ states:
 
   plan_review:
     description: "複数レビュアーによる並列計画レビュー"
+    mark: "*"
+    color: yellow
     on_enter: |
       pending_tasks に全タスクの tracking_key をセットする。
       fed state update pending_tasks '["gemini_plan", "codex_plan"]'
@@ -131,6 +135,8 @@ states:
 
   plan_revision:
     description: "レビューフィードバックに基づく計画修正"
+    mark: "~"
+    color: yellow
     on_enter: |
       retry_count.plan_review をインクリメントする。
       fed state update retry_count.plan_review <current+1>
@@ -150,6 +156,8 @@ states:
 
   implementing:
     description: "計画に基づく実装フェーズ"
+    mark: "~"
+    color: blue
     tasks:
       - pane: implementer
         tracking_key: implementer
@@ -164,6 +172,8 @@ states:
 
   code_review:
     description: "複数レビュアーによる並列コードレビュー"
+    mark: "*"
+    color: yellow
     on_enter: |
       pending_tasks に全タスクの tracking_key をセットする。
       fed state update pending_tasks '["gemini_code", "codex_code"]'
@@ -194,6 +204,8 @@ states:
 
   code_revision:
     description: "レビューフィードバックに基づくコード修正"
+    mark: "~"
+    color: yellow
     on_enter: |
       retry_count.code_review をインクリメントする。
       fed state update retry_count.code_review <current+1>
@@ -212,6 +224,8 @@ states:
 
   completed:
     description: "全レビュー通過、人間の最終承認待ち"
+    mark: "+"
+    color: green
     decision_logic: |
       fed notify-human で人間に最終確認を依頼する。
       人間のフィードバックに応じて:
@@ -222,6 +236,8 @@ states:
 
   approved:
     description: "ワークフロー完了"
+    mark: "+"
+    color: green
     terminal: true
     decision_logic: |
       最終状態。遷移なし。
@@ -229,6 +245,8 @@ states:
 
   waiting_human:
     description: "エスカレーション - 人間の判断待ち"
+    mark: "!"
+    color: magenta
     decision_logic: |
       fed notify-human でエスカレーション理由を人間に通知する。
       人間の指示に応じて任意の状態に遷移する。

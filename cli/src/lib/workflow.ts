@@ -52,7 +52,7 @@ export interface TaskDef {
 
 export interface WorkflowState {
   description: string;
-  icon?: string;
+  mark?: string;
   color?: string;
   entry_point?: boolean;
   terminal?: boolean;

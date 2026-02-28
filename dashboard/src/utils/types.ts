@@ -48,9 +48,9 @@ export const STATUS_PREVIEW_MAP: Record<string, string[]> = {
 // Stale threshold in seconds (must match stale-watcher.ts)
 export const STALE_THRESHOLD_SEC = 600;
 
-// Status display config (icon + color) per state
+// Status display config (mark + color) per state
 export interface StatusConfig {
-  icon: string;
+  mark: string;
   color: string;
 }
 
