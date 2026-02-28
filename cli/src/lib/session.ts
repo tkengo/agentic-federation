@@ -26,6 +26,7 @@ export function createSessionDir(repoName: string, meta: MetaJson): string {
   const dirName = generateSessionDirName(meta.branch);
   const sessionPath = path.join(SESSIONS_DIR, repoName, dirName);
   fs.mkdirSync(sessionPath, { recursive: true });
+  meta.session_dir = sessionPath;
   fs.writeFileSync(
     path.join(sessionPath, "meta.json"),
     JSON.stringify(meta, null, 2) + "\n"

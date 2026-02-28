@@ -60,11 +60,58 @@ Each command is a file in `cli/src/commands/<name>.ts`:
 ## Workflow System
 
 Workflows are defined in `workflows/*.yaml`. Each workflow defines:
-- **panes**: tmux pane layout and agent assignments
+- **windows**: tmux window/pane layout and agent assignments
 - **states**: State machine with transitions, tasks, and decision logic
 - **tasks**: Messages to dispatch to agent panes, with input/output artifacts and tracking keys
+- **scripts**: Named scripts for pre/post-processing (e.g., commit & PR creation)
 
 The orchestrator reads the workflow YAML at runtime via `fed workflow show <name>` and follows the state machine. Agent prompts are role-only; operational details (what to read, where to write, how to report completion) are assembled by the orchestrator from the workflow definition.
+
+### Script Definitions
+
+Scripts are defined in the `scripts:` section of workflow YAML. Environment variables and working directory are explicitly defined using template variables (`{{meta.*}}`, `{{repo.*}}`):
+
+```yaml
+scripts:
+  worktree-merge:
+    path: ./scripts/worktree-merge.sh
+    description: "Rebase worktree branch onto main and fast-forward merge"
+    cwd: "{{meta.worktree}}"
+    env:
+      FED_SESSION: "{{meta.tmux_session}}"
+      FED_SESSION_DIR: "{{meta.session_dir}}"
+      FED_REPO_DIR: "{{meta.worktree}}"
+      FED_BRANCH: "{{meta.branch}}"
+      FED_REPO: "{{meta.repo}}"
+      FED_WORKFLOW: "{{meta.workflow}}"
+      FED_REPO_ROOT: "{{repo.repo_root}}"
+```
+
+- `path`: Script file path (relative to repo worktree, or absolute)
+- `description`: Human-readable description (shown in dashboard and `fed script list`)
+- `env`: Environment variables passed to the script (use template variables for session context)
+- `cwd`: Working directory (use template variables; defaults to session dir if omitted)
+
+No environment variables are automatically injected — everything is explicitly declared in the YAML.
+
+### Template Variables
+
+Available template variables for `scripts.env` and `scripts.cwd`:
+
+| Variable | Source | Value |
+|---|---|---|
+| `{{meta.repo}}` | meta.json | Repository name |
+| `{{meta.branch}}` | meta.json | Branch name |
+| `{{meta.workflow}}` | meta.json | Workflow name |
+| `{{meta.worktree}}` | meta.json | Worktree path |
+| `{{meta.tmux_session}}` | meta.json | tmux session name |
+| `{{meta.session_dir}}` | meta.json | Session directory path |
+| `{{repo.repo_root}}` | repo config | Main repository root path |
+| `{{repo.worktree_base}}` | repo config | Worktree base directory |
+| `{{repo.extra.*}}` | repo config | Custom repo config values |
+
+Scripts are executed via `fed script run <name>` or from the dashboard detail panel.
+Script logs are saved to `<sessionDir>/script-logs/<timestamp>_<id>_<name>.log`.
 
 ## Dashboard Structure (dashboard/src/)
 
@@ -79,7 +126,8 @@ Dashboard duplicates minimal type definitions from cli/src/lib/ (MetaJson, State
 - Watcher processes (notification, stale) write PID files to session dir for cleanup
 - `fed stop` kills watchers via PID files, then kills tmux session, then archives
 - Agent prompts are role-only; operational instructions come from workflow YAML via orchestrator
-- `--workflow <name>` enables team mode; without it, solo mode (terminal + nvim only)
+- `workflow` is a required positional argument to `fed start`
+- Scripts defined in workflow YAML can be run via `fed script run` or from the dashboard
 
 ## Testing
 

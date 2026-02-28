@@ -16,6 +16,7 @@ import { Footer } from "./components/Footer.js";
 import { Splash } from "./components/Splash.js";
 import { DetailPanel, useScripts, LOG_MAX_VISIBLE } from "./components/DetailPanel.js";
 import type { DetailMode } from "./components/DetailPanel.js";
+import { AddRepo } from "./components/AddRepo.js";
 import { useSessions } from "./hooks/useSessions.js";
 import { useSessionWatcher } from "./hooks/useSessionWatcher.js";
 import { useKeyboard } from "./hooks/useKeyboard.js";
@@ -24,7 +25,7 @@ import { useArtifacts } from "./components/ArtifactList.js";
 import { REPOS_DIR } from "./utils/types.js";
 import type { SessionData } from "./utils/types.js";
 
-type Screen = "splash" | "list" | "preview" | "feedback" | "create" | "palette";
+type Screen = "splash" | "list" | "preview" | "feedback" | "create" | "palette" | "add-repo";
 
 export function App() {
   const { exit } = useApp();
@@ -198,21 +199,6 @@ export function App() {
     showMessage(`Detached from ${selectedSession.name}`);
   }, [selectedSession, showMessage]);
 
-  // Approve / start orchestrator
-  const approveSession = useCallback(() => {
-    if (!selectedSession) return;
-    const target = `${selectedSession.meta.tmux_session}:agent-team.1`;
-    try {
-      execSync(
-        `tmux send-keys -t '${target}' '/start_orchestrator' Enter`,
-        { stdio: "ignore" }
-      );
-      showMessage(`Sent /start_orchestrator to ${selectedSession.name}`);
-    } catch {
-      showMessage(`Failed to send to ${selectedSession.name}`);
-    }
-  }, [selectedSession, showMessage]);
-
   // Send short feedback via tmux send-keys
   const sendFeedback = useCallback(
     (text: string) => {
@@ -322,6 +308,33 @@ export function App() {
     [refresh, showMessage]
   );
 
+  // Add a new repo via fed repo add
+  const addRepo = useCallback(
+    (cloneUrl: string, basePath: string) => {
+      try {
+        const args = ["fed", "repo", "add", `'${cloneUrl}'`];
+        if (basePath && basePath !== "~/fed/repos") {
+          args.push(`'${basePath}'`);
+        }
+        execSync(args.join(" "), { stdio: "inherit" });
+        // Restore terminal state
+        if (process.stdin.isTTY && process.stdin.setRawMode) {
+          process.stdin.setRawMode(true);
+        }
+        process.stdout.write("\x1b[2J\x1b[H");
+        showMessage("Repository added successfully");
+      } catch {
+        if (process.stdin.isTTY && process.stdin.setRawMode) {
+          process.stdin.setRawMode(true);
+        }
+        process.stdout.write("\x1b[2J\x1b[H");
+        showMessage("Failed to add repository");
+      }
+      setScreen("list");
+    },
+    [showMessage]
+  );
+
   // Run a script from the expanded session
   const runScript = useCallback(() => {
     if (!expandedSession) return;
@@ -336,19 +349,12 @@ export function App() {
       ? scriptDef.path
       : path.resolve(expandedSession.meta.worktree, scriptDef.path);
 
-    // Resolve working directory
-    const cwd = scriptDef.cwd === "session"
-      ? sessionDir
-      : expandedSession.meta.worktree;
+    // Use template-expanded cwd, fallback to session dir
+    const cwd = scriptDef.cwd ?? sessionDir;
 
-    // Build environment
+    // Build environment: inherit current env + script-defined env
     const env: Record<string, string> = {
       ...process.env as Record<string, string>,
-      FED_SESSION_DIR: sessionDir,
-      FED_REPO_DIR: expandedSession.meta.worktree,
-      FED_BRANCH: expandedSession.meta.branch,
-      FED_REPO: expandedSession.meta.repo,
-      FED_WORKFLOW: expandedSession.workflow ?? "",
     };
     if (scriptDef.env) {
       Object.assign(env, scriptDef.env);
@@ -603,7 +609,6 @@ export function App() {
       onPreview: () => {
         if (selectedSession) setScreen("preview");
       },
-      onApprove: approveSession,
       onFeedback: () => {
         if (selectedSession) setScreen("feedback");
       },
@@ -617,6 +622,9 @@ export function App() {
       },
       onPalette: () => {
         setScreen("palette");
+      },
+      onAddRepo: () => {
+        setScreen("add-repo");
       },
       onSpace: () => {
         if (selectedSession) {
@@ -659,7 +667,6 @@ export function App() {
     {
       onBack: () => setScreen("list"),
       onQuit: () => setScreen("list"),
-      onApprove: approveSession,
       onFeedback: () => setScreen("feedback"),
       onEnter: switchToSession,
     },
@@ -689,13 +696,13 @@ export function App() {
         flexGrow={1}
         overflow="hidden"
       >
-        {/* Session list - visible on list, create, and palette screens */}
-        {(screen === "list" || screen === "create" || screen === "palette") && (
+        {/* Session list - visible on list, create, palette, and add-repo screens */}
+        {(screen === "list" || screen === "create" || screen === "palette" || screen === "add-repo") && (
           <>
             <SessionList
               sessions={sessions}
               selectedIndex={selectedIndex}
-              dimmed={screen === "create" || screen === "palette"}
+              dimmed={screen === "create" || screen === "palette" || screen === "add-repo"}
               expandedIndex={expandedIndex}
               renderDetail={(session, colWidths) => (
                 <DetailPanel
@@ -737,7 +744,7 @@ export function App() {
         )}
 
         {/* Spacer pushes panels to bottom */}
-        {(screen === "create" || screen === "palette") && <Box flexGrow={1} />}
+        {(screen === "create" || screen === "palette" || screen === "add-repo") && <Box flexGrow={1} />}
 
         {/* Command palette - bottom-aligned */}
         {screen === "palette" && (
@@ -750,9 +757,6 @@ export function App() {
               switch (cmdId) {
                 case "attach":
                   switchToSession();
-                  break;
-                case "approve":
-                  approveSession();
                   break;
                 case "stop":
                   killSession();
@@ -785,6 +789,14 @@ export function App() {
               }
             }}
             showMessage={showMessage}
+          />
+        )}
+
+        {/* Add repo panel - bottom-aligned */}
+        {screen === "add-repo" && (
+          <AddRepo
+            onSubmit={addRepo}
+            onCancel={() => setScreen("list")}
           />
         )}
 

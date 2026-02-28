@@ -3,7 +3,7 @@ import { Box, Text } from "ink";
 import type { DetailMode } from "./DetailPanel.js";
 
 interface FooterProps {
-  screen: "list" | "preview" | "feedback" | "create" | "palette";
+  screen: "list" | "preview" | "feedback" | "create" | "palette" | "add-repo";
   createStep?: "workflow" | "repo" | "branch";
   hasSelectedSession?: boolean;
   expanded?: boolean;
@@ -67,6 +67,17 @@ export function Footer({
     );
   }
 
+  if (screen === "add-repo") {
+    return (
+      <Box borderStyle="single" borderTop={false} paddingX={1}>
+        <Text>
+          <Text dimColor>{"[Tab] Next field  [Enter] Clone  [Esc] Cancel  "}</Text>
+          {quitHint}
+        </Text>
+      </Box>
+    );
+  }
+
   if (screen === "palette") {
     return (
       <Box borderStyle="single" borderTop={false} paddingX={1}>
@@ -101,7 +112,7 @@ export function Footer({
     return (
       <Box borderStyle="single" borderTop={false} paddingX={1}>
         <Text>
-          <Text dimColor>{"[q/Esc] Back  [a] Approve  [f] Feedback  [Enter] Switch  "}</Text>
+          <Text dimColor>{"[q/Esc] Back  [f] Feedback  [Enter] Switch  "}</Text>
           {quitHint}
         </Text>
       </Box>
@@ -160,7 +171,7 @@ export function Footer({
     return (
       <Box borderStyle="single" borderTop={false} paddingX={1}>
         <Text>
-          <Text dimColor>{"[Enter] Clean  [n] New  [:] Commands  "}</Text>
+          <Text dimColor>{"[Enter] Clean  [n] New  [a] Add Repo  [:] Commands  "}</Text>
           {quitHint}
         </Text>
       </Box>
@@ -172,7 +183,7 @@ export function Footer({
     return (
       <Box borderStyle="single" borderTop={false} paddingX={1}>
         <Text>
-          <Text dimColor>{"[Enter] Switch  [Space] Expand  [n] New  [s] Stop  [:] Commands  "}</Text>
+          <Text dimColor>{"[Enter] Switch  [Space] Expand  [n] New  [a] Add Repo  [s] Stop  [:] Commands  "}</Text>
           {quitHint}
         </Text>
       </Box>
@@ -182,7 +193,7 @@ export function Footer({
   return (
     <Box borderStyle="single" borderTop={false} paddingX={1}>
       <Text>
-        <Text dimColor>{"[n] New  [:] Commands  "}</Text>
+        <Text dimColor>{"[n] New  [a] Add Repo  [:] Commands  "}</Text>
         {quitHint}
       </Text>
     </Box>

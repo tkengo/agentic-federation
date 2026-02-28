@@ -77,6 +77,20 @@ windows:
         - { source: 7, direction: h, percent: 50 }
       focus: 1
 
+scripts:
+  worktree-merge:
+    path: ./scripts/worktree-merge.sh
+    description: "Rebase worktree branch onto main and fast-forward merge"
+    cwd: "{{meta.worktree}}"
+    env:
+      FED_SESSION: "{{meta.tmux_session}}"
+      FED_SESSION_DIR: "{{meta.session_dir}}"
+      FED_REPO_DIR: "{{meta.worktree}}"
+      FED_BRANCH: "{{meta.branch}}"
+      FED_REPO: "{{meta.repo}}"
+      FED_WORKFLOW: "{{meta.workflow}}"
+      FED_REPO_ROOT: "{{repo.repo_root}}"
+
 states:
   planning:
     description: "人間と対話しながら計画を策定する"

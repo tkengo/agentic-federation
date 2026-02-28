@@ -72,10 +72,10 @@ const repo = program
   .description("Manage repository definitions");
 
 repo
-  .command("add <name>")
-  .description("Add a new repository definition interactively")
-  .action(async (name: string) => {
-    await repoAddCommand(name);
+  .command("add <clone-url> [base-path]")
+  .description("Clone a repository and register it")
+  .action((cloneUrl: string, basePath?: string) => {
+    repoAddCommand(cloneUrl, basePath);
   });
 
 repo

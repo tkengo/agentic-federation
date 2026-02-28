@@ -9,7 +9,7 @@ export interface ScriptDef {
   path: string;
   description?: string;
   env?: Record<string, string>;
-  cwd?: "repo" | "session";
+  cwd?: string;
 }
 
 export interface WorkflowDefinition {

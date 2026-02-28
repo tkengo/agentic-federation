@@ -5,7 +5,6 @@ export interface KeyboardActions {
   onUp?: () => void;
   onDown?: () => void;
   onPreview?: () => void;
-  onApprove?: () => void;
   onFeedback?: () => void;
   onLongFeedback?: () => void;
   onStop?: () => void;
@@ -14,6 +13,7 @@ export interface KeyboardActions {
   onCreate?: () => void;
   onPalette?: () => void;
   onSpace?: () => void;
+  onAddRepo?: () => void;
 }
 
 export function useKeyboard(actions: KeyboardActions, active = true) {
@@ -35,7 +35,7 @@ export function useKeyboard(actions: KeyboardActions, active = true) {
       } else if (input === "p") {
         actions.onPreview?.();
       } else if (input === "a") {
-        actions.onApprove?.();
+        actions.onAddRepo?.();
       } else if (input === "f") {
         actions.onFeedback?.();
       } else if (input === "F") {

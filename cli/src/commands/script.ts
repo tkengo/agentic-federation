@@ -3,6 +3,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { requireSessionDir, readMeta } from "../lib/session.js";
 import { loadSessionWorkflow } from "../lib/workflow.js";
+import { loadRepoConfig } from "../lib/repo.js";
 import type { ScriptDef } from "../lib/workflow.js";
 
 function loadScripts(sessionDir: string): Record<string, ScriptDef> {
@@ -27,17 +28,6 @@ function resolveScriptPath(scriptDef: ScriptDef, sessionDir: string): string {
   return path.resolve(sessionDir, raw);
 }
 
-function resolveCwd(scriptDef: ScriptDef, sessionDir: string): string {
-  if (scriptDef.cwd === "session") {
-    return sessionDir;
-  }
-  // Default to repo worktree
-  const meta = readMeta(sessionDir);
-  if (meta?.worktree) {
-    return meta.worktree;
-  }
-  return sessionDir;
-}
 
 export function scriptListCommand(): void {
   const sessionDir = requireSessionDir();
@@ -67,7 +57,7 @@ export function scriptShowCommand(name: string): void {
   }
 
   const resolvedPath = resolveScriptPath(def, sessionDir);
-  const cwd = resolveCwd(def, sessionDir);
+  const cwd = def.cwd ?? sessionDir;
 
   console.log(`Script: ${name}`);
   if (def.description) {
@@ -101,27 +91,12 @@ export function scriptRunCommand(name: string): void {
     process.exit(1);
   }
 
-  const cwd = resolveCwd(def, sessionDir);
-  const meta = readMeta(sessionDir);
+  const cwd = def.cwd ?? sessionDir;
 
-  // Build environment: inherit current env, add script-defined env, add session context
+  // Build environment: inherit current env + script-defined env
   const env: Record<string, string> = {
     ...process.env as Record<string, string>,
-    FED_SESSION_DIR: sessionDir,
   };
-  if (meta?.worktree) {
-    env.FED_REPO_DIR = meta.worktree;
-  }
-  if (meta?.branch) {
-    env.FED_BRANCH = meta.branch;
-  }
-  if (meta?.repo) {
-    env.FED_REPO = meta.repo;
-  }
-  if (meta?.workflow) {
-    env.FED_WORKFLOW = meta.workflow;
-  }
-  // Script-defined env overrides
   if (def.env) {
     for (const [k, v] of Object.entries(def.env)) {
       env[k] = v;

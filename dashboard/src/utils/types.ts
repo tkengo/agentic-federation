@@ -8,6 +8,7 @@ export interface MetaJson {
   workflow: string;
   worktree: string;
   tmux_session: string;
+  session_dir: string;
   created_at: string;
   /** @deprecated old format compat */
   mode?: "solo" | "team";

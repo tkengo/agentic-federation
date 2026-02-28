@@ -4,6 +4,7 @@ export interface MetaJson {
   workflow: string;
   worktree: string;
   tmux_session: string;
+  session_dir: string;
   created_at: string;
   /** @deprecated old format compat */
   mode?: "solo" | "team";
@@ -24,14 +25,23 @@ export interface StateJson {
   }>;
 }
 
+// New JSON format saved by `fed repo add <clone-url>`
+export interface NewRepoConfig {
+  repo_name: string;
+  base_path: string;
+  setup_scripts: string[];
+  symlinks: string[];
+  copy_files: string[];
+  extra: Record<string, unknown>;
+}
+
+// Normalized runtime type — all consumers use this
 export interface RepoConfig {
   repo_root: string;
   worktree_base: string;
-  setup: string;
-  extra: Record<string, unknown>;
-  symlinks: string[];
-  copies: string[];
   cleanup_pattern: string;
-  /** @deprecated old format — use extra.dev_server */
-  dev_server?: string | null;
+  symlinks: string[];
+  setup_scripts: string[];
+  copy_files: string[];
+  extra: Record<string, unknown>;
 }

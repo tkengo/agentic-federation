@@ -22,7 +22,7 @@ export interface ScriptEntry {
   description?: string;
   path: string;
   env?: Record<string, string>;
-  cwd?: "repo" | "session";
+  cwd?: string;
 }
 
 export function useScripts(sessionDir: string): ScriptEntry[] {
@@ -37,7 +37,7 @@ export function useScripts(sessionDir: string): ScriptEntry[] {
           path: string;
           description?: string;
           env?: Record<string, string>;
-          cwd?: "repo" | "session";
+          cwd?: string;
         }>;
       };
       if (!wf.scripts) return [];

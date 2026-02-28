@@ -1,63 +1,52 @@
 import fs from "node:fs";
 import path from "node:path";
 import { execSync } from "node:child_process";
-import readline from "node:readline";
-import { REPOS_DIR } from "../lib/paths.js";
-import { loadRepoConfig, listRepoConfigs, saveRepoConfig } from "../lib/repo.js";
-import type { RepoConfig } from "../lib/types.js";
+import { REPOS_DIR, DEFAULT_BASE_PATH } from "../lib/paths.js";
+import { loadRepoConfig, listRepoConfigs, saveNewRepoConfig, parseCloneUrl } from "../lib/repo.js";
+import type { NewRepoConfig } from "../lib/types.js";
 
-function prompt(question: string): Promise<string> {
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
-  return new Promise((resolve) => {
-    rl.question(question, (answer) => {
-      rl.close();
-      resolve(answer.trim());
-    });
-  });
-}
-
-export async function repoAddCommand(name: string): Promise<void> {
-  const configPath = path.join(REPOS_DIR, `${name}.json`);
+export function repoAddCommand(cloneUrl: string, basePath?: string): void {
+  const repoName = parseCloneUrl(cloneUrl);
+  const configPath = path.join(REPOS_DIR, `${repoName}.json`);
   if (fs.existsSync(configPath)) {
-    console.error(`Repository '${name}' already exists. Use 'fed repo edit ${name}' to modify.`);
+    console.error(`Repository '${repoName}' already exists. Use 'fed repo edit ${repoName}' to modify.`);
     process.exit(1);
   }
 
-  console.log(`Adding repository: ${name}`);
-  const repoRoot = await prompt("  repo_root (absolute path to git repo): ");
-  const worktreeBase = await prompt("  worktree_base (parent dir for worktrees): ");
-  const setup = await prompt("  setup command (e.g. 'npm install'): ");
-  const devServer = await prompt("  dev_server command (or empty for none): ");
-  const symlinksRaw = await prompt("  symlinks (comma-separated, e.g. '.claude'): ");
-  const copiesRaw = await prompt("  copies (comma-separated, e.g. '.env.local'): ");
-  const cleanupPattern = await prompt("  cleanup_pattern (glob for Claude project dirs): ");
+  const resolvedBase = basePath ?? DEFAULT_BASE_PATH;
+  const workspace = path.join(resolvedBase, `${repoName}-workspace`);
+  const cloneDest = path.join(workspace, "main");
 
-  const extra: Record<string, unknown> = {};
-  if (devServer) {
-    extra.dev_server = devServer;
-  }
+  console.log(`Adding repository: ${repoName}`);
+  console.log(`  Clone URL:  ${cloneUrl}`);
+  console.log(`  Base path:  ${resolvedBase}`);
+  console.log(`  Workspace:  ${workspace}`);
+  console.log(`  Clone dest: ${cloneDest}`);
 
-  const config: RepoConfig = {
-    repo_root: repoRoot,
-    worktree_base: worktreeBase,
-    setup,
-    extra,
-    symlinks: symlinksRaw ? symlinksRaw.split(",").map((s) => s.trim()) : [],
-    copies: copiesRaw ? copiesRaw.split(",").map((s) => s.trim()) : [],
-    cleanup_pattern: cleanupPattern,
+  // Create workspace directory
+  fs.mkdirSync(workspace, { recursive: true });
+
+  // Clone the repo
+  console.log(`\nCloning...`);
+  execSync(`git clone '${cloneUrl}' '${cloneDest}'`, { stdio: "inherit" });
+
+  // Save config in new format
+  const config: NewRepoConfig = {
+    repo_name: repoName,
+    base_path: resolvedBase,
+    setup_scripts: [],
+    symlinks: [],
+    copy_files: [],
+    extra: {},
   };
-
-  saveRepoConfig(name, config);
-  console.log(`Saved: ${configPath}`);
+  saveNewRepoConfig(repoName, config);
+  console.log(`\nSaved: ${configPath}`);
 }
 
 export function repoListCommand(): void {
   const repos = listRepoConfigs();
   if (repos.length === 0) {
-    console.log("No repositories defined. Use 'fed repo add <name>' to add one.");
+    console.log("No repositories defined. Use 'fed repo add <clone-url>' to add one.");
     return;
   }
   console.log("Repositories:");

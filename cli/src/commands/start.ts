@@ -124,6 +124,7 @@ export async function startCommand(
     workflow: workflowName,
     worktree: worktreePath,
     tmux_session: tmuxSession,
+    session_dir: "",  // set by createSessionDir
     created_at: new Date().toISOString(),
   };
   const sessionPath = createSessionDir(repoName, meta);
@@ -240,7 +241,7 @@ function setupWorktree(
   }
 
   // Copy files
-  for (const copy of config.copies) {
+  for (const copy of config.copy_files) {
     const src = path.join(config.repo_root, copy);
     const dest = path.join(worktreePath, copy);
     if (fs.existsSync(dest)) {
@@ -254,10 +255,10 @@ function setupWorktree(
     }
   }
 
-  // Run setup command
-  if (config.setup) {
-    console.log(`Running setup: ${config.setup}`);
-    execSync(config.setup, { cwd: worktreePath, stdio: "inherit" });
+  // Run setup scripts
+  for (const script of config.setup_scripts) {
+    console.log(`Running setup: ${script}`);
+    execSync(script, { cwd: worktreePath, stdio: "inherit" });
   }
 }
 

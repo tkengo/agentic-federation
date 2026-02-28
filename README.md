@@ -2,8 +2,6 @@
 
 AI エージェントチームによる開発セッションを統一管理する CLI ツール。
 
-リポジトリごとに散在していた shell スクリプト群を `fed` コマンドに統合し、git worktree + tmux ベースの開発環境をワンコマンドで構築する。
-
 ## Prerequisites
 
 - Node.js (v20+)
@@ -43,10 +41,10 @@ fed init
 fed repo add my-project
 
 # 3. ソロモードで開発セッションを起動 (terminal + nvim)
-fed start my-project feature-branch
+fed start solo my-project feature-branch
 
 # 4. チームモードで起動 (agent-team ウィンドウ付き)
-fed start my-project feature-branch --workflow dev-team
+fed start dev-team my-project feature-branch
 
 # ダッシュボードを起動
 fed dashboard
@@ -58,8 +56,7 @@ fed dashboard
 
 | Command | Description |
 |---|---|
-| `fed start <repo> <branch>` | ソロモードで開発セッションを起動 |
-| `fed start <repo> <branch> --workflow <name>` | ワークフロー指定でチームモードを起動 |
+| `fed start <workflow> <repo> <branch>` | 開発セッションを起動 |
 | `fed stop [session-name]` | セッションを停止してアーカイブ |
 | `fed list` (`fed ls`) | アクティブセッション一覧 |
 | `fed info [session-name]` | セッション詳細表示 |
@@ -89,6 +86,39 @@ fed dashboard
 | `fed repo list` | 一覧表示 |
 | `fed repo show <name>` | 詳細表示 |
 | `fed repo edit <name>` | $EDITOR で編集 |
+
+### スクリプト
+
+| Command | Description |
+|---|---|
+| `fed script list` | ワークフロー定義のスクリプト一覧 |
+| `fed script show <name>` | スクリプト詳細表示 |
+| `fed script run <name>` | スクリプト実行 |
+
+スクリプトはワークフロー YAML の `scripts:` セクションで定義する:
+
+```yaml
+scripts:
+  make-pr:
+    path: ./scripts/make-pr.sh
+    description: "Create a PR from current changes"
+    env:
+      BRANCH_PREFIX: feat
+    cwd: repo  # "repo" (default) or "session"
+```
+
+実行時に自動注入される環境変数:
+
+| Variable | Description |
+|---|---|
+| `FED_SESSION` | tmux セッション名 |
+| `FED_SESSION_DIR` | セッションディレクトリパス |
+| `FED_REPO_DIR` | worktree パス |
+| `FED_BRANCH` | ブランチ名 |
+| `FED_REPO` | リポジトリ名 |
+| `FED_WORKFLOW` | ワークフロー名 |
+
+ログは `<sessionDir>/script-logs/` に自動保存される。
 
 ### エージェント連携 (セッション内で使用)
 
@@ -133,7 +163,9 @@ fed workflow validate dev-team
 
 ## Session Modes
 
-**Solo mode** (default): terminal + nvim (+ dev server)
+`fed start <workflow> <repo> <branch>` でワークフローを指定して起動する。
+
+**solo**: terminal + nvim (+ dev server)
 
 ```
 +-------------------+-------------------+
@@ -143,7 +175,7 @@ fed workflow validate dev-team
 +---------------------------------------+
 ```
 
-**Team mode** (`--workflow`): 上記 + ワークフロー定義に基づく agent-team ウィンドウ
+**dev-team**: 上記 + ワークフロー定義に基づく agent-team ウィンドウ
 
 ## Runtime Data
 
@@ -190,13 +222,18 @@ fed workflow validate dev-team
 
 | Key | Action |
 |---|---|
-| `Up/Down` | セッション選択 |
+| `j/k` / `Up/Down` | セッション選択 |
 | `Enter` | tmux セッションに切替 |
+| `Space` | セッション詳細展開 (Artifacts / Scripts) |
 | `p` | 成果物プレビュー |
 | `a` | 承認 |
 | `f` | フィードバック入力 |
-| `k` | セッション終了 |
-| `q` | ダッシュボード終了 |
+| `s` | セッション終了 |
+| `n` | 新規セッション作成 |
+| `:` | コマンドパレット |
+| `C-c C-c` | ダッシュボード終了 |
+
+展開モードでは Artifacts と Scripts を統合リストで表示し、スクリプトを選択して実行できる。実行中のログはリアルタイムでスクロール表示される。
 
 ## Development
 
@@ -238,6 +275,7 @@ agentic-federation/
 │   │   │   ├── prompt.ts         # fed prompt
 │   │   │   ├── stale.ts          # fed stale
 │   │   │   ├── workflow.ts       # fed workflow
+│   │   │   ├── script.ts         # fed script
 │   │   │   └── notify-human.ts   # fed notify-human
 │   │   └── lib/                  # 共通ライブラリ
 │   │       ├── paths.ts          # ~/.fed/ パス定数
