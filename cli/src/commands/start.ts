@@ -15,7 +15,7 @@ import {
   type WorkflowDefinition,
   type WorkflowWindow,
 } from "../lib/workflow.js";
-import { parse as parseYaml } from "yaml";
+import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 
 export async function startCommand(
   workflowName: string,
@@ -295,13 +295,26 @@ function expandAndSaveWorkflow(
   meta: MetaJson
 ): WorkflowDefinition {
   const fedRepo = path.resolve(import.meta.dirname, "..", "..", "..");
-  const srcWorkflow = path.join(fedRepo, "workflows", workflowName, "workflow.yaml");
+  const srcWorkflowDir = path.join(fedRepo, "workflows", workflowName);
+  const srcWorkflow = path.join(srcWorkflowDir, "workflow.yaml");
   const rawYaml = fs.readFileSync(srcWorkflow, "utf-8");
   const expandedYaml = expandTemplateVariables(rawYaml, { repo: config, meta });
-  fs.writeFileSync(path.join(sessionPath, "workflow.yaml"), expandedYaml);
 
-  // Parse the expanded YAML to get the runtime workflow object
-  return parseYaml(expandedYaml) as WorkflowDefinition;
+  // Parse expanded YAML and resolve relative script paths to absolute
+  const wf = parseYaml(expandedYaml) as WorkflowDefinition;
+  if (wf.scripts) {
+    for (const def of Object.values(wf.scripts)) {
+      if (!path.isAbsolute(def.path)) {
+        def.path = path.resolve(srcWorkflowDir, def.path);
+      }
+    }
+  }
+
+  fs.writeFileSync(
+    path.join(sessionPath, "workflow.yaml"),
+    stringifyYaml(wf)
+  );
+  return wf;
 }
 
 // --- Start TypeScript notification watcher as child process ---
