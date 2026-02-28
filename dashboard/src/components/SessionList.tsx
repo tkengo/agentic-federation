@@ -69,7 +69,7 @@ export function SessionList({ sessions, selectedIndex, dimmed, expandedIndex, re
       {/* Header row */}
       <Box>
         <Text dimColor>
-          {`    ${"REPO/BRANCH".padEnd(colWidths.repoBranch)}  ${"WORKFLOW".padEnd(colWidths.workflow)}  ${"STATUS".padEnd(colWidths.status + 2)}       AGE  WORKTREE`}
+          {`    ${"REPO/BRANCH".padEnd(colWidths.repoBranch)}  ${"WORKFLOW".padEnd(colWidths.workflow)}  ${"STATUS".padEnd(colWidths.status + 2)}       AGE`}
         </Text>
       </Box>
       {/* Session rows */}

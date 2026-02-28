@@ -2,7 +2,9 @@ import React, { useMemo } from "react";
 import { Box, Text } from "ink";
 import fs from "node:fs";
 import path from "node:path";
+import stringWidth from "string-width";
 import { computeScrollOffset } from "../utils/scroll.js";
+import { shortenHome } from "../utils/format.js";
 import { useBlink } from "../hooks/useBlink.js";
 import { REPOS_DIR } from "../utils/types.js";
 import type { ArtifactEntry } from "./ArtifactList.js";
@@ -79,6 +81,7 @@ interface DetailPanelProps {
     workflow: number;
     status: number;
   };
+  worktree?: string;
   description?: string;
   mode: DetailMode;
   // Browse mode
@@ -96,13 +99,23 @@ interface DetailPanelProps {
 const DESC_MAX_LINES = 3;
 
 function truncateLines(text: string, lineWidth: number, maxLines: number): string {
-  const maxChars = lineWidth * maxLines;
-  if (text.length <= maxChars) return text;
-  return text.slice(0, maxChars - 1) + "\u2026";
+  const maxCols = lineWidth * maxLines;
+  if (stringWidth(text) <= maxCols) return text;
+  // Trim by visual width
+  let cols = 0;
+  let i = 0;
+  for (const ch of text) {
+    const w = stringWidth(ch);
+    if (cols + w > maxCols - 1) break; // -1 for ellipsis
+    cols += w;
+    i += ch.length;
+  }
+  return text.slice(0, i) + "\u2026";
 }
 
 export function DetailPanel({
   colWidths,
+  worktree,
   description,
   mode,
   artifacts,
@@ -117,12 +130,18 @@ export function DetailPanel({
   const blinkOn = useBlink(500);
 
   // Box width (same formula as ArtifactList)
-  const boxWidth = 4 + colWidths.repoBranch + 2 + colWidths.workflow + 2 + colWidths.status + 2 + 4 + 2 + 4;
+  const boxWidth = 4 + colWidths.repoBranch + 2 + colWidths.workflow + 2 + colWidths.status + 2 + 4 + 2 + 4 + 50;
   const innerWidth = boxWidth - 4;
 
   if (mode === "running" || mode === "done") {
     return (
       <Box marginLeft={3} width={boxWidth} borderStyle="round" flexDirection="column" paddingX={1}>
+        {worktree && (
+          <>
+            <Text dimColor>{shortenHome(worktree)}</Text>
+            <Text>{" "}</Text>
+          </>
+        )}
         <LogView
           innerWidth={innerWidth}
           mode={mode}
@@ -139,6 +158,12 @@ export function DetailPanel({
 
   return (
     <Box marginLeft={3} width={boxWidth} borderStyle="round" flexDirection="column" paddingX={1}>
+      {worktree && (
+        <>
+          <Text dimColor>{shortenHome(worktree)}</Text>
+          <Text>{" "}</Text>
+        </>
+      )}
       <BrowseView
         innerWidth={innerWidth}
         description={description}
@@ -210,10 +235,10 @@ function BrowseView({
   return (
     <>
       {truncatedDesc && (
-        <Box width={innerWidth} flexDirection="column">
+        <>
           <Text>{truncatedDesc}</Text>
           <Text>{" "}</Text>
-        </Box>
+        </>
       )}
       {visibleRows.map((row, i) => {
         const isFirst = i === 0;

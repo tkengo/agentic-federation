@@ -694,6 +694,7 @@ export function App() {
               renderDetail={(session, colWidths) => (
                 <DetailPanel
                   colWidths={colWidths}
+                  worktree={session.meta.worktree}
                   description={session.description}
                   mode={detailMode}
                   artifacts={expandedArtifacts}

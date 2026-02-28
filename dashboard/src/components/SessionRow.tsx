@@ -1,7 +1,7 @@
 import React from "react";
 import { Box, Text } from "ink";
 import { StatusBadge } from "./StatusBadge.js";
-import { formatAge, shortenHome } from "../utils/format.js";
+import { formatAge } from "../utils/format.js";
 import type { SessionData } from "../utils/types.js";
 import { STALE_THRESHOLD_SEC } from "../utils/types.js";
 
@@ -68,7 +68,6 @@ export function SessionRow({ session, selected, dimmed, expanded, blinkOn, colWi
       )}
       <Text dimColor={dimmed}>{`  `}</Text>
       <Text dimColor>{age.padStart(4)}</Text>
-      <Text dimColor>{`  ${shortenHome(session.meta.worktree)}`}</Text>
       {inlineDesc && (
         <Text dimColor>{`  ${inlineDesc}`}</Text>
       )}
