@@ -1,5 +1,5 @@
 ---
-name: fed-dev-developer-agent
+name: solo-dev-developer-agent
 description: Common agent for solo workflow
 model: opus
 tools: Read, Write, Edit, Bash, Glob, Grep

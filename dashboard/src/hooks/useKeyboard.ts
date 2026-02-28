@@ -40,7 +40,7 @@ export function useKeyboard(actions: KeyboardActions, active = true) {
         actions.onFeedback?.();
       } else if (input === "F") {
         actions.onLongFeedback?.();
-      } else if (input === "s") {
+      } else if (input === "d") {
         actions.onStop?.();
       } else if (input === "n") {
         actions.onCreate?.();

@@ -20,4 +20,8 @@ echo "=== Uninstalling dev command ==="
 "$FED_REPO_DIR/bin/uninstall" --dev "$FED_BRANCH"
 
 echo ""
+echo "=== Install latest CLI and dashboard ==="
+$FED_REPO_ROOT/bin/install
+
+echo ""
 echo "=== Done ==="

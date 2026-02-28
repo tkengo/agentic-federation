@@ -1,13 +1,13 @@
-name: fed-dev
-description: "agentic-federationの開発用"
+name: solo-dev
+description: "ソロ開発用"
 
 windows:
-  - name: fed-dev
+  - name: solo-dev
     panes:
       - id: terminal
         name: Terminal
         pane: 1
-        command: 'yoloclaude --agent fed-dev-developer-agent'
+        command: 'yoloclaude --agent solo-dev-developer-agent'
       - id: editor
         name: Editor
         pane: 2

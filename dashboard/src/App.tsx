@@ -845,18 +845,12 @@ export function App() {
       )}
 
       <Footer
-        screen={screen}
-        createStep={createStep}
-        hasSelectedSession={!!selectedSession}
-        expanded={expandedIndex !== null}
-        cleanRowSelected={cleanRowSelected}
         confirmingClean={confirmingClean}
         cleanableCount={cleanableCount}
         cleaning={cleaning}
         confirmingKill={confirmingKill}
         killTargetName={selectedSession?.name}
         ctrlCPending={ctrlCPending}
-        detailMode={detailMode}
         confirmingScript={confirmingScript}
         confirmScriptName={confirmScriptName}
       />
