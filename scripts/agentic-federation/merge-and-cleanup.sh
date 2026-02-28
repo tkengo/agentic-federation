@@ -13,8 +13,4 @@ echo "=== Install latest CLI and dashboard ==="
 $FED_REPO_ROOT/bin/install
 
 echo ""
-echo "=== Stop fed session ==="
-fed stop $FED_SESSION
-
-echo ""
 echo "=== Done ==="
