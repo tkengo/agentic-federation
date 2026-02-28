@@ -1,40 +1,44 @@
 import fs from "node:fs";
-import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { requireSessionDir, readMeta } from "../lib/session.js";
-import { loadSessionWorkflow } from "../lib/workflow.js";
-import { loadRepoConfig } from "../lib/repo.js";
-import type { ScriptDef } from "../lib/workflow.js";
+import { loadRepoConfig, resolveRepoScriptPath } from "../lib/repo.js";
+import type { MetaJson, RepoConfig, ScriptDef } from "../lib/types.js";
 
-function loadScripts(sessionDir: string): Record<string, ScriptDef> {
-  const wf = loadSessionWorkflow(sessionDir);
-  if (!wf) {
-    console.error("Error: No workflow.yaml found in session directory.");
+// Load scripts and session context from repo config.
+function loadContext(sessionDir: string): {
+  scripts: Record<string, ScriptDef>;
+  meta: MetaJson;
+  repoConfig: RepoConfig;
+  sessionDir: string;
+} {
+  const meta = readMeta(sessionDir);
+  if (!meta) {
+    console.error("Error: No meta.json found in session directory.");
     process.exit(1);
   }
-  return wf.scripts ?? {};
+  const repoConfig = loadRepoConfig(meta.repo);
+  return { scripts: repoConfig.scripts, meta, repoConfig, sessionDir };
 }
 
-function resolveScriptPath(scriptDef: ScriptDef, sessionDir: string): string {
-  const raw = scriptDef.path;
-  if (path.isAbsolute(raw)) {
-    return raw;
-  }
-  // Relative paths resolve from the repo worktree
-  const meta = readMeta(sessionDir);
-  if (meta?.worktree) {
-    return path.resolve(meta.worktree, raw);
-  }
-  return path.resolve(sessionDir, raw);
+// Build auto-injected FED_* environment variables from session context.
+function buildAutoEnv(meta: MetaJson, repoConfig: RepoConfig): Record<string, string> {
+  return {
+    FED_SESSION: meta.tmux_session,
+    FED_SESSION_DIR: meta.session_dir,
+    FED_REPO_DIR: meta.worktree,
+    FED_BRANCH: meta.branch,
+    FED_REPO: meta.repo,
+    FED_WORKFLOW: meta.workflow,
+    FED_REPO_ROOT: repoConfig.repo_root,
+  };
 }
 
-
-export function scriptListCommand(): void {
+export function repoScriptListCommand(): void {
   const sessionDir = requireSessionDir();
-  const scripts = loadScripts(sessionDir);
+  const { scripts } = loadContext(sessionDir);
   const entries = Object.entries(scripts);
 
-  console.log("Scripts:");
+  console.log("Repo scripts:");
   if (entries.length === 0) {
     console.log("  (none)");
     return;
@@ -45,9 +49,9 @@ export function scriptListCommand(): void {
   }
 }
 
-export function scriptShowCommand(name: string): void {
+export function repoScriptShowCommand(name: string): void {
   const sessionDir = requireSessionDir();
-  const scripts = loadScripts(sessionDir);
+  const { scripts, meta, repoConfig } = loadContext(sessionDir);
   const def = scripts[name];
 
   if (!def) {
@@ -56,8 +60,8 @@ export function scriptShowCommand(name: string): void {
     process.exit(1);
   }
 
-  const resolvedPath = resolveScriptPath(def, sessionDir);
-  const cwd = def.cwd ?? sessionDir;
+  const resolvedPath = resolveRepoScriptPath(def.path);
+  const autoEnv = buildAutoEnv(meta, repoConfig);
 
   console.log(`Script: ${name}`);
   if (def.description) {
@@ -65,18 +69,22 @@ export function scriptShowCommand(name: string): void {
   }
   console.log(`Path: ${def.path}`);
   console.log(`Resolved: ${resolvedPath}`);
-  console.log(`Cwd: ${cwd}`);
+  console.log(`Cwd: ${def.cwd ?? meta.worktree}`);
+  console.log("Auto-injected env:");
+  for (const [k, v] of Object.entries(autoEnv)) {
+    console.log(`  ${k}=${v}`);
+  }
   if (def.env && Object.keys(def.env).length > 0) {
-    console.log("Env:");
+    console.log("Script env:");
     for (const [k, v] of Object.entries(def.env)) {
       console.log(`  ${k}=${v}`);
     }
   }
 }
 
-export function scriptRunCommand(name: string): void {
+export function repoScriptRunCommand(name: string): void {
   const sessionDir = requireSessionDir();
-  const scripts = loadScripts(sessionDir);
+  const { scripts, meta, repoConfig } = loadContext(sessionDir);
   const def = scripts[name];
 
   if (!def) {
@@ -85,17 +93,19 @@ export function scriptRunCommand(name: string): void {
     process.exit(1);
   }
 
-  const resolvedPath = resolveScriptPath(def, sessionDir);
+  const resolvedPath = resolveRepoScriptPath(def.path);
   if (!fs.existsSync(resolvedPath)) {
     console.error(`Error: Script file not found: ${resolvedPath}`);
     process.exit(1);
   }
 
-  const cwd = def.cwd ?? sessionDir;
+  // Default cwd to worktree path
+  const cwd = def.cwd ?? meta.worktree;
 
-  // Build environment: inherit current env + script-defined env
+  // Build environment: inherit process env + auto-injected FED_* + script-defined env
   const env: Record<string, string> = {
     ...process.env as Record<string, string>,
+    ...buildAutoEnv(meta, repoConfig),
   };
   if (def.env) {
     for (const [k, v] of Object.entries(def.env)) {

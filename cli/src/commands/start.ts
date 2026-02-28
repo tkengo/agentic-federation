@@ -300,15 +300,7 @@ function expandAndSaveWorkflow(
   const rawYaml = fs.readFileSync(srcWorkflow, "utf-8");
   const expandedYaml = expandTemplateVariables(rawYaml, { repo: config, meta });
 
-  // Parse expanded YAML and resolve relative script paths to absolute
   const wf = parseYaml(expandedYaml) as WorkflowDefinition;
-  if (wf.scripts) {
-    for (const def of Object.values(wf.scripts)) {
-      if (!path.isAbsolute(def.path)) {
-        def.path = path.resolve(srcWorkflowDir, def.path);
-      }
-    }
-  }
 
   fs.writeFileSync(
     path.join(sessionPath, "workflow.yaml"),

@@ -2,9 +2,9 @@ import React, { useMemo } from "react";
 import { Box, Text } from "ink";
 import fs from "node:fs";
 import path from "node:path";
-import { parse as parseYaml } from "yaml";
 import { computeScrollOffset } from "../utils/scroll.js";
 import { useBlink } from "../hooks/useBlink.js";
+import { REPOS_DIR } from "../utils/types.js";
 import type { ArtifactEntry } from "./ArtifactList.js";
 
 // Unicode emoji icons (string-width correctly reports 2 for these)
@@ -28,20 +28,27 @@ export interface ScriptEntry {
 export function useScripts(sessionDir: string): ScriptEntry[] {
   return useMemo(() => {
     if (!sessionDir) return [];
-    const wfPath = path.join(sessionDir, "workflow.yaml");
     try {
-      if (!fs.existsSync(wfPath)) return [];
-      const raw = fs.readFileSync(wfPath, "utf-8");
-      const wf = parseYaml(raw) as {
-        scripts?: Record<string, {
-          path: string;
-          description?: string;
-          env?: Record<string, string>;
-          cwd?: string;
-        }>;
-      };
-      if (!wf.scripts) return [];
-      return Object.entries(wf.scripts).map(([name, def]) => ({
+      // Read meta.json to get repo name
+      const metaPath = path.join(sessionDir, "meta.json");
+      if (!fs.existsSync(metaPath)) return [];
+      const meta = JSON.parse(fs.readFileSync(metaPath, "utf-8"));
+      const repoName = meta.repo;
+      if (!repoName) return [];
+
+      // Read repo config JSON
+      const repoConfigPath = path.join(REPOS_DIR, `${repoName}.json`);
+      if (!fs.existsSync(repoConfigPath)) return [];
+      const repoConfig = JSON.parse(fs.readFileSync(repoConfigPath, "utf-8"));
+      const scripts = repoConfig.scripts as Record<string, {
+        path: string;
+        description?: string;
+        env?: Record<string, string>;
+        cwd?: string;
+      }> | undefined;
+      if (!scripts) return [];
+
+      return Object.entries(scripts).map(([name, def]) => ({
         name,
         description: def.description,
         path: def.path,

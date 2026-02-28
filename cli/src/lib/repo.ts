@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { REPOS_DIR } from "./paths.js";
 import type { RepoConfig, NewRepoConfig } from "./types.js";
@@ -23,6 +24,7 @@ function deriveFromNewFormat(raw: NewRepoConfig): RepoConfig {
     setup_scripts: raw.setup_scripts ?? [],
     copy_files: raw.copy_files ?? [],
     extra: raw.extra ?? {},
+    scripts: raw.scripts ?? {},
   };
 }
 
@@ -54,4 +56,15 @@ export function saveNewRepoConfig(name: string, config: NewRepoConfig): void {
   fs.mkdirSync(REPOS_DIR, { recursive: true });
   const configPath = path.join(REPOS_DIR, `${name}.json`);
   fs.writeFileSync(configPath, JSON.stringify(config, null, 2) + "\n");
+}
+
+// ---- Script path resolution ----
+
+// Resolve script path: expand ~/, absolute as-is, relative from REPOS_DIR.
+export function resolveRepoScriptPath(scriptPath: string): string {
+  if (scriptPath.startsWith("~/")) {
+    return path.join(os.homedir(), scriptPath.slice(2));
+  }
+  if (path.isAbsolute(scriptPath)) return scriptPath;
+  return path.resolve(REPOS_DIR, scriptPath);
 }

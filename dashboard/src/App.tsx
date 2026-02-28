@@ -353,7 +353,7 @@ export function App() {
     [showMessage, refreshRepos]
   );
 
-  // Run a script from the expanded session
+  // Run a script from the expanded session via `fed repo-script run`
   const runScript = useCallback(() => {
     if (!expandedSession) return;
     const scriptIdx = detailIndex - expandedArtifacts.length;
@@ -361,22 +361,7 @@ export function App() {
     if (!scriptDef) return;
 
     const sessionDir = expandedSession.sessionDir;
-
-    // Resolve script path (relative to worktree, or absolute)
-    const scriptPath = path.isAbsolute(scriptDef.path)
-      ? scriptDef.path
-      : path.resolve(expandedSession.meta.worktree, scriptDef.path);
-
-    // Use template-expanded cwd, fallback to session dir
-    const cwd = scriptDef.cwd ?? sessionDir;
-
-    // Build environment: inherit current env + script-defined env
-    const env: Record<string, string> = {
-      ...process.env as Record<string, string>,
-    };
-    if (scriptDef.env) {
-      Object.assign(env, scriptDef.env);
-    }
+    const sessionName = expandedSession.meta.tmux_session;
 
     // Create log file
     const logsDir = path.join(sessionDir, "script-logs");
@@ -406,10 +391,8 @@ export function App() {
     setRunningScriptName(scriptDef.name);
     setDetailMode("running");
 
-    // Spawn the script
-    const proc = spawn(scriptPath, {
-      cwd,
-      env,
+    // Delegate to `fed repo-script run` — path resolution, env injection, cwd all handled by CLI
+    const proc = spawn("fed", ["repo-script", "run", scriptDef.name, "--session", sessionName], {
       stdio: ["ignore", "pipe", "pipe"],
     });
     scriptProcessRef.current = proc;

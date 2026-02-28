@@ -25,6 +25,14 @@ export interface StateJson {
   }>;
 }
 
+// Script definition (stored in repo config JSON)
+export interface ScriptDef {
+  path: string;
+  description?: string;
+  env?: Record<string, string>;
+  cwd?: string;
+}
+
 // New JSON format saved by `fed repo add <clone-url>`
 export interface NewRepoConfig {
   repo_name: string;
@@ -33,6 +41,7 @@ export interface NewRepoConfig {
   symlinks: string[];
   copy_files: string[];
   extra: Record<string, unknown>;
+  scripts?: Record<string, ScriptDef>;
 }
 
 // Normalized runtime type — all consumers use this
@@ -44,4 +53,5 @@ export interface RepoConfig {
   setup_scripts: string[];
   copy_files: string[];
   extra: Record<string, unknown>;
+  scripts: Record<string, ScriptDef>;
 }

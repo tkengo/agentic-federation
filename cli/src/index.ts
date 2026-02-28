@@ -39,10 +39,10 @@ import {
   workflowValidateCommand,
 } from "./commands/workflow.js";
 import {
-  scriptListCommand,
-  scriptShowCommand,
-  scriptRunCommand,
-} from "./commands/script.js";
+  repoScriptListCommand,
+  repoScriptShowCommand,
+  repoScriptRunCommand,
+} from "./commands/repo-script.js";
 
 const program = new Command();
 
@@ -353,30 +353,30 @@ workflow
     workflowValidateCommand(name);
   });
 
-// --- script ---
-const script = program
-  .command("script")
-  .description("Run workflow-defined scripts");
+// --- repo-script ---
+const repoScript = program
+  .command("repo-script")
+  .description("Run repo-defined scripts");
 
-script
+repoScript
   .command("list")
   .description("List available scripts")
   .action(() => {
-    scriptListCommand();
+    repoScriptListCommand();
   });
 
-script
+repoScript
   .command("show <name>")
   .description("Show script details")
   .action((name: string) => {
-    scriptShowCommand(name);
+    repoScriptShowCommand(name);
   });
 
-script
+repoScript
   .command("run <name>")
   .description("Run a script")
   .action((name: string) => {
-    scriptRunCommand(name);
+    repoScriptRunCommand(name);
   });
 
 program.parse();
