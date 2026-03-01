@@ -1,44 +1,34 @@
 import React from "react";
 import { Box, Text } from "ink";
+import type { FooterOverride } from "../utils/types.js";
 
 interface FooterProps {
-  confirmingClean?: boolean;
-  cleanableCount?: number;
-  cleaning?: boolean;
-  confirmingKill?: boolean;
-  killTargetName?: string;
+  override?: FooterOverride;
   ctrlCPending?: boolean;
-  confirmingScript?: boolean;
-  confirmScriptName?: string;
   message?: string | null;
 }
 
-export function Footer({
-  cleaning, confirmingClean, cleanableCount,
-  confirmingKill, killTargetName,
-  ctrlCPending, confirmingScript, confirmScriptName,
-  message,
-}: FooterProps) {
+export function Footer({ override, ctrlCPending, message }: FooterProps) {
   let content: React.ReactNode = <Text>{" "}</Text>;
 
-  if (cleaning) {
+  if (override?.type === "cleaning") {
     content = <Text color="yellow">Cleaning worktrees...</Text>;
-  } else if (confirmingClean) {
+  } else if (override?.type === "confirmClean") {
     content = (
       <Text color="yellow">
-        Clean {cleanableCount} worktrees? [y]Yes  [any key]Cancel
+        Clean {override.count} worktrees? [y]Yes  [any key]Cancel
       </Text>
     );
-  } else if (confirmingKill && killTargetName) {
+  } else if (override?.type === "confirmKill") {
     content = (
       <Text color="yellow">
-        Stop session &quot;{killTargetName}&quot;? [y]Yes  [any key]Cancel
+        Stop session &quot;{override.name}&quot;? [y]Yes  [any key]Cancel
       </Text>
     );
-  } else if (confirmingScript && confirmScriptName) {
+  } else if (override?.type === "confirmScript") {
     content = (
       <Text color="yellow">
-        Run script &quot;{confirmScriptName}&quot;? [y]Yes  [any key]Cancel
+        Run script &quot;{override.name}&quot;? [y]Yes  [any key]Cancel
       </Text>
     );
   } else if (ctrlCPending) {

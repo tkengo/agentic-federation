@@ -57,6 +57,20 @@ export interface RepoInfo {
   repoRoot: string;
 }
 
+// Footer override state from Home component
+export type FooterOverride =
+  | null
+  | { type: "cleaning" }
+  | { type: "confirmClean"; count: number }
+  | { type: "confirmKill"; name: string }
+  | { type: "confirmScript"; name: string };
+
+// Workflow info for dashboard display
+export interface WorkflowInfo {
+  name: string;
+  description: string;
+}
+
 // Session data used by the dashboard
 export interface SessionData {
   name: string;
