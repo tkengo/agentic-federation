@@ -498,14 +498,8 @@ export function Home({
       const maxScroll = Math.max(0, logLines.length - LOG_MAX_VISIBLE);
 
       if (key.escape) {
-        setDetailMode("browse");
-        setLogLines([]);
-        setLogScroll(0);
-        setRunningScriptName(null);
-        setScriptExitCode(null);
-        setScriptKilled(false);
-        logBufferRef.current = "";
-        autoScrollRef.current = true;
+        // Close detail panel and return to session list
+        setExpandedIndex(null);
       } else if (isPageUp) {
         setLogScroll((s) => Math.max(0, s - LOG_MAX_VISIBLE));
       } else if (isPageDown) {
