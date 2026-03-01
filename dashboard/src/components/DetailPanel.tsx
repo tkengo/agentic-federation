@@ -203,8 +203,9 @@ export function DetailPanel({
 }: DetailPanelProps) {
   const blinkOn = useBlink(500);
 
-  // Box width (same formula as ArtifactList)
-  const boxWidth = 4 + colWidths.repoBranch + 2 + colWidths.workflow + 2 + colWidths.status + 2 + 4 + 2 + 4 + 50;
+  // Box width: cursor visual width is 4 (space + arrow(2) + space), minus marginLeft(4)
+  // then repoBranch + 2 + workflow + 2 + status + 2 + [!](4) + 2 + age(4) + extra(50)
+  const boxWidth = 3 + colWidths.repoBranch + 2 + colWidths.workflow + 2 + colWidths.status + 2 + 4 + 2 + 4 + 50;
   const innerWidth = boxWidth - 4;
 
   const worktreeHeader = worktree ? (
@@ -216,7 +217,7 @@ export function DetailPanel({
 
   if (mode === "sending") {
     return (
-      <Box marginLeft={3} width={boxWidth} borderStyle="round" flexDirection="column" paddingX={1}>
+      <Box marginLeft={4} width={boxWidth} borderStyle="round" flexDirection="column" paddingX={1}>
         {worktreeHeader}
         <Box>
           <Text>{ICON_SEND} </Text>
@@ -238,7 +239,7 @@ export function DetailPanel({
 
   if (mode === "running" || mode === "done") {
     return (
-      <Box marginLeft={3} width={boxWidth} borderStyle="round" flexDirection="column" paddingX={1}>
+      <Box marginLeft={4} width={boxWidth} borderStyle="round" flexDirection="column" paddingX={1}>
         {worktreeHeader}
         <LogView
           innerWidth={innerWidth}
@@ -255,7 +256,7 @@ export function DetailPanel({
   }
 
   return (
-    <Box marginLeft={3} width={boxWidth} borderStyle="round" flexDirection="column" paddingX={1}>
+    <Box marginLeft={4} width={boxWidth} borderStyle="round" flexDirection="column" paddingX={1}>
       {worktreeHeader}
       <BrowseView
         innerWidth={innerWidth}
