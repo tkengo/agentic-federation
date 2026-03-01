@@ -157,6 +157,7 @@ export function Home({
       autoScrollRef.current = true;
       setSendingValue("");
       setSendingPaneIndex(-1);
+      process.stdout.write("\x1b[?25l"); // Hide terminal cursor in case sending mode was active
     }
     prevExpandedRef.current = expandedIndex;
   }, [expandedIndex]);
@@ -428,6 +429,7 @@ export function Home({
           setSendingPaneIndex(paneIdx);
           setSendingValue("");
           setDetailMode("sending");
+          process.stdout.write("\x1b[?25h"); // Show terminal cursor for IME
         }
       },
       onSpace: () => {
@@ -517,6 +519,7 @@ export function Home({
   useInput(
     (_input, key) => {
       if (key.escape) {
+        process.stdout.write("\x1b[?25l"); // Hide terminal cursor
         setSendingValue("");
         setSendingPaneIndex(-1);
         setDetailMode("browse");
@@ -624,14 +627,22 @@ export function Home({
               if (!pane) return;
               const q = (s: string) => `'${s.replace(/'/g, "'\\''")}'`;
               try {
+                // Send text literally, then Enter separately (with sleep to
+                // ensure TUI apps like Claude Code process the text first).
                 execSync(
-                  `tmux send-keys -t ${q(pane.tmuxTarget)} ${q(text)} Enter`,
+                  `tmux send-keys -t ${q(pane.tmuxTarget)} -l ${q(text)}`,
+                  { stdio: "ignore" }
+                );
+                execSync("sleep 1");
+                execSync(
+                  `tmux send-keys -t ${q(pane.tmuxTarget)} Enter`,
                   { stdio: "ignore" }
                 );
                 showMessage(`Sent to ${pane.displayName}`);
               } catch {
                 showMessage(`Failed to send to ${pane.displayName}`);
               }
+              process.stdout.write("\x1b[?25l"); // Hide terminal cursor
               setSendingValue("");
               setSendingPaneIndex(-1);
               setDetailMode("browse");
