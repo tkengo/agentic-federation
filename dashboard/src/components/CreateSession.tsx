@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Box, Text, useInput } from "ink";
 import { EmacsTextInput } from "./EmacsTextInput.js";
+import { ScrollableRows } from "./ScrollableRows.js";
 import { computeScrollOffset } from "../utils/scroll.js";
 import type { SessionData } from "../utils/types.js";
 
@@ -142,56 +143,30 @@ export function CreateSession({
     ? breadcrumbParts.join(" > ")
     : "";
 
-  // Render scrollable list inside panel box
-  // Indicators (▲/▼) appear at the right edge of first/last visible rows
+  // Render scrollable list inside panel box using shared ScrollableRows
   const renderScrollableList = (
     items: { label: string; desc?: string }[],
     selectedIdx: number,
   ) => {
-    const total = items.length;
-    const offset = computeScrollOffset(selectedIdx, total, MAX_VISIBLE);
-    const visible = items.slice(offset, offset + MAX_VISIBLE);
-    const hasMore = total > MAX_VISIBLE;
-    const showUp = hasMore && offset > 0;
-    const showDown = hasMore && offset + MAX_VISIBLE < total;
-
-    // Pad to always show MAX_VISIBLE rows
-    const emptyRows = MAX_VISIBLE - visible.length;
-
     return (
       <Box flexDirection="column">
-        {visible.map((item, i) => {
-          const realIndex = offset + i;
-          const isSel = realIndex === selectedIdx;
-          // Show ▲ on first row, ▼ on last row (right-aligned)
-          const isFirst = i === 0;
-          const isLast = i === visible.length - 1 || (i === visible.length - 1 + emptyRows);
-          const indicator = (isFirst && showUp) ? " \u25B2" : (isLast && showDown) ? " \u25BC" : "";
-          return (
-            <Box key={item.label}>
-              <Box flexGrow={1}>
-                <Text>
-                  {isSel ? "  " : "    "}
-                  {isSel ? <Text color="cyan">{"> "}</Text> : ""}
-                  {isSel ? <Text color="cyan">{item.label}</Text> : item.label}
-                  {item.desc ? <Text dimColor>  {item.desc}</Text> : ""}
-                </Text>
-              </Box>
-              {indicator && <Text dimColor>{indicator} </Text>}
-            </Box>
-          );
-        })}
-        {/* Pad empty rows to keep height stable */}
-        {Array.from({ length: emptyRows }, (_, i) => {
-          const isLastPad = i === emptyRows - 1;
-          const indicator = (isLastPad && showDown) ? " \u25BC" : "";
-          return (
-            <Box key={`empty-${i}`}>
-              <Box flexGrow={1}><Text>{" "}</Text></Box>
-              {indicator && <Text dimColor>{indicator} </Text>}
-            </Box>
-          );
-        })}
+        <ScrollableRows
+          items={items}
+          maxVisible={MAX_VISIBLE}
+          scrollOffset={computeScrollOffset(selectedIdx, items.length, MAX_VISIBLE)}
+          renderRow={(item, realIndex) => {
+            const isSel = realIndex === selectedIdx;
+            return (
+              <Text>
+                {isSel ? "  " : "    "}
+                {isSel ? <Text color="cyan">{"> "}</Text> : ""}
+                {isSel ? <Text color="cyan">{item.label}</Text> : item.label}
+                {item.desc ? <Text dimColor>  {item.desc}</Text> : ""}
+              </Text>
+            );
+          }}
+          keyExtractor={(item) => item.label}
+        />
       </Box>
     );
   };

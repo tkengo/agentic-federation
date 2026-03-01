@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from "react";
 import { Box, Text, useInput } from "ink";
 import { EmacsTextInput } from "./EmacsTextInput.js";
+import { ScrollableRows } from "./ScrollableRows.js";
 import { execSync } from "node:child_process";
 import { filterCommands } from "../utils/commands.js";
 import { computeScrollOffset } from "../utils/scroll.js";
@@ -152,9 +153,6 @@ export function CommandPalette({
 
   // Render output mode
   if (subMode === "output") {
-    const visibleLines = outputLines.slice(outputScroll, outputScroll + MAX_VISIBLE);
-    const hasMoreUp = outputScroll > 0;
-    const hasMoreDown = outputScroll + MAX_VISIBLE < outputLines.length;
     return (
       <Box flexDirection="column">
         <Box
@@ -167,39 +165,18 @@ export function CommandPalette({
             <Text bold>Output </Text>
             <Text dimColor>[Up/Down] Scroll  [Esc] Back</Text>
           </Box>
-          {visibleLines.map((line, i) => {
-            const isFirst = i === 0;
-            const isLast = i === visibleLines.length - 1;
-            const indicator = (isFirst && hasMoreUp) ? " \u25B2" : (isLast && hasMoreDown) ? " \u25BC" : "";
-            return (
-              <Box key={`${outputScroll}-${i}`}>
-                <Box flexGrow={1}><Text>{line}</Text></Box>
-                {indicator && <Text dimColor>{indicator} </Text>}
-              </Box>
-            );
-          })}
-          {/* Pad empty rows to keep height stable */}
-          {Array.from({ length: MAX_VISIBLE - visibleLines.length }, (_, i) => {
-            const isLastPad = i === MAX_VISIBLE - visibleLines.length - 1;
-            const indicator = (isLastPad && hasMoreDown) ? " \u25BC" : "";
-            return (
-              <Box key={`empty-${i}`}>
-                <Box flexGrow={1}><Text>{" "}</Text></Box>
-                {indicator && <Text dimColor>{indicator} </Text>}
-              </Box>
-            );
-          })}
+          <ScrollableRows
+            items={outputLines}
+            maxVisible={MAX_VISIBLE}
+            scrollOffset={outputScroll}
+            renderRow={(line) => <Text>{line}</Text>}
+          />
         </Box>
       </Box>
     );
   }
 
   // Render search mode
-  const offset = computeScrollOffset(clampedIndex, filtered.length, MAX_VISIBLE);
-  const visible = filtered.slice(offset, offset + MAX_VISIBLE);
-  const hasMoreUp = offset > 0;
-  const hasMoreDown = offset + MAX_VISIBLE < filtered.length;
-
   return (
     <Box flexDirection="column">
       <Box
@@ -219,37 +196,22 @@ export function CommandPalette({
           <Text dimColor>  No matching commands</Text>
         ) : (
           <Box flexDirection="column">
-            {visible.map((cmd, i) => {
-              const realIndex = offset + i;
-              const isSel = realIndex === clampedIndex;
-              // Show ▲ on first row, ▼ on last row (right-aligned)
-              const isFirst = i === 0;
-              const isLast = i === visible.length - 1;
-              const indicator = (isFirst && hasMoreUp) ? " \u25B2" : (isLast && hasMoreDown) ? " \u25BC" : "";
-              return (
-                <Box key={cmd.id}>
-                  <Box flexGrow={1}>
-                    <Text>
-                      {isSel ? <Text color="cyan">{"> "}</Text> : "  "}
-                      {isSel ? <Text color="cyan">{cmd.name}</Text> : cmd.name}
-                      <Text dimColor>  {cmd.description}</Text>
-                    </Text>
-                  </Box>
-                  {indicator && <Text dimColor>{indicator} </Text>}
-                </Box>
-              );
-            })}
-            {/* Pad empty rows to keep height stable */}
-            {Array.from({ length: MAX_VISIBLE - visible.length }, (_, i) => {
-              const isLastPad = i === MAX_VISIBLE - visible.length - 1;
-              const indicator = (isLastPad && hasMoreDown) ? " \u25BC" : "";
-              return (
-                <Box key={`empty-${i}`}>
-                  <Box flexGrow={1}><Text>{" "}</Text></Box>
-                  {indicator && <Text dimColor>{indicator} </Text>}
-                </Box>
-              );
-            })}
+            <ScrollableRows
+              items={filtered}
+              maxVisible={MAX_VISIBLE}
+              scrollOffset={computeScrollOffset(clampedIndex, filtered.length, MAX_VISIBLE)}
+              renderRow={(cmd, realIndex) => {
+                const isSel = realIndex === clampedIndex;
+                return (
+                  <Text>
+                    {isSel ? <Text color="cyan">{"> "}</Text> : "  "}
+                    {isSel ? <Text color="cyan">{cmd.name}</Text> : cmd.name}
+                    <Text dimColor>  {cmd.description}</Text>
+                  </Text>
+                );
+              }}
+              keyExtractor={(cmd) => cmd.id}
+            />
           </Box>
         )}
       </Box>

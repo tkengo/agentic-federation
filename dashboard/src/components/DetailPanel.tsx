@@ -8,6 +8,7 @@ import { computeScrollOffset } from "../utils/scroll.js";
 import { shortenHome } from "../utils/format.js";
 import { useBlink } from "../hooks/useBlink.js";
 import { EmacsTextInput } from "./EmacsTextInput.js";
+import { ScrollableRows, INDICATOR_COL_WIDTH } from "./ScrollableRows.js";
 import { REPOS_DIR } from "../utils/types.js";
 import type { ArtifactEntry } from "./ArtifactList.js";
 
@@ -328,13 +329,13 @@ function BrowseView({
     (r) => (r.type === "artifact" || r.type === "script" || r.type === "pane") && r.itemIndex === selectedIndex
   );
   const scrollOffset = computeScrollOffset(Math.max(0, selectedRowIndex), rows.length, MAX_VISIBLE);
-  const visibleRows = rows.slice(scrollOffset, scrollOffset + MAX_VISIBLE);
-  const hasMoreUp = scrollOffset > 0;
-  const hasMoreDown = scrollOffset + MAX_VISIBLE < rows.length;
 
   const truncatedDesc = description
     ? truncateLines(description, innerWidth, DESC_MAX_LINES)
     : null;
+
+  // Content width accounts for indicator column when scrolling is needed
+  const contentWidth = innerWidth - (rows.length > MAX_VISIBLE ? INDICATOR_COL_WIDTH : 0);
 
   // Compute max script name length for alignment
   const maxScriptNameLen = scripts.length > 0
@@ -346,6 +347,83 @@ function BrowseView({
     ? Math.max(16, ...panes.map((p) => p.displayName.length))
     : 16;
 
+  const renderRow = (row: VirtualRow) => {
+    if (row.type === "header") {
+      return (
+        <Box marginLeft={1}>
+          <Text dimColor> {row.label} </Text>
+        </Box>
+      );
+    }
+
+    if (row.type === "blank") {
+      return <Text>{" "}</Text>;
+    }
+
+    if (row.type === "artifact") {
+      const selected = row.itemIndex === selectedIndex;
+      const cursor = selected ? "> " : "  ";
+      // cursor(2) + icon(2) + space(1) + name + space(1) + sizeKB
+      const nameMax = contentWidth - 2 - 3 - 1 - row.sizeKB.length;
+      const displayName = row.name.length > nameMax
+        ? row.name.slice(0, nameMax - 1) + "\u2026"
+        : row.name.padEnd(nameMax);
+      return (
+        <Text color={selected ? "cyan" : undefined} bold={selected}>
+          {cursor}{ICON_ARTIFACT} {displayName} {row.sizeKB}
+        </Text>
+      );
+    }
+
+    if (row.type === "script") {
+      const selected = row.itemIndex === selectedIndex;
+      const cursor = selected ? "> " : "  ";
+      const displayName = row.name.length > maxScriptNameLen
+        ? row.name.slice(0, maxScriptNameLen - 1) + "\u2026"
+        : row.name.padEnd(maxScriptNameLen);
+      // cursor(2) + icon(2) + space(1) + scriptName + space(1)
+      const descSpace = contentWidth - 2 - 3 - maxScriptNameLen - 1;
+      const desc = row.description
+        ? (row.description.length > descSpace
+          ? row.description.slice(0, descSpace - 1) + "\u2026"
+          : row.description)
+        : "";
+      return (
+        <>
+          <Text color={selected ? "cyan" : undefined} bold={selected}>
+            {cursor}{ICON_SCRIPT} {displayName}
+          </Text>
+          {desc && <Text dimColor> {desc}</Text>}
+        </>
+      );
+    }
+
+    if (row.type === "pane") {
+      const selected = row.itemIndex === selectedIndex;
+      const cursor = selected ? "> " : "  ";
+      const displayName = row.displayName.length > maxPaneNameLen
+        ? row.displayName.slice(0, maxPaneNameLen - 1) + "\u2026"
+        : row.displayName.padEnd(maxPaneNameLen);
+      // cursor(2) + icon(2+VS16) + space(1) + name + space(1)
+      const descSpace = contentWidth - 2 - 3 - maxPaneNameLen - 1;
+      const desc = row.description
+        ? (row.description.length > descSpace
+          ? row.description.slice(0, descSpace - 1) + "\u2026"
+          : row.description)
+        : "";
+      return (
+        <>
+          <Text color={selected ? "cyan" : undefined} bold={selected}>
+            {cursor}{ICON_PANE} {displayName}
+          </Text>
+          {desc && <Text dimColor> {desc}</Text>}
+        </>
+      );
+    }
+
+    return null;
+  };
+
   return (
     <>
       {truncatedDesc && (
@@ -354,105 +432,23 @@ function BrowseView({
           <Text>{" "}</Text>
         </>
       )}
-      {visibleRows.map((row, i) => {
-        const isFirst = i === 0;
-        const isLast = i === visibleRows.length - 1;
-        const indicator = (isFirst && hasMoreUp) ? " \u25B2" : (isLast && hasMoreDown) ? " \u25BC" : "";
-
-        if (row.type === "header") {
-          return (
-            <Box key={`h-${row.label}-${scrollOffset}`}>
-              <Box flexGrow={1} marginLeft={1}>
-                <Text dimColor> {row.label} </Text>
-              </Box>
-              {indicator && <Text dimColor>{indicator}</Text>}
-            </Box>
-          );
-        }
-
-        if (row.type === "blank") {
-          return (
-            <Box key={`b-${scrollOffset}-${i}`}>
-              <Box flexGrow={1}><Text>{" "}</Text></Box>
-              {indicator && <Text dimColor>{indicator}</Text>}
-            </Box>
-          );
-        }
-
-        if (row.type === "artifact") {
-          const selected = row.itemIndex === selectedIndex;
-          const cursor = selected ? "> " : "  ";
-          // cursor(2) + icon(2) + space(1) + name + space(1) + sizeKB
-          const nameMax = innerWidth - 2 - 3 - 1 - row.sizeKB.length;
-          const displayName = row.name.length > nameMax
-            ? row.name.slice(0, nameMax - 1) + "\u2026"
-            : row.name.padEnd(nameMax);
-          return (
-            <Box key={`a-${row.name}`}>
-              <Box flexGrow={1}>
-                <Text color={selected ? "cyan" : undefined} bold={selected}>
-                  {cursor}{ICON_ARTIFACT} {displayName} {row.sizeKB}
-                </Text>
-              </Box>
-              {indicator && <Text dimColor>{indicator}</Text>}
-            </Box>
-          );
-        }
-
-        if (row.type === "script") {
-          const selected = row.itemIndex === selectedIndex;
-          const cursor = selected ? "> " : "  ";
-          const displayName = row.name.length > maxScriptNameLen
-            ? row.name.slice(0, maxScriptNameLen - 1) + "\u2026"
-            : row.name.padEnd(maxScriptNameLen);
-          // cursor(2) + icon(2) + space(1) + scriptName + space(1)
-          const descSpace = innerWidth - 2 - 3 - maxScriptNameLen - 1;
-          const desc = row.description
-            ? (row.description.length > descSpace
-              ? row.description.slice(0, descSpace - 1) + "\u2026"
-              : row.description)
-            : "";
-          return (
-            <Box key={`s-${row.name}`}>
-              <Box flexGrow={1}>
-                <Text color={selected ? "cyan" : undefined} bold={selected}>
-                  {cursor}{ICON_SCRIPT} {displayName}
-                </Text>
-                {desc && <Text dimColor> {desc}</Text>}
-              </Box>
-              {indicator && <Text dimColor>{indicator}</Text>}
-            </Box>
-          );
-        }
-
-        if (row.type === "pane") {
-          const selected = row.itemIndex === selectedIndex;
-          const cursor = selected ? "> " : "  ";
-          const displayName = row.displayName.length > maxPaneNameLen
-            ? row.displayName.slice(0, maxPaneNameLen - 1) + "\u2026"
-            : row.displayName.padEnd(maxPaneNameLen);
-          // cursor(2) + icon(2+VS16) + space(1) + name + space(1)
-          const descSpace = innerWidth - 2 - 3 - maxPaneNameLen - 1;
-          const desc = row.description
-            ? (row.description.length > descSpace
-              ? row.description.slice(0, descSpace - 1) + "\u2026"
-              : row.description)
-            : "";
-          return (
-            <Box key={`pn-${row.displayName}`}>
-              <Box flexGrow={1}>
-                <Text color={selected ? "cyan" : undefined} bold={selected}>
-                  {cursor}{ICON_PANE} {displayName}
-                </Text>
-                {desc && <Text dimColor> {desc}</Text>}
-              </Box>
-              {indicator && <Text dimColor>{indicator}</Text>}
-            </Box>
-          );
-        }
-
-        return null;
-      })}
+      <ScrollableRows
+        items={rows}
+        maxVisible={MAX_VISIBLE}
+        scrollOffset={scrollOffset}
+        renderRow={(row) => renderRow(row)}
+        keyExtractor={(row, index) => {
+          switch (row.type) {
+            case "header": return `h-${row.label}-${index}`;
+            case "blank": return `b-${index}`;
+            case "artifact": return `a-${row.name}`;
+            case "script": return `s-${row.name}`;
+            case "pane": return `pn-${row.displayName}`;
+            default: return `row-${index}`;
+          }
+        }}
+        padEmpty={false}
+      />
     </>
   );
 }
@@ -501,10 +497,8 @@ function LogView({
     headerColor = "red";
   }
 
-  // Log scrolling
-  const visibleLog = logLines.slice(logScroll, logScroll + LOG_MAX_VISIBLE);
-  const hasMoreUp = logScroll > 0;
-  const hasMoreDown = logScroll + LOG_MAX_VISIBLE < logLines.length;
+  // Content width accounts for indicator column when scrolling is needed
+  const contentWidth = innerWidth - (logLines.length > LOG_MAX_VISIBLE ? INDICATOR_COL_WIDTH : 0);
 
   return (
     <>
@@ -514,32 +508,17 @@ function LogView({
         <Text color={headerColor} bold>{headerText}</Text>
       </Box>
       {/* Log lines */}
-      {visibleLog.map((line, i) => {
-        const isFirst = i === 0;
-        const isLast = i === visibleLog.length - 1;
-        const indicator = (isFirst && hasMoreUp) ? " \u25B2" : (isLast && hasMoreDown) ? " \u25BC" : "";
-        const maxLen = innerWidth - (indicator ? 2 : 0);
-        const displayLine = line.length > maxLen
-          ? line.slice(0, maxLen - 1) + "\u2026"
-          : line;
-        return (
-          <Box key={`l-${logScroll}-${i}`}>
-            <Box flexGrow={1}><Text>{displayLine || " "}</Text></Box>
-            {indicator && <Text dimColor>{indicator}</Text>}
-          </Box>
-        );
-      })}
-      {/* Pad to keep height stable */}
-      {Array.from({ length: Math.max(0, LOG_MAX_VISIBLE - visibleLog.length) }, (_, i) => {
-        const isLastPad = i === LOG_MAX_VISIBLE - visibleLog.length - 1;
-        const indicator = (isLastPad && hasMoreDown) ? " \u25BC" : "";
-        return (
-          <Box key={`p-${i}`}>
-            <Box flexGrow={1}><Text>{" "}</Text></Box>
-            {indicator && <Text dimColor>{indicator}</Text>}
-          </Box>
-        );
-      })}
+      <ScrollableRows
+        items={logLines}
+        maxVisible={LOG_MAX_VISIBLE}
+        scrollOffset={logScroll}
+        renderRow={(line) => {
+          const displayLine = line.length > contentWidth
+            ? line.slice(0, contentWidth - 1) + "\u2026"
+            : line;
+          return <Text>{displayLine || " "}</Text>;
+        }}
+      />
     </>
   );
 }
