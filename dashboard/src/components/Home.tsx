@@ -235,11 +235,12 @@ export function Home({
   }, [showMessage, refresh]);
 
   // Run fed clean
-  const runClean = useCallback(() => {
+  const runClean = useCallback((force?: boolean) => {
     setCleaning(true);
     setTimeout(() => {
       try {
-        const output = execSync("fed clean", { encoding: "utf-8" });
+        const cmd = force ? "fed clean --force" : "fed clean";
+        const output = execSync(cmd, { encoding: "utf-8" });
         const doneLine = output.match(/^Done\. (.+)$/m);
         showMessage(doneLine ? doneLine[1] : "Cleaned worktrees");
         refresh();
@@ -587,6 +588,9 @@ export function Home({
       if (_input === "y" || _input === "Y") {
         setConfirmingClean(false);
         runClean();
+      } else if (_input === "f" || _input === "F") {
+        setConfirmingClean(false);
+        runClean(true);
       } else {
         setConfirmingClean(false);
       }

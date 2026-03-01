@@ -16,7 +16,7 @@ export function Footer({ override, ctrlCPending, message }: FooterProps) {
   } else if (override?.type === "confirmClean") {
     content = (
       <Text color="yellow">
-        Clean {override.count} worktrees? [y]Yes  [any key]Cancel
+        Clean {override.count} worktrees? [y]Yes  [f]Force (include dirty)  [any key]Cancel
       </Text>
     );
   } else if (override?.type === "confirmKill") {
