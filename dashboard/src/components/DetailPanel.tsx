@@ -15,7 +15,7 @@ import type { ArtifactEntry } from "./ArtifactList.js";
 const ICON_ARTIFACT = "\u{1F4C4}"; // 📄
 const ICON_SCRIPT = "\u{1F4DC}";   // 📜
 const ICON_PANE = "\u{1F4BB}"; // 💻
-const ICON_PLAY = "\u{25B6}\uFE0F"; // ▶️
+const ICON_PLAY = "\u{25BA}";       // ►
 const ICON_SEND = "\u{1F4E8}"; // 📨
 
 const MAX_VISIBLE = 15;
