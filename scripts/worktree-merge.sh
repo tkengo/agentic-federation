@@ -41,12 +41,11 @@ echo "Staging changes..."
 git add -A
 
 if git diff --cached --quiet; then
-  echo "No changes to commit. Nothing to do."
-  exit 0
+  echo "No staged changes. Skipping commit."
+else
+  echo "Committing..."
+  gcauto
 fi
-
-echo "Committing..."
-gcauto
 
 # --- Rebase onto main ---
 
