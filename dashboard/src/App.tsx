@@ -6,7 +6,6 @@ import { execSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { Header } from "./components/Header.js";
 import { Home } from "./components/Home.js";
-import { FeedbackInput } from "./components/FeedbackInput.js";
 import { CreateSession } from "./components/CreateSession.js";
 import { CommandPalette } from "./components/CommandPalette.js";
 import { Footer } from "./components/Footer.js";
@@ -18,7 +17,7 @@ import { useTerminalSize } from "./hooks/useTerminalSize.js";
 import { REPOS_DIR } from "./utils/types.js";
 import type { SessionData, RepoInfo, FooterOverride, WorkflowInfo } from "./utils/types.js";
 
-type Screen = "splash" | "list" | "feedback" | "create" | "palette" | "add-repo";
+type Screen = "splash" | "list" | "create" | "palette" | "add-repo";
 
 export function App() {
   const { exit } = useApp();
@@ -101,20 +100,6 @@ export function App() {
     setMessage(msg);
     setTimeout(() => setMessage(null), 3000);
   }, []);
-
-  // Send short feedback
-  const sendFeedback = useCallback(
-    (text: string) => {
-      if (!activeSession) return;
-      const feedbackPath = path.join(activeSession.sessionDir, "human_feedback.md");
-      const timestamp = new Date().toISOString();
-      const entry = `\n## [${timestamp}]\n\n${text}\n`;
-      fs.appendFileSync(feedbackPath, entry);
-      showMessage(`Feedback sent to ${activeSession.name}`);
-      setScreen("list");
-    },
-    [activeSession, showMessage]
-  );
 
   // Create new session via fed start --no-attach
   const createSession = useCallback(
@@ -229,14 +214,6 @@ export function App() {
           />
         )}
 
-        {screen === "feedback" && activeSession && (
-          <FeedbackInput
-            session={activeSession}
-            onSubmit={sendFeedback}
-            onCancel={() => setScreen("list")}
-          />
-        )}
-
         {/* Spacer pushes panels to bottom */}
         {(screen === "create" || screen === "palette" || screen === "add-repo") && <Box flexGrow={1} />}
 
@@ -252,9 +229,6 @@ export function App() {
             }}
             onScreenTransition={(cmdId) => {
               switch (cmdId) {
-                case "feedback":
-                  if (activeSession) setScreen("feedback");
-                  break;
                 case "new":
                   setCreateStep("workflow");
                   setScreen("create");

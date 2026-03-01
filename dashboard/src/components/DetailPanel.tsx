@@ -3,18 +3,22 @@ import { Box, Text } from "ink";
 import fs from "node:fs";
 import path from "node:path";
 import stringWidth from "string-width";
+import { parse as parseYaml } from "yaml";
 import { computeScrollOffset } from "../utils/scroll.js";
 import { shortenHome } from "../utils/format.js";
 import { useBlink } from "../hooks/useBlink.js";
+import { EmacsTextInput } from "./EmacsTextInput.js";
 import { REPOS_DIR } from "../utils/types.js";
 import type { ArtifactEntry } from "./ArtifactList.js";
 
 // Unicode emoji icons (string-width correctly reports 2 for these)
 const ICON_ARTIFACT = "\u{1F4C4}"; // 📄
 const ICON_SCRIPT = "\u{1F4DC}";   // 📜
+const ICON_PANE = "\u{1F4BB}"; // 💻
 const ICON_PLAY = "\u{25B6}\uFE0F"; // ▶️
+const ICON_SEND = "\u{1F4E8}"; // 📨
 
-const MAX_VISIBLE = 10;
+const MAX_VISIBLE = 15;
 export const LOG_MAX_VISIBLE = 9; // 10 total - 1 header line
 
 // --- Script types and hook ---
@@ -63,17 +67,76 @@ export function useScripts(sessionDir: string): ScriptEntry[] {
   }, [sessionDir]);
 }
 
+// --- Pane types and hook ---
+
+export interface PaneEntry {
+  windowName: string;
+  paneName: string;
+  displayName: string;    // "window.pane"
+  description: string;    // pane.description ?? pane.command ?? ""
+  tmuxTarget: string;     // "tmuxSession:windowName.paneNumber"
+}
+
+interface WorkflowYamlPane {
+  id: string;
+  name: string;
+  pane: number;
+  command: string | null;
+  description?: string;
+}
+
+interface WorkflowYamlWindow {
+  name: string;
+  panes: WorkflowYamlPane[];
+}
+
+export function usePanes(sessionDir: string): PaneEntry[] {
+  return useMemo(() => {
+    if (!sessionDir) return [];
+    try {
+      const workflowPath = path.join(sessionDir, "workflow.yaml");
+      if (!fs.existsSync(workflowPath)) return [];
+      const raw = fs.readFileSync(workflowPath, "utf-8");
+      const wf = parseYaml(raw) as { windows?: WorkflowYamlWindow[] };
+
+      // Read tmux session name from meta.json
+      const metaPath = path.join(sessionDir, "meta.json");
+      if (!fs.existsSync(metaPath)) return [];
+      const meta = JSON.parse(fs.readFileSync(metaPath, "utf-8"));
+      const tmuxSession: string = meta.tmux_session;
+      if (!tmuxSession) return [];
+
+      const entries: PaneEntry[] = [];
+      for (const win of wf.windows ?? []) {
+        for (const pane of win.panes ?? []) {
+          entries.push({
+            windowName: win.name,
+            paneName: pane.name,
+            displayName: `${win.name}.${pane.name}`,
+            description: pane.description ?? pane.command ?? "",
+            tmuxTarget: `${tmuxSession}:${win.name}.${pane.pane}`,
+          });
+        }
+      }
+      return entries;
+    } catch {
+      return [];
+    }
+  }, [sessionDir]);
+}
+
 // --- Virtual row types for browse mode ---
 
 type VirtualRow =
   | { type: "header"; label: string }
   | { type: "artifact"; itemIndex: number; name: string; sizeKB: string }
   | { type: "script"; itemIndex: number; name: string; description?: string }
+  | { type: "pane"; itemIndex: number; displayName: string; description: string }
   | { type: "blank" };
 
 // --- Component ---
 
-export type DetailMode = "browse" | "running" | "done";
+export type DetailMode = "browse" | "running" | "done" | "sending";
 
 interface DetailPanelProps {
   colWidths: {
@@ -87,6 +150,7 @@ interface DetailPanelProps {
   // Browse mode
   artifacts: ArtifactEntry[];
   scripts: ScriptEntry[];
+  panes: PaneEntry[];
   selectedIndex: number;
   // Log mode (running/done)
   scriptName?: string;
@@ -94,6 +158,11 @@ interface DetailPanelProps {
   scriptKilled?: boolean;
   logLines?: string[];
   logScroll?: number;
+  // Sending mode
+  sendingPaneDisplayName?: string;
+  sendingValue?: string;
+  onSendingChange?: (value: string) => void;
+  onSendingSubmit?: (value: string) => void;
 }
 
 const DESC_MAX_LINES = 3;
@@ -120,12 +189,17 @@ export function DetailPanel({
   mode,
   artifacts,
   scripts,
+  panes,
   selectedIndex,
   scriptName,
   scriptExitCode,
   scriptKilled,
   logLines = [],
   logScroll = 0,
+  sendingPaneDisplayName,
+  sendingValue,
+  onSendingChange,
+  onSendingSubmit,
 }: DetailPanelProps) {
   const blinkOn = useBlink(500);
 
@@ -133,15 +207,39 @@ export function DetailPanel({
   const boxWidth = 4 + colWidths.repoBranch + 2 + colWidths.workflow + 2 + colWidths.status + 2 + 4 + 2 + 4 + 50;
   const innerWidth = boxWidth - 4;
 
+  const worktreeHeader = worktree ? (
+    <>
+      <Text dimColor>{shortenHome(worktree)}</Text>
+      <Text>{" "}</Text>
+    </>
+  ) : null;
+
+  if (mode === "sending") {
+    return (
+      <Box marginLeft={3} width={boxWidth} borderStyle="round" flexDirection="column" paddingX={1}>
+        {worktreeHeader}
+        <Box>
+          <Text>{ICON_SEND} </Text>
+          <Text bold>{sendingPaneDisplayName}</Text>
+        </Box>
+        <Box>
+          <Text color="cyan">{"> "}</Text>
+          <EmacsTextInput
+            value={sendingValue ?? ""}
+            onChange={onSendingChange ?? (() => {})}
+            onSubmit={onSendingSubmit}
+          />
+        </Box>
+        <Text>{" "}</Text>
+        <Text dimColor>[Enter] Send  [Esc] Cancel</Text>
+      </Box>
+    );
+  }
+
   if (mode === "running" || mode === "done") {
     return (
       <Box marginLeft={3} width={boxWidth} borderStyle="round" flexDirection="column" paddingX={1}>
-        {worktree && (
-          <>
-            <Text dimColor>{shortenHome(worktree)}</Text>
-            <Text>{" "}</Text>
-          </>
-        )}
+        {worktreeHeader}
         <LogView
           innerWidth={innerWidth}
           mode={mode}
@@ -158,17 +256,13 @@ export function DetailPanel({
 
   return (
     <Box marginLeft={3} width={boxWidth} borderStyle="round" flexDirection="column" paddingX={1}>
-      {worktree && (
-        <>
-          <Text dimColor>{shortenHome(worktree)}</Text>
-          <Text>{" "}</Text>
-        </>
-      )}
+      {worktreeHeader}
       <BrowseView
         innerWidth={innerWidth}
         description={description}
         artifacts={artifacts}
         scripts={scripts}
+        panes={panes}
         selectedIndex={selectedIndex}
       />
     </Box>
@@ -182,15 +276,17 @@ function BrowseView({
   description,
   artifacts,
   scripts,
+  panes,
   selectedIndex,
 }: {
   innerWidth: number;
   description?: string;
   artifacts: ArtifactEntry[];
   scripts: ScriptEntry[];
+  panes: PaneEntry[];
   selectedIndex: number;
 }) {
-  const hasItems = artifacts.length > 0 || scripts.length > 0;
+  const hasItems = artifacts.length > 0 || scripts.length > 0 || panes.length > 0;
 
   if (!description && !hasItems) {
     return <Text dimColor>(empty)</Text>;
@@ -213,10 +309,22 @@ function BrowseView({
       type: "script", itemIndex: artifacts.length + i, name: s.name, description: s.description,
     }));
   }
+  if ((artifacts.length > 0 || scripts.length > 0) && panes.length > 0) {
+    rows.push({ type: "blank" });
+  }
+  if (panes.length > 0) {
+    rows.push({ type: "header", label: "Panes" });
+    panes.forEach((p, i) => rows.push({
+      type: "pane",
+      itemIndex: artifacts.length + scripts.length + i,
+      displayName: p.displayName,
+      description: p.description,
+    }));
+  }
 
   // Compute scroll offset based on selected row position
   const selectedRowIndex = rows.findIndex(
-    (r) => (r.type === "artifact" || r.type === "script") && r.itemIndex === selectedIndex
+    (r) => (r.type === "artifact" || r.type === "script" || r.type === "pane") && r.itemIndex === selectedIndex
   );
   const scrollOffset = computeScrollOffset(Math.max(0, selectedRowIndex), rows.length, MAX_VISIBLE);
   const visibleRows = rows.slice(scrollOffset, scrollOffset + MAX_VISIBLE);
@@ -231,6 +339,11 @@ function BrowseView({
   const maxScriptNameLen = scripts.length > 0
     ? Math.max(12, ...scripts.map((s) => s.name.length))
     : 12;
+
+  // Compute max pane display name length for alignment
+  const maxPaneNameLen = panes.length > 0
+    ? Math.max(16, ...panes.map((p) => p.displayName.length))
+    : 16;
 
   return (
     <>
@@ -303,6 +416,32 @@ function BrowseView({
               <Box flexGrow={1}>
                 <Text color={selected ? "cyan" : undefined} bold={selected}>
                   {cursor}{ICON_SCRIPT} {displayName}
+                </Text>
+                {desc && <Text dimColor> {desc}</Text>}
+              </Box>
+              {indicator && <Text dimColor>{indicator}</Text>}
+            </Box>
+          );
+        }
+
+        if (row.type === "pane") {
+          const selected = row.itemIndex === selectedIndex;
+          const cursor = selected ? "> " : "  ";
+          const displayName = row.displayName.length > maxPaneNameLen
+            ? row.displayName.slice(0, maxPaneNameLen - 1) + "\u2026"
+            : row.displayName.padEnd(maxPaneNameLen);
+          // cursor(2) + icon(2+VS16) + space(1) + name + space(1)
+          const descSpace = innerWidth - 2 - 3 - maxPaneNameLen - 1;
+          const desc = row.description
+            ? (row.description.length > descSpace
+              ? row.description.slice(0, descSpace - 1) + "\u2026"
+              : row.description)
+            : "";
+          return (
+            <Box key={`pn-${row.displayName}`}>
+              <Box flexGrow={1}>
+                <Text color={selected ? "cyan" : undefined} bold={selected}>
+                  {cursor}{ICON_PANE} {displayName}
                 </Text>
                 {desc && <Text dimColor> {desc}</Text>}
               </Box>

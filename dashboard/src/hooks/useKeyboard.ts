@@ -5,8 +5,6 @@ export interface KeyboardActions {
   onUp?: () => void;
   onDown?: () => void;
 
-  onFeedback?: () => void;
-  onLongFeedback?: () => void;
   onStop?: () => void;
   onQuit?: () => void;
   onBack?: () => void;
@@ -34,10 +32,6 @@ export function useKeyboard(actions: KeyboardActions, active = true) {
         actions.onDown?.();
       } else if (input === "a") {
         actions.onAddRepo?.();
-      } else if (input === "f") {
-        actions.onFeedback?.();
-      } else if (input === "F") {
-        actions.onLongFeedback?.();
       } else if (input === "d") {
         actions.onStop?.();
       } else if (input === "n") {

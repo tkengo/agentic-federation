@@ -26,14 +26,6 @@ export const PALETTE_COMMANDS: PaletteCommand[] = [
     resultType: "action",
   },
   {
-    id: "feedback",
-    name: "feedback",
-    description: "Send feedback to session",
-    requiresSession: true,
-    needsConfirmation: false,
-    resultType: "screen-transition",
-  },
-  {
     id: "stop",
     name: "stop",
     description: "Stop session (fed stop)",

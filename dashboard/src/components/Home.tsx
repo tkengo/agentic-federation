@@ -6,7 +6,7 @@ import crypto from "node:crypto";
 import { execSync, spawn } from "node:child_process";
 import type { ChildProcess } from "node:child_process";
 import { SessionList } from "./SessionList.js";
-import { DetailPanel, useScripts, LOG_MAX_VISIBLE } from "./DetailPanel.js";
+import { DetailPanel, useScripts, usePanes, LOG_MAX_VISIBLE } from "./DetailPanel.js";
 import type { DetailMode } from "./DetailPanel.js";
 import { RepoList } from "./RepoList.js";
 import { WorkflowList } from "./WorkflowList.js";
@@ -24,7 +24,7 @@ interface HomeProps {
   showMessage: (msg: string) => void;
   refresh: () => void;
   refreshRepos: () => void;
-  onNavigate: (target: "feedback" | "create" | "palette" | "add-repo") => void;
+  onNavigate: (target: "create" | "palette" | "add-repo") => void;
   onSelectedSessionChange: (session: SessionData | undefined) => void;
   onFooterOverrideChange: (override: FooterOverride) => void;
   pendingAction: string | null;
@@ -54,6 +54,10 @@ export function Home({
   const [confirmingKill, setConfirmingKill] = useState(false);
   const [confirmingClean, setConfirmingClean] = useState(false);
   const [cleaning, setCleaning] = useState(false);
+
+  // Pane sending state
+  const [sendingValue, setSendingValue] = useState("");
+  const [sendingPaneIndex, setSendingPaneIndex] = useState(-1);
 
   // Script execution state
   const [logLines, setLogLines] = useState<string[]>([]);
@@ -113,7 +117,8 @@ export function Home({
   const expandedSession = expandedIndex !== null ? sessions[expandedIndex] : undefined;
   const expandedArtifacts = useArtifacts(expandedSession?.sessionDir ?? "");
   const expandedScripts = useScripts(expandedSession?.sessionDir ?? "");
-  const totalDetailItems = expandedArtifacts.length + expandedScripts.length;
+  const expandedPanes = usePanes(expandedSession?.sessionDir ?? "");
+  const totalDetailItems = expandedArtifacts.length + expandedScripts.length + expandedPanes.length;
 
   // Collapse when expanded session disappears
   if (expandedIndex !== null && !expandedSession) {
@@ -150,6 +155,8 @@ export function Home({
       setScriptExitCode(null);
       setScriptKilled(false);
       autoScrollRef.current = true;
+      setSendingValue("");
+      setSendingPaneIndex(-1);
     }
     prevExpandedRef.current = expandedIndex;
   }, [expandedIndex]);
@@ -244,12 +251,6 @@ export function Home({
       setCleaning(false);
     }, 50);
   }, [showMessage, refresh]);
-
-  // Long feedback hint
-  const longFeedback = useCallback(() => {
-    if (!selectedSession) return;
-    showMessage("Use: fed feedback write (from session terminal)");
-  }, [selectedSession, showMessage]);
 
   // Open repo config in nvim
   const openRepoConfig = useCallback((repoIndex: number) => {
@@ -418,9 +419,15 @@ export function Home({
           } catch {
             showMessage(`Failed to open ${artifactName}`);
           }
-        } else {
+        } else if (detailIndex < expandedArtifacts.length + expandedScripts.length) {
           // Confirm script execution
           setConfirmingScript(true);
+        } else {
+          // Pane selected -> enter sending mode
+          const paneIdx = detailIndex - expandedArtifacts.length - expandedScripts.length;
+          setSendingPaneIndex(paneIdx);
+          setSendingValue("");
+          setDetailMode("sending");
         }
       },
       onSpace: () => {
@@ -512,6 +519,18 @@ export function Home({
     { isActive: active && expandedIndex !== null && detailMode === "done" }
   );
 
+  // Sending mode: Esc to cancel (Enter handled by EmacsTextInput's onSubmit)
+  useInput(
+    (_input, key) => {
+      if (key.escape) {
+        setSendingValue("");
+        setSendingPaneIndex(-1);
+        setDetailMode("browse");
+      }
+    },
+    { isActive: active && expandedIndex !== null && detailMode === "sending" }
+  );
+
   // List screen keyboard bindings
   useKeyboard(
     {
@@ -530,10 +549,6 @@ export function Home({
           switchToSession();
         }
       },
-      onFeedback: () => {
-        if (selectedSession) onNavigate("feedback");
-      },
-      onLongFeedback: longFeedback,
       onStop: () => {
         if (selectedSession) setConfirmingKill(true);
       },
@@ -597,12 +612,36 @@ export function Home({
             mode={detailMode}
             artifacts={expandedArtifacts}
             scripts={expandedScripts}
+            panes={expandedPanes}
             selectedIndex={detailIndex}
             scriptName={runningScriptName ?? undefined}
             scriptExitCode={scriptExitCode}
             scriptKilled={scriptKilled}
             logLines={logLines}
             logScroll={logScroll}
+            sendingPaneDisplayName={
+              sendingPaneIndex >= 0 ? expandedPanes[sendingPaneIndex]?.displayName : undefined
+            }
+            sendingValue={sendingValue}
+            onSendingChange={setSendingValue}
+            onSendingSubmit={(text) => {
+              if (!text.trim()) return;
+              const pane = expandedPanes[sendingPaneIndex];
+              if (!pane) return;
+              const q = (s: string) => `'${s.replace(/'/g, "'\\''")}'`;
+              try {
+                execSync(
+                  `tmux send-keys -t ${q(pane.tmuxTarget)} ${q(text)} Enter`,
+                  { stdio: "ignore" }
+                );
+                showMessage(`Sent to ${pane.displayName}`);
+              } catch {
+                showMessage(`Failed to send to ${pane.displayName}`);
+              }
+              setSendingValue("");
+              setSendingPaneIndex(-1);
+              setDetailMode("browse");
+            }}
           />
         )}
       />
