@@ -812,19 +812,8 @@ export function App() {
         )}
       </Box>
 
-      {/* Message bar */}
-      {message && (
-        <Box
-          borderStyle="single"
-          borderTop={false}
-          borderBottom={false}
-          paddingX={1}
-        >
-          <Text color="green">{message}</Text>
-        </Box>
-      )}
-
       <Footer
+        message={message}
         confirmingClean={confirmingClean}
         cleanableCount={cleanableCount}
         cleaning={cleaning}
