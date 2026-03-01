@@ -16,6 +16,7 @@ interface SessionListProps {
   selectedIndex: number;
   dimmed?: boolean;
   expandedIndex?: number | null;
+  hideDescription?: boolean;
   renderDetail?: (session: SessionData, colWidths: ColWidths) => React.ReactNode;
 }
 
@@ -26,7 +27,7 @@ function hasAnyStaleSessions(sessions: SessionData[]): boolean {
   );
 }
 
-export function SessionList({ sessions, selectedIndex, dimmed, expandedIndex, renderDetail }: SessionListProps) {
+export function SessionList({ sessions, selectedIndex, dimmed, expandedIndex, hideDescription, renderDetail }: SessionListProps) {
   const blinkOn = useBlink(500);
   const anyStale = hasAnyStaleSessions(sessions);
   const anyWaiting = sessions.some((s) => s.waitingHuman.waiting);
@@ -81,6 +82,7 @@ export function SessionList({ sessions, selectedIndex, dimmed, expandedIndex, re
             selected={index === selectedIndex}
             dimmed={dimmed}
             expanded={index === expandedIndex}
+            hideDescription={hideDescription}
             colWidths={colWidths}
             blinkOn={anyWaiting ? blinkOn : true}
           />

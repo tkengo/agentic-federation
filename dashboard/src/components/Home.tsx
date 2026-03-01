@@ -8,12 +8,17 @@ import type { ChildProcess } from "node:child_process";
 import { SessionList } from "./SessionList.js";
 import { DetailPanel, useScripts, usePanes, LOG_MAX_VISIBLE } from "./DetailPanel.js";
 import type { DetailMode } from "./DetailPanel.js";
+import { PreviewPanel } from "./PreviewPanel.js";
 import { RepoList } from "./RepoList.js";
 import { WorkflowList } from "./WorkflowList.js";
 import { useArtifacts } from "./ArtifactList.js";
+import { usePreviewContent } from "../hooks/usePreviewContent.js";
 import { useKeyboard } from "../hooks/useKeyboard.js";
 import { REPOS_DIR } from "../utils/types.js";
 import type { SessionData, RepoInfo, FooterOverride, WorkflowInfo } from "../utils/types.js";
+
+// Minimum terminal width to show the preview side panel
+const PREVIEW_MIN_COLUMNS = 130;
 
 interface HomeProps {
   sessions: SessionData[];
@@ -21,6 +26,8 @@ interface HomeProps {
   workflows: WorkflowInfo[];
   cleanableCount: number;
   active: boolean;
+  columns: number;
+  rows: number;
   showMessage: (msg: string) => void;
   refresh: () => void;
   refreshRepos: () => void;
@@ -37,6 +44,8 @@ export function Home({
   workflows,
   cleanableCount,
   active,
+  columns,
+  rows,
   showMessage,
   refresh,
   refreshRepos,
@@ -113,12 +122,36 @@ export function Home({
     }
   }, [cleaning, confirmingClean, confirmingKill, confirmingScript, cleanableCount, selectedSession, detailIndex]);
 
+  // Preview panel state
+  const [previewScroll, setPreviewScroll] = useState(0);
+
   // Data for expanded session
   const expandedSession = expandedIndex !== null ? sessions[expandedIndex] : undefined;
   const expandedArtifacts = useArtifacts(expandedSession?.sessionDir ?? "");
   const expandedScripts = useScripts(expandedSession?.sessionDir ?? "");
   const expandedPanes = usePanes(expandedSession?.sessionDir ?? "");
   const totalDetailItems = expandedArtifacts.length + expandedScripts.length + expandedPanes.length;
+
+  // Preview content for selected detail item
+  const previewData = usePreviewContent(
+    expandedSession?.sessionDir ?? "",
+    expandedArtifacts,
+    expandedScripts,
+    expandedPanes,
+    detailIndex,
+  );
+
+  // Determine if preview side panel should be shown
+  const showPreview = expandedIndex !== null && columns >= PREVIEW_MIN_COLUMNS;
+
+  // Reset preview scroll when detail selection changes
+  const prevDetailIndexRef = useRef(detailIndex);
+  useEffect(() => {
+    if (prevDetailIndexRef.current !== detailIndex) {
+      setPreviewScroll(0);
+      prevDetailIndexRef.current = detailIndex;
+    }
+  }, [detailIndex]);
 
   // Collapse when expanded session disappears
   if (expandedIndex !== null && !expandedSession) {
@@ -442,6 +475,22 @@ export function Home({
       && !confirmingScript && !confirmingKill && !confirmingClean && !cleaning
   );
 
+  // Preview scroll in browse mode (Ctrl+U / Ctrl+D)
+  useInput(
+    (input, key) => {
+      if (!showPreview) return;
+      const previewContentHeight = Math.max(1, rows - 4);
+      const maxScroll = Math.max(0, previewData.lines.length - previewContentHeight);
+      if (key.ctrl && input === "u") {
+        setPreviewScroll((s) => Math.max(0, s - previewContentHeight));
+      } else if (key.ctrl && input === "d") {
+        setPreviewScroll((s) => Math.min(maxScroll, s + previewContentHeight));
+      }
+    },
+    { isActive: active && expandedIndex !== null && detailMode === "browse"
+        && !confirmingScript && !confirmingKill && !confirmingClean && !cleaning }
+  );
+
   // Script confirmation handler
   useInput(
     (_input) => {
@@ -595,62 +644,75 @@ export function Home({
     { isActive: active && confirmingClean && !cleaning }
   );
 
-  return (
-    <>
+  // Compute preview panel width
+  // Left panel takes roughly: marginLeft(4) + boxWidth of DetailPanel
+  // We give the remaining columns to the preview panel
+  const previewWidth = showPreview ? Math.max(40, columns - 100) : 0;
+  // Preview panel height: use available rows minus header/footer overhead
+  // Header(~24 logo lines + 1 border) + footer(2) + session list overhead(~4) = ~30
+  // Use rows directly since the panel will be constrained by the parent
+  const previewHeight = Math.max(10, rows - 6);
+
+  const renderDetailPanel = (session: SessionData, colWidths: { repoBranch: number; workflow: number; status: number }) => (
+    <DetailPanel
+      colWidths={colWidths}
+      worktree={session.meta.worktree}
+      description={session.description}
+      hideDescription={showPreview}
+      mode={detailMode}
+      artifacts={expandedArtifacts}
+      scripts={expandedScripts}
+      panes={expandedPanes}
+      selectedIndex={detailIndex}
+      scriptName={runningScriptName ?? undefined}
+      scriptExitCode={scriptExitCode}
+      scriptKilled={scriptKilled}
+      logLines={logLines}
+      logScroll={logScroll}
+      sendingPaneDisplayName={
+        sendingPaneIndex >= 0 ? expandedPanes[sendingPaneIndex]?.displayName : undefined
+      }
+      sendingValue={sendingValue}
+      onSendingChange={setSendingValue}
+      onSendingSubmit={(text) => {
+        if (!text.trim()) return;
+        const pane = expandedPanes[sendingPaneIndex];
+        if (!pane) return;
+        const q = (s: string) => `'${s.replace(/'/g, "'\\''")}'`;
+        try {
+          // Send text literally first (synchronous).
+          execSync(
+            `tmux send-keys -t ${q(pane.tmuxTarget)} -l ${q(text)}`,
+            { stdio: "ignore" }
+          );
+          // Send Enter in the background after a delay so TUI apps
+          // like Claude Code have time to process the pasted text.
+          const child = spawn(
+            "sh",
+            ["-c", `sleep 1 && tmux send-keys -t ${q(pane.tmuxTarget)} Enter`],
+            { stdio: "ignore", detached: true }
+          );
+          child.unref();
+          showMessage(`Sent to ${pane.displayName}`);
+        } catch {
+          showMessage(`Failed to send to ${pane.displayName}`);
+        }
+        setSendingValue("");
+        setSendingPaneIndex(-1);
+        setDetailMode("browse");
+      }}
+    />
+  );
+
+  const leftContent = (
+    <Box flexDirection="column" flexGrow={1}>
       <SessionList
         sessions={sessions}
         selectedIndex={selectedIndex}
         dimmed={!active}
         expandedIndex={expandedIndex}
-        renderDetail={(session, colWidths) => (
-          <DetailPanel
-            colWidths={colWidths}
-            worktree={session.meta.worktree}
-            description={session.description}
-            mode={detailMode}
-            artifacts={expandedArtifacts}
-            scripts={expandedScripts}
-            panes={expandedPanes}
-            selectedIndex={detailIndex}
-            scriptName={runningScriptName ?? undefined}
-            scriptExitCode={scriptExitCode}
-            scriptKilled={scriptKilled}
-            logLines={logLines}
-            logScroll={logScroll}
-            sendingPaneDisplayName={
-              sendingPaneIndex >= 0 ? expandedPanes[sendingPaneIndex]?.displayName : undefined
-            }
-            sendingValue={sendingValue}
-            onSendingChange={setSendingValue}
-            onSendingSubmit={(text) => {
-              if (!text.trim()) return;
-              const pane = expandedPanes[sendingPaneIndex];
-              if (!pane) return;
-              const q = (s: string) => `'${s.replace(/'/g, "'\\''")}'`;
-              try {
-                // Send text literally first (synchronous).
-                execSync(
-                  `tmux send-keys -t ${q(pane.tmuxTarget)} -l ${q(text)}`,
-                  { stdio: "ignore" }
-                );
-                // Send Enter in the background after a delay so TUI apps
-                // like Claude Code have time to process the pasted text.
-                const child = spawn(
-                  "sh",
-                  ["-c", `sleep 1 && tmux send-keys -t ${q(pane.tmuxTarget)} Enter`],
-                  { stdio: "ignore", detached: true }
-                );
-                child.unref();
-                showMessage(`Sent to ${pane.displayName}`);
-              } catch {
-                showMessage(`Failed to send to ${pane.displayName}`);
-              }
-              setSendingValue("");
-              setSendingPaneIndex(-1);
-              setDetailMode("browse");
-            }}
-          />
-        )}
+        hideDescription={showPreview}
+        renderDetail={renderDetailPanel}
       />
       {hasCleanRow && (
         <Box paddingX={1} paddingTop={1}>
@@ -679,6 +741,22 @@ export function Home({
         workflows={workflows}
         dimmed={!active}
       />
-    </>
+    </Box>
   );
+
+  if (showPreview) {
+    return (
+      <Box flexDirection="row">
+        {leftContent}
+        <PreviewPanel
+          preview={previewData}
+          width={previewWidth}
+          height={previewHeight}
+          scrollOffset={previewScroll}
+        />
+      </Box>
+    );
+  }
+
+  return leftContent;
 }

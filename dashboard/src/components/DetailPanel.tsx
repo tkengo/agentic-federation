@@ -147,6 +147,7 @@ interface DetailPanelProps {
   };
   worktree?: string;
   description?: string;
+  hideDescription?: boolean;
   mode: DetailMode;
   // Browse mode
   artifacts: ArtifactEntry[];
@@ -187,6 +188,7 @@ export function DetailPanel({
   colWidths,
   worktree,
   description,
+  hideDescription,
   mode,
   artifacts,
   scripts,
@@ -206,7 +208,7 @@ export function DetailPanel({
 
   // Box width: cursor visual width is 4 (space + arrow(2) + space), minus marginLeft(4)
   // then repoBranch + 2 + workflow + 2 + status + 2 + [!](4) + 2 + age(4) + extra(50)
-  const boxWidth = 3 + colWidths.repoBranch + 2 + colWidths.workflow + 2 + colWidths.status + 2 + 4 + 2 + 4 + 50;
+  const boxWidth = 3 + colWidths.repoBranch + 2 + colWidths.workflow + 2 + colWidths.status + 2 + 4 + 2 + 4 + 25;
   const innerWidth = boxWidth - 4;
 
   const worktreeHeader = worktree ? (
@@ -261,7 +263,7 @@ export function DetailPanel({
       {worktreeHeader}
       <BrowseView
         innerWidth={innerWidth}
-        description={description}
+        description={hideDescription ? undefined : description}
         artifacts={artifacts}
         scripts={scripts}
         panes={panes}

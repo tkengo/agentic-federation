@@ -10,6 +10,7 @@ interface SessionRowProps {
   selected: boolean;
   dimmed?: boolean;
   expanded?: boolean;
+  hideDescription?: boolean;
   blinkOn: boolean;
   colWidths: {
     repoBranch: number;
@@ -30,12 +31,12 @@ function truncate(text: string, max: number): string {
   return text.slice(0, max - 1) + "\u2026";
 }
 
-export function SessionRow({ session, selected, dimmed, expanded, blinkOn, colWidths }: SessionRowProps) {
+export function SessionRow({ session, selected, dimmed, expanded, hideDescription, blinkOn, colWidths }: SessionRowProps) {
   const cursor = !dimmed && selected ? (expanded ? "\u25BC" : ">") : " ";
   const highlight = !dimmed && selected;
   const age = formatAge(session.meta.created_at);
   const stale = isStale(session);
-  const inlineDesc = session.description ? truncate(session.description, DESC_INLINE_MAX) : null;
+  const inlineDesc = (!hideDescription && session.description) ? truncate(session.description, DESC_INLINE_MAX) : null;
 
   return (
     <Box>

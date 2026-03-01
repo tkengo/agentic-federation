@@ -200,6 +200,8 @@ export function App() {
             workflows={workflows}
             cleanableCount={cleanableCount}
             active={screen === "list"}
+            columns={columns}
+            rows={rows}
             showMessage={showMessage}
             refresh={refresh}
             refreshRepos={refreshRepos}
