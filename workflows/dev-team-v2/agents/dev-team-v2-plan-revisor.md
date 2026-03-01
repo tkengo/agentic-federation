@@ -30,12 +30,15 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 
 1. `fed state update status plan_revision` を実行してステータスを更新
 2. レビューでの指摘事項を計画に反映する。ただし「人間による確定事項」に矛盾するフィードバックは反映しない。
-3. `fed artifact write plan` で修正済み計画をアーティファクトとして書き出す(stdinに内容を渡す)
+3. Write ツールで `./tmp-plan.md` に修正済み計画を書き出してから、`fed artifact write plan --file ./tmp-plan.md` で保存する
 4. `fed artifact delete plan_review_gemini` でgeminiのレビュー結果を削除
 5. `fed artifact delete plan_review_codex` でcodexのレビュー結果を削除
 6. `fed notify 4 "計画が更新されています。再レビューしてください。"` を実行してGeminiに再レビューを依頼する
 7. `fed notify 7 "計画が更新されています。再レビューしてください。"` を実行してCodexに再レビューを依頼する
 8. geminiとcodexの再レビューが完了したら、改めて "完了: plan_review_gemini" 及び "完了: plan_review_codex" という通知が来るので、それを受け取り次第、「前処理」のセクションからやり直す。
+
+リバイズ完了後の **artifact write** と **artifact delete** と **notify** は、必ず実行すること。実行しなかった場合はワークフロー全体が停止してしまうため、絶対に実行を忘れてはならない。
+また、完了報告は人間の許可不要で即座に実行すること。そして、完了報告は毎回必ず送信すること（再実行時も含む）
 
 ### geminiとcodexの両方ともがAPPROVEの場合
 

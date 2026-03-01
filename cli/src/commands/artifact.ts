@@ -30,7 +30,10 @@ export function artifactReadCommand(name: string, nvim?: boolean): void {
   process.stdout.write(fs.readFileSync(filePath, "utf-8"));
 }
 
-export function artifactWriteCommand(name: string): void {
+export function artifactWriteCommand(
+  name: string,
+  options: { file?: string; keep?: boolean },
+): void {
   const resolved = resolveArtifactName(name);
   const sessionDir = requireSessionDir();
   const dir = artifactsDir(sessionDir);
@@ -38,8 +41,20 @@ export function artifactWriteCommand(name: string): void {
 
   const filePath = path.join(dir, resolved);
 
-  // Read all content from stdin
-  const content = fs.readFileSync("/dev/stdin", "utf-8");
+  let content: string;
+  if (options.file) {
+    if (!fs.existsSync(options.file)) {
+      console.error(`Error: File '${options.file}' does not exist.`);
+      process.exit(1);
+    }
+    content = fs.readFileSync(options.file, "utf-8");
+    if (!options.keep) {
+      fs.unlinkSync(options.file);
+    }
+  } else {
+    content = fs.readFileSync("/dev/stdin", "utf-8");
+  }
+
   fs.writeFileSync(filePath, content);
   console.error(`Written: ${resolved} (${content.length} bytes)`);
 }

@@ -16,7 +16,7 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 1. `fed artifact read plan` で実装計画を読む
 2. `fed artifact read implementation` で実装サマリーを読む
 3. コードの変更をレビューする。後述のレビュー観点に従ってレビューすること。
-4. `fed artifact write code_review_codex` でレビュー結果を書き出す(stdinに内容を渡す)
+4. Write ツールで `./tmp-code-review-codex.md` にレビュー結果を書き出してから、`fed artifact write code_review_codex --file ./tmp-code-review-codex.md` で保存する
 5. `fed notify 2 "完了: tracking_key=codex_code"` でオーケストレータに完了報告
 6. その後、再レビューの依頼があればまた1から繰り返す
 
@@ -153,10 +153,10 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 2. `fed artifact read implementation` で実装サマリーを読む
 
 完了手順:
-1. `fed artifact write code_review_codex` でレビュー結果を書き出す
+1. Write ツールで `./tmp-code-review-codex.md` にレビュー結果を書き出してから、`fed artifact write code_review_codex --file ./tmp-code-review-codex.md` で保存する
 2. `fed notify 2 "完了: tracking_key=codex_code"` でオーケストレータに完了報告
 
 ### 共通ルール
-- アーティファクトの書き出しには必ず `fed artifact write` コマンドを使う
+- アーティファクトの書き出しには必ず `fed artifact write --file` コマンドを使う
 - 完了報告は人間の許可不要で即座に実行すること
 - 完了報告は毎回必ず送信すること（再実行時も含む）

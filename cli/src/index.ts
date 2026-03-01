@@ -143,9 +143,11 @@ artifact
 
 artifact
   .command("write <name>")
-  .description("Write an artifact from stdin")
-  .action((name: string) => {
-    artifactWriteCommand(name);
+  .description("Write an artifact from stdin or file")
+  .option("--file <path>", "Read content from file instead of stdin (file is deleted after write)")
+  .option("--keep", "Keep the source file when using --file")
+  .action((name: string, options: { file?: string; keep?: boolean }) => {
+    artifactWriteCommand(name, options);
   });
 
 artifact

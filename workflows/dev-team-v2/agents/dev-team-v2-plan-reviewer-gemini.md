@@ -15,7 +15,7 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 
 1. `fed artifact read plan` で実装計画を読む
 2. その実装計画のレビューをする。後述のレビュー観点に従ってレビューすること。
-3. `fed artifact write plan_review_gemini` でレビュー結果を書き出す(stdinに内容を渡す)
+3. Write ツールで `./tmp-plan-review-gemini.md` にレビュー結果を書き出してから、`fed artifact write plan_review_gemini --file ./tmp-plan-review-gemini.md` で保存する
 4. `fed notify 3 "完了: plan_review_gemini"` を実行して完了報告
 5. その後、再レビューの依頼があればまた1から繰り返す
 

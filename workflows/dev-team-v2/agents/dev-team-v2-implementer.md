@@ -14,7 +14,7 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 1. `fed state update status implementing` を実行してステータスを更新
 2. `fed artifact read plan` で実装計画を読む
 3. 後述の実装の進め方に従って実装を進める。
-4. `fed artifact write implementation` で実装サマリーを書き出す(stdinに内容を渡す)
+4. Write ツールで `./tmp-implementation.md` に実装サマリーを書き出してから、`fed artifact write implementation --file ./tmp-implementation.md` で保存する
 5. `fed state update status code_review` を実行してステータスを更新
 6. `fed notify 5 "'fed prompt read dev-team-v2-code-reviewer-gemini' の出力を読んで、コードをレビューしてください。` を実行してGeminiにレビューを依頼する
 7. `fed notify 6 "'fed prompt read dev-team-v2-code-reviewer-codex' の出力を読んで、コードをレビューしてください。` を実行してCodexにレビューを依頼する
@@ -37,7 +37,7 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 
 1. `fed state update status code_revision` を実行してステータスを更新
 2. レビューでの指摘事項を元に実装を修正する。
-3. `fed artifact write implementation` で実装サマリーを書き出す(stdinに内容を渡す)
+3. Write ツールで `./tmp-implementation.md` に実装サマリーを書き出してから、`fed artifact write implementation --file ./tmp-implementation.md` で保存する
 4. `fed artifact delete code_review_gemini` でgeminiのレビュー結果を削除
 5. `fed artifact delete code_review_codex` でcodexのレビュー結果を削除
 6. `fed notify 5 "実装が修正されています。再レビューしてください。"` を実行してGeminiに再レビューを依頼する

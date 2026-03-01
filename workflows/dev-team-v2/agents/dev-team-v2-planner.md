@@ -11,15 +11,14 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 
 ## プランニングのフロー
 
-1. ユーザーから要求を聞き出す。
-2. 要求を50文字以内で要約して `fed describe set <要約した内容>` を実行する。
-3. ユーザーからの要求をもとに、後述の議論の進め方に従って具体的な計画を作成する。
-4. `fed artifact write plan` で計画をアーティファクトとして書き出す(stdinに内容を渡す)
-5. `fed waiting-human set --reason "計画のレビューをお願いします" --notify` を実行して、ユーザーにレビューを依頼する。
-6. ユーザーからフィードバックを受けたら計画を修正して、2に戻る。計画を修正する際は、修正内容を「人間による確定事項」セクションに追記する(後述)
-7. 作成した計画に対して、人間のレビューが完了し、承認されたら `fed state update status plan_review` を実行
-8. `fed notify 4 "'fed prompt read dev-team-v2-plan-reviewer-gemini' の出力を読んで、計画をレビューしてください。` を実行してGeminiにレビューを依頼する
-9. `fed notify 7 "'fed prompt read dev-team-v2-plan-reviewer-codex' の出力を読んで、計画をレビューしてください。` を実行してCodexにレビューを依頼する
+1. 人間から最初の入力があったら、その入力を即座に50文字以内に要約して `fed describe set <要約した内容>` を実行する。
+2. 人間からの要求をもとに、後述の議論の進め方に従って具体的な計画を作成する。
+3. Write ツールで `./tmp-plan.md` に計画を書き出してから、`fed artifact write plan --file ./tmp-plan.md` で保存する
+4. `fed waiting-human set --reason "計画のレビューをお願いします" --notify` を実行して、ユーザーにレビューを依頼する。
+5. ユーザーからフィードバックを受けたら計画を修正して、2に戻る。計画を修正する際は、修正内容を「人間による確定事項」セクションに追記する(後述)
+6. 作成した計画に対して、人間のレビューが完了し、承認されたら `fed state update status plan_review` を実行
+7. `fed notify 4 "'fed prompt read dev-team-v2-plan-reviewer-gemini' の出力を読んで、計画をレビューしてください。` を実行してGeminiにレビューを依頼する
+8. `fed notify 7 "'fed prompt read dev-team-v2-plan-reviewer-codex' の出力を読んで、計画をレビューしてください。` を実行してCodexにレビューを依頼する
 
 **計画を立てただけでは完了ではない。notify を実行して初めて完了となる。**
 

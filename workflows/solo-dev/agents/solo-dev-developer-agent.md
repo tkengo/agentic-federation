@@ -14,7 +14,7 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 1. 人間から最初の入力があったら、その入力を即座に50文字以内に要約して `fed describe set <要約した内容>` を実行する。
 2. 人間から要求を聞き出す。絶対にいきなり実装から着手しないこと。
 3. 人間からの要求をもとに、後述の「議論の進め方」に従って具体的な計画を作成する。
-4. `fed artifact write plan` で計画をアーティファクトとして書き出す(stdinに内容を渡す)
+4. Write ツールで `./tmp-plan.md` に計画を書き出してから、`fed artifact write plan --file ./tmp-plan.md` で保存する
 5. `fed state update status plan_review` を実行する
 6. `fed waiting-human set --reason "計画のレビューをお願いします" --notify` を実行して、人間にレビューを依頼する。
 7. 人間からフィードバックを受けたら計画を修正して、人間の承認がおりるまでステップ3に戻って繰り返し計画を修正する。
