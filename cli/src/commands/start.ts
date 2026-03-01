@@ -156,6 +156,11 @@ export async function startCommand(
       // First window: create tmux session
       console.log(`Creating tmux session (window: ${win.name})...`);
       tmux.newSession(tmuxSession, worktreePath, win.name);
+
+      // Set FED_SESSION before any pane commands run.
+      // Agents like Codex that cannot access the tmux socket rely on this
+      // environment variable to identify the session.
+      tmux.setEnvironment(tmuxSession, "FED_SESSION", tmuxSession);
     } else {
       // Subsequent windows
       console.log(`Creating window: ${win.name}...`);
@@ -163,9 +168,6 @@ export async function startCommand(
     }
     createWindowLayout(tmuxSession, win, worktreePath);
   }
-
-  // Set FED_SESSION in tmux session environment
-  tmux.setEnvironment(tmuxSession, "FED_SESSION", tmuxSession);
 
   // Customize tmux status bar for fed session
   tmux.setOption(tmuxSession, "status-style", "bg=colour24,fg=white");
