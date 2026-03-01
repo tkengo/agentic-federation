@@ -157,7 +157,6 @@ export function Home({
       autoScrollRef.current = true;
       setSendingValue("");
       setSendingPaneIndex(-1);
-      process.stdout.write("\x1b[?25l"); // Hide terminal cursor in case sending mode was active
     }
     prevExpandedRef.current = expandedIndex;
   }, [expandedIndex]);
@@ -430,7 +429,6 @@ export function Home({
           setSendingPaneIndex(paneIdx);
           setSendingValue("");
           setDetailMode("sending");
-          process.stdout.write("\x1b[?25h"); // Show terminal cursor for IME
         }
       },
       onSpace: () => {
@@ -520,7 +518,6 @@ export function Home({
   useInput(
     (_input, key) => {
       if (key.escape) {
-        process.stdout.write("\x1b[?25l"); // Hide terminal cursor
         setSendingValue("");
         setSendingPaneIndex(-1);
         setDetailMode("browse");
@@ -648,7 +645,6 @@ export function Home({
               } catch {
                 showMessage(`Failed to send to ${pane.displayName}`);
               }
-              process.stdout.write("\x1b[?25l"); // Hide terminal cursor
               setSendingValue("");
               setSendingPaneIndex(-1);
               setDetailMode("browse");

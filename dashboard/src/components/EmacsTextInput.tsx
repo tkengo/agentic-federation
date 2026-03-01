@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from "react";
-import { Text, useInput } from "ink";
+import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
+import { Box, Text, useInput } from "ink";
 import chalk from "chalk";
+import stringWidth from "string-width";
 
 interface EmacsTextInputProps {
   value: string;
@@ -9,6 +10,24 @@ interface EmacsTextInputProps {
   placeholder?: string;
   focus?: boolean;
   showCursor?: boolean;
+}
+
+// Walk up the Yoga node tree to calculate absolute position within Ink's layout.
+// Each node's getComputedLeft/Top is relative to its parent, so summing them
+// gives the absolute position in Ink's coordinate system.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getAbsolutePosition(node: any): { x: number; y: number } {
+  let x = 0;
+  let y = 0;
+  let current = node;
+  while (current) {
+    if (current.yogaNode) {
+      x += current.yogaNode.getComputedLeft();
+      y += current.yogaNode.getComputedTop();
+    }
+    current = current.parentNode;
+  }
+  return { x, y };
 }
 
 // TextInput with emacs-style keybindings (readline emulation).
@@ -26,6 +45,8 @@ export function EmacsTextInput({
   showCursor = true,
 }: EmacsTextInputProps) {
   const [cursorOffset, setCursorOffset] = useState(originalValue.length);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const boxRef = useRef<any>(null);
 
   useEffect(() => {
     if (cursorOffset > originalValue.length) {
@@ -114,6 +135,31 @@ export function EmacsTextInput({
     }
   }, { isActive: focus });
 
+  // Position the real terminal cursor at the text input cursor for IME support.
+  // The dashboard runs in alternate screen buffer with height={rows}, so Ink's
+  // Yoga coordinate (x, y) maps directly to terminal position (col+1, row+1).
+  // useLayoutEffect runs synchronously after Ink writes output to stdout,
+  // ensuring the cursor is positioned before the next user input.
+  useLayoutEffect(() => {
+    if (!focus || !showCursor) return;
+    const node = boxRef.current;
+    if (!node) return;
+    const { x, y } = getAbsolutePosition(node);
+    const textBeforeCursor = originalValue.slice(0, cursorOffset);
+    const col = x + stringWidth(textBeforeCursor) + 1; // ANSI is 1-indexed
+    const row = y + 1;
+    // Move cursor to position and make it visible
+    process.stdout.write(`\x1b[${row};${col}H\x1b[?25h`);
+  });
+
+  // Hide terminal cursor when losing focus or unmounting
+  useEffect(() => {
+    if (!focus) return;
+    return () => {
+      process.stdout.write("\x1b[?25l");
+    };
+  }, [focus]);
+
   // Render
   const value = originalValue;
   let renderedValue: string = value;
@@ -137,10 +183,12 @@ export function EmacsTextInput({
   }
 
   return (
-    <Text>
-      {placeholder
-        ? value.length > 0 ? renderedValue : renderedPlaceholder
-        : renderedValue}
-    </Text>
+    <Box ref={boxRef}>
+      <Text>
+        {placeholder
+          ? value.length > 0 ? renderedValue : renderedPlaceholder
+          : renderedValue}
+      </Text>
+    </Box>
   );
 }
