@@ -631,17 +631,19 @@ export function Home({
               if (!pane) return;
               const q = (s: string) => `'${s.replace(/'/g, "'\\''")}'`;
               try {
-                // Send text literally, then Enter separately (with sleep to
-                // ensure TUI apps like Claude Code process the text first).
+                // Send text literally first (synchronous).
                 execSync(
                   `tmux send-keys -t ${q(pane.tmuxTarget)} -l ${q(text)}`,
                   { stdio: "ignore" }
                 );
-                execSync("sleep 1");
-                execSync(
-                  `tmux send-keys -t ${q(pane.tmuxTarget)} Enter`,
-                  { stdio: "ignore" }
+                // Send Enter in the background after a delay so TUI apps
+                // like Claude Code have time to process the pasted text.
+                const child = spawn(
+                  "sh",
+                  ["-c", `sleep 1 && tmux send-keys -t ${q(pane.tmuxTarget)} Enter`],
+                  { stdio: "ignore", detached: true }
                 );
+                child.unref();
                 showMessage(`Sent to ${pane.displayName}`);
               } catch {
                 showMessage(`Failed to send to ${pane.displayName}`);
