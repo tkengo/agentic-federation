@@ -55,7 +55,6 @@ export function SessionRow({ session, selected, dimmed, expanded, blinkOn, colWi
           <StatusBadge
             status={session.status}
             stale={stale}
-            blinkOn={blinkOn}
             statusConfigMap={session.statusConfigMap}
             stateMtimeMs={session.stateMtimeMs}
           />

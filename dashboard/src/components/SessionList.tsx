@@ -29,6 +29,7 @@ function hasAnyStaleSessions(sessions: SessionData[]): boolean {
 export function SessionList({ sessions, selectedIndex, dimmed, expandedIndex, renderDetail }: SessionListProps) {
   const blinkOn = useBlink(500);
   const anyStale = hasAnyStaleSessions(sessions);
+  const anyWaiting = sessions.some((s) => s.waitingHuman.waiting);
 
   if (sessions.length === 0) {
     return (
@@ -81,7 +82,7 @@ export function SessionList({ sessions, selectedIndex, dimmed, expandedIndex, re
             dimmed={dimmed}
             expanded={index === expandedIndex}
             colWidths={colWidths}
-            blinkOn={anyStale ? blinkOn : true}
+            blinkOn={anyWaiting ? blinkOn : true}
           />
           {index === expandedIndex && renderDetail?.(session, colWidths)}
         </React.Fragment>

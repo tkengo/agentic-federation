@@ -5,7 +5,6 @@ import type { StatusConfig } from "../utils/types.js";
 interface StatusBadgeProps {
   status: string;
   stale?: boolean;
-  blinkOn?: boolean;
   statusConfigMap?: Record<string, StatusConfig>;
   stateMtimeMs?: number;
 }
@@ -15,7 +14,7 @@ const DEFAULT_MARK: StatusConfig = { mark: "●", color: "white" };
 // Terminal statuses that should never show as stale
 const TERMINAL_STATUSES = new Set(["completed", "approved", "waiting_human"]);
 
-export function StatusBadge({ status, stale, blinkOn, statusConfigMap, stateMtimeMs }: StatusBadgeProps) {
+export function StatusBadge({ status, stale, statusConfigMap, stateMtimeMs }: StatusBadgeProps) {
   const config = statusConfigMap?.[status] ?? DEFAULT_MARK;
   const isStale = stale && !TERMINAL_STATUSES.has(status);
 
@@ -32,9 +31,8 @@ export function StatusBadge({ status, stale, blinkOn, statusConfigMap, stateMtim
         elapsed = ` (${hours}h)`;
       }
     }
-    // Red text, dims on blink-off cycle to create blink effect
     return (
-      <Text color="red" bold dimColor={!blinkOn}>
+      <Text color="red" bold>
         {config.mark} {status}{elapsed}
       </Text>
     );
