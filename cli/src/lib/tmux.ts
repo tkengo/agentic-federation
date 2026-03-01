@@ -68,6 +68,11 @@ export function setEnvironment(session: string, name: string, value: string): vo
   tmux(`set-environment -t ${quote(session)} ${quote(name)} ${quote(value)}`);
 }
 
+// Set a tmux option for a specific session
+export function setOption(session: string, option: string, value: string): void {
+  tmux(`set-option -t ${quote(session)} ${quote(option)} ${quote(value)}`);
+}
+
 // Quote a tmux argument for shell safety
 function quote(s: string): string {
   return `'${s.replace(/'/g, "'\\''")}'`;

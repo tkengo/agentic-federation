@@ -167,6 +167,10 @@ export async function startCommand(
   // Set FED_SESSION in tmux session environment
   tmux.setEnvironment(tmuxSession, "FED_SESSION", tmuxSession);
 
+  // Customize tmux status bar for fed session
+  tmux.setOption(tmuxSession, "status-style", "bg=colour24,fg=white");
+  tmux.setOption(tmuxSession, "status-right", ` ⚡fed ▸ ${workflowName}:${repoName}/${branch} `);
+
   // Start notification watcher (always - needed for stateful and useful for future stateless extensions)
   startNotificationWatcher(sessionPath, tmuxSession);
 
