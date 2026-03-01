@@ -223,8 +223,12 @@ function setupWorktree(
   if (fs.existsSync(worktreePath)) {
     console.log(`Worktree already exists: ${worktreePath}`);
   } else {
-    console.log("Creating worktree...");
-    execSync(`git -C '${config.repo_root}' worktree add '${worktreePath}' -b '${branch}'`, {
+    console.log("Fetching latest from origin...");
+    execSync(`git -C '${config.repo_root}' fetch origin`, {
+      stdio: "inherit",
+    });
+    console.log("Creating worktree from origin/main...");
+    execSync(`git -C '${config.repo_root}' worktree add '${worktreePath}' -b '${branch}' origin/main`, {
       stdio: "inherit",
     });
   }
