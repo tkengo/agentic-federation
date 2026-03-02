@@ -216,7 +216,12 @@ export function Home({
     const insideTmux = !!process.env.TMUX;
     try {
       if (insideTmux) {
-        execSync(`tmux switch-client -t '${target}'`, { stdio: "ignore" });
+        // Use display-popup so that detaching from the agent session
+        // automatically closes the popup and returns to the dashboard.
+        execSync(
+          `tmux display-popup -E -w 100% -h 100% "TMUX= exec tmux attach-session -t '${target}'"`,
+          { stdio: "ignore" },
+        );
       } else {
         execSync(`tmux attach-session -t '${target}'`, { stdio: "inherit" });
         if (process.stdin.isTTY && process.stdin.setRawMode) {
