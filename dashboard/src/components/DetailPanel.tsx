@@ -370,15 +370,21 @@ function BrowseView({
     if (row.type === "artifact") {
       const selected = row.itemIndex === selectedIndex;
       const cursor = selected ? "> " : "  ";
-      // cursor(2) + icon(2) + space(1) + name + space(1) + sizeKB
+      // cursor(2) + icon(2) + space(1) + name ... space(1) + sizeKB
       const nameMax = contentWidth - 2 - 3 - 1 - row.sizeKB.length;
       const displayName = row.name.length > nameMax
         ? row.name.slice(0, nameMax - 1) + "\u2026"
-        : row.name.padEnd(nameMax);
+        : row.name;
       return (
-        <Text color={selected ? "cyan" : undefined} bold={selected}>
-          {cursor}{ICON_ARTIFACT} {displayName} {row.sizeKB}
-        </Text>
+        <>
+          <Text color={selected ? "cyan" : undefined} bold={selected}>
+            {cursor}{ICON_ARTIFACT} {displayName}
+          </Text>
+          <Box flexGrow={1} />
+          <Text color={selected ? "cyan" : undefined} bold={selected}>
+            {" "}{row.sizeKB}
+          </Text>
+        </>
       );
     }
 
