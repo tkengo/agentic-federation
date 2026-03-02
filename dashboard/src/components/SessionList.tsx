@@ -55,7 +55,9 @@ export function SessionList({ sessions, selectedIndex, dimmed, expandedIndex, hi
   // Calculate column widths (add space for stale elapsed time suffix)
   const staleExtra = anyStale ? 6 : 0;
   const colWidths: ColWidths = {
-    repoBranch: Math.max(11, ...sessions.map((s) => `${s.meta.repo}/${s.meta.branch}`.length)),
+    repoBranch: Math.max(11, ...sessions.map((s) =>
+      s.meta.repo ? `${s.meta.repo}/${s.meta.branch}`.length : s.name.length
+    )),
     workflow: Math.max(8, ...sessions.map((s) => (s.workflow ?? "solo").length)),
     status: Math.max(6, ...sessions.map((s) => s.status.length + 2)) + staleExtra,
   };

@@ -5,10 +5,11 @@ import { loadRepoConfig, resolveRepoScriptPath } from "../lib/repo.js";
 import type { MetaJson, RepoConfig, ScriptDef } from "../lib/types.js";
 
 // Load scripts and session context from repo config.
+// For standalone sessions (no repo), returns empty scripts.
 function loadContext(sessionDir: string): {
   scripts: Record<string, ScriptDef>;
   meta: MetaJson;
-  repoConfig: RepoConfig;
+  repoConfig: RepoConfig | null;
   sessionDir: string;
 } {
   const meta = readMeta(sessionDir);
@@ -16,12 +17,16 @@ function loadContext(sessionDir: string): {
     console.error("Error: No meta.json found in session directory.");
     process.exit(1);
   }
+  if (!meta.repo) {
+    // Standalone session - no repo scripts available
+    return { scripts: {}, meta, repoConfig: null, sessionDir };
+  }
   const repoConfig = loadRepoConfig(meta.repo);
   return { scripts: repoConfig.scripts, meta, repoConfig, sessionDir };
 }
 
 // Build auto-injected FED_* environment variables from session context.
-function buildAutoEnv(meta: MetaJson, repoConfig: RepoConfig): Record<string, string> {
+function buildAutoEnv(meta: MetaJson, repoConfig: RepoConfig | null): Record<string, string> {
   return {
     FED_SESSION: meta.tmux_session,
     FED_SESSION_DIR: meta.session_dir,
@@ -29,7 +34,7 @@ function buildAutoEnv(meta: MetaJson, repoConfig: RepoConfig): Record<string, st
     FED_BRANCH: meta.branch,
     FED_REPO: meta.repo,
     FED_WORKFLOW: meta.workflow,
-    FED_REPO_ROOT: repoConfig.repo_root,
+    FED_REPO_ROOT: repoConfig?.repo_root ?? "",
   };
 }
 

@@ -25,7 +25,7 @@ export function App() {
   const { sessions, refresh, refreshSessions, cleanableCount } = useSessions();
   const [screen, setScreen] = useState<Screen>("splash");
   const [message, setMessage] = useState<string | null>(null);
-  const [createStep, setCreateStep] = useState<"workflow" | "repo" | "branch">("workflow");
+  const [createStep, setCreateStep] = useState<"workflow" | "repo" | "branch" | "session-name">("workflow");
   const lastCtrlCRef = useRef(0);
   const [ctrlCPending, setCtrlCPending] = useState(false);
 
@@ -105,7 +105,14 @@ export function App() {
   const createSession = useCallback(
     (repo: string, branch: string, workflow: string) => {
       try {
-        const args = ["fed", "start", workflow, repo, branch, "--no-attach"];
+        let args: string[];
+        if (repo) {
+          // Repo mode
+          args = ["fed", "start", workflow, repo, branch, "--no-attach"];
+        } else {
+          // Standalone mode: branch param is actually the session name
+          args = ["fed", "start", workflow, "--session-name", branch, "--no-attach"];
+        }
         execSync(args.join(" "), { stdio: "inherit" });
         if (process.stdin.isTTY && process.stdin.setRawMode) {
           process.stdin.setRawMode(true);

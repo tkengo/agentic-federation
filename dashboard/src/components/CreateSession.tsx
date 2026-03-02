@@ -5,9 +5,10 @@ import { ScrollableRows } from "./ScrollableRows.js";
 import { computeScrollOffset } from "../utils/scroll.js";
 import type { SessionData } from "../utils/types.js";
 
-type Step = "workflow" | "repo" | "branch";
+type Step = "workflow" | "repo" | "branch" | "session-name";
 
 const MAX_VISIBLE = 6;
+const STANDALONE_LABEL = "Standalone";
 
 interface WorkflowInfo {
   name: string;
@@ -49,9 +50,11 @@ export function CreateSession({
       })
     : workflows;
 
+  // Prepend "Standalone" to repo list, then apply filter
+  const allRepoOptions = [STANDALONE_LABEL, ...repos];
   const filteredRepos = repoQuery
-    ? repos.filter((r) => r.toLowerCase().includes(repoQuery.toLowerCase()))
-    : repos;
+    ? allRepoOptions.filter((r) => r.toLowerCase().includes(repoQuery.toLowerCase()))
+    : allRepoOptions;
 
   // Clamp selected index when filtered list shrinks
   const clampedWorkflowIndex = Math.min(workflowIndex, Math.max(0, workflowOptions.length - 1));
@@ -65,13 +68,25 @@ export function CreateSession({
     onStepChange(next);
   };
 
-  const validateBranch = (repo: string, branchName: string): boolean => {
-    const duplicate = sessions.some(
-      (s) => s.meta.repo === repo && s.meta.branch === branchName
-    );
-    if (duplicate) {
-      setBranchError(`Session already exists: ${repo}/${branchName}`);
-      return false;
+  const isStandalone = !selectedRepo;
+
+  const validateInput = (repo: string, name: string): boolean => {
+    if (!repo) {
+      // Standalone: check tmux session name uniqueness
+      const duplicate = sessions.some((s) => s.name === name);
+      if (duplicate) {
+        setBranchError(`Session already exists: ${name}`);
+        return false;
+      }
+    } else {
+      // Repo mode: check repo+branch uniqueness
+      const duplicate = sessions.some(
+        (s) => s.meta.repo === repo && s.meta.branch === name
+      );
+      if (duplicate) {
+        setBranchError(`Session already exists: ${repo}/${name}`);
+        return false;
+      }
     }
     setBranchError("");
     return true;
@@ -103,9 +118,16 @@ export function CreateSession({
           setRepoIndex((i) => Math.min(filteredRepos.length - 1, i + 1));
         } else if (key.return) {
           if (filteredRepos.length > 0) {
-            setSelectedRepo(filteredRepos[clampedRepoIndex]!);
-            setRepoQuery("");
-            goToStep("branch");
+            const selected = filteredRepos[clampedRepoIndex]!;
+            if (selected === STANDALONE_LABEL) {
+              setSelectedRepo("");
+              setRepoQuery("");
+              goToStep("session-name");
+            } else {
+              setSelectedRepo(selected);
+              setRepoQuery("");
+              goToStep("branch");
+            }
           }
         } else if (key.escape) {
           setRepoQuery("");
@@ -116,18 +138,15 @@ export function CreateSession({
           setBranchError("");
           goToStep("repo");
         }
+      } else if (step === "session-name") {
+        if (key.escape) {
+          setBranchError("");
+          goToStep("repo");
+        }
       }
     },
     { isActive: true }
   );
-
-  if (repos.length === 0) {
-    return (
-      <Box flexDirection="column" paddingX={1}>
-        <Text color="red">No repos configured. Run: fed repo add &lt;name&gt;</Text>
-      </Box>
-    );
-  }
 
   // Build breadcrumb string
   const breadcrumbParts: string[] = [];
@@ -138,6 +157,8 @@ export function CreateSession({
   }
   if (step === "branch") {
     breadcrumbParts.push(selectedRepo);
+  } else if (step === "session-name") {
+    breadcrumbParts.push(STANDALONE_LABEL);
   }
   const breadcrumb = breadcrumbParts.length > 0
     ? breadcrumbParts.join(" > ")
@@ -173,6 +194,10 @@ export function CreateSession({
 
   // Step label for list steps header
   const stepLabel = step === "workflow" ? "Workflow:" : step === "repo" ? "Repo:" : "";
+
+  // Determine if we're in an input step (branch or session-name)
+  const isInputStep = step === "branch" || step === "session-name";
+  const inputLabel = step === "session-name" ? "Session Name: " : "Branch: ";
 
   return (
     <Box flexDirection="column">
@@ -214,7 +239,10 @@ export function CreateSession({
             )}
             {step === "repo" && (filteredRepos.length > 0
               ? renderScrollableList(
-                  filteredRepos.map((r) => ({ label: r })),
+                  filteredRepos.map((r) => ({
+                    label: r,
+                    desc: r === STANDALONE_LABEL ? "No repository" : undefined,
+                  })),
                   clampedRepoIndex,
                 )
               : <Box flexDirection="column">
@@ -227,11 +255,11 @@ export function CreateSession({
           </>
         )}
 
-        {/* Branch step: inline label + input, compact */}
-        {step === "branch" && (
+        {/* Branch / Session Name step: inline label + input, compact */}
+        {isInputStep && (
           <Box flexDirection="column">
             <Box marginLeft={2}>
-              <Text bold>{"Branch: "}</Text>
+              <Text bold>{inputLabel}</Text>
               <EmacsTextInput
                 value={branch}
                 onChange={(text) => {
@@ -241,7 +269,7 @@ export function CreateSession({
                 onSubmit={(text) => {
                   if (text.trim()) {
                     const trimmed = text.trim();
-                    if (validateBranch(selectedRepo, trimmed)) {
+                    if (validateInput(selectedRepo, trimmed)) {
                       setBranch(trimmed);
                       onSubmit(selectedRepo, trimmed, selectedWorkflow);
                     }
@@ -256,7 +284,7 @@ export function CreateSession({
       </Box>
 
       {/* Spacing between panel box and footer */}
-      {step === "branch" && (
+      {isInputStep && (
         <>
           {branchError && (
             <Box marginLeft={2}>

@@ -5,8 +5,8 @@ import { execSync } from "node:child_process";
 import { SESSIONS_DIR, ACTIVE_DIR } from "./paths.js";
 import type { MetaJson } from "./types.js";
 
-// Generate session directory name: YYYYMMDDHHMMSS_<6charID>_<branch>
-export function generateSessionDirName(branch: string): string {
+// Generate session directory name: YYYYMMDDHHMMSS_<6charID>_<suffix>
+export function generateSessionDirName(suffix: string): string {
   const now = new Date();
   const ts = [
     now.getFullYear(),
@@ -17,13 +17,14 @@ export function generateSessionDirName(branch: string): string {
     String(now.getSeconds()).padStart(2, "0"),
   ].join("");
   const id = crypto.randomBytes(3).toString("hex");
-  return `${ts}_${id}_${branch}`;
+  return `${ts}_${id}_${suffix}`;
 }
 
 // Create session directory and write meta.json
-// Path: ~/.fed/sessions/<repoName>/YYYYMMDDHHMMSS_<id>_<branch>/
+// Path: ~/.fed/sessions/<repoName>/YYYYMMDDHHMMSS_<id>_<suffix>/
+// For standalone sessions, tmux_session is used as suffix when branch is empty.
 export function createSessionDir(repoName: string, meta: MetaJson): string {
-  const dirName = generateSessionDirName(meta.branch);
+  const dirName = generateSessionDirName(meta.branch || meta.tmux_session);
   const sessionPath = path.join(SESSIONS_DIR, repoName, dirName);
   fs.mkdirSync(sessionPath, { recursive: true });
   meta.session_dir = sessionPath;

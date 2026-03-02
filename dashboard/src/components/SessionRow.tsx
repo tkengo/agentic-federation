@@ -44,7 +44,10 @@ export function SessionRow({ session, selected, dimmed, expanded, hideDescriptio
         {` ${cursor} `}
       </Text>
       <Text color={highlight ? "cyan" : undefined} bold={highlight} dimColor={dimmed}>
-        {`${session.meta.repo}/${session.meta.branch}`.padEnd(colWidths.repoBranch)}
+        {(session.meta.repo
+          ? `${session.meta.repo}/${session.meta.branch}`
+          : session.name
+        ).padEnd(colWidths.repoBranch)}
       </Text>
       <Text dimColor={dimmed}>{`  `}</Text>
       <Text color={highlight ? "cyan" : undefined} bold={highlight} dimColor={dimmed}>{(session.workflow ?? "solo").padEnd(colWidths.workflow)}</Text>

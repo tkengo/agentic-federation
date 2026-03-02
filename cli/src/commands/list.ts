@@ -46,8 +46,7 @@ export function listCommand(): void {
   }
 
   type Row = {
-    repo: string;
-    branch: string;
+    session: string; // "repo/branch" or tmux session name for standalone
     workflow: string;
     status: string;
     age: string;
@@ -75,9 +74,13 @@ export function listCommand(): void {
       }
     }
 
+    // For standalone sessions, display tmux session name instead of repo/branch
+    const session = meta.repo
+      ? `${meta.repo}/${meta.branch}`
+      : meta.tmux_session;
+
     rows.push({
-      repo: meta.repo,
-      branch: meta.branch,
+      session,
       workflow: meta.workflow ?? "solo",
       status,
       age: formatAge(meta.created_at),
@@ -91,10 +94,9 @@ export function listCommand(): void {
   }
 
   // Calculate column widths
-  const headers = { repo: "REPO", branch: "BRANCH", workflow: "WORKFLOW", status: "STATUS", age: "AGE" };
+  const headers = { session: "SESSION", workflow: "WORKFLOW", status: "STATUS", age: "AGE" };
   const widths = {
-    repo: Math.max(headers.repo.length, ...rows.map((r) => r.repo.length)),
-    branch: Math.max(headers.branch.length, ...rows.map((r) => r.branch.length)),
+    session: Math.max(headers.session.length, ...rows.map((r) => r.session.length)),
     workflow: Math.max(headers.workflow.length, ...rows.map((r) => r.workflow.length)),
     status: Math.max(headers.status.length, ...rows.map((r) => r.status.length)),
     age: Math.max(headers.age.length, ...rows.map((r) => r.age.length)),
@@ -102,8 +104,7 @@ export function listCommand(): void {
 
   // Print header
   console.log(
-    `  ${headers.repo.padEnd(widths.repo)}  ` +
-    `${headers.branch.padEnd(widths.branch)}  ` +
+    `  ${headers.session.padEnd(widths.session)}  ` +
     `${headers.workflow.padEnd(widths.workflow)}  ` +
     `${headers.status.padEnd(widths.status)}  ` +
     `${headers.age.padStart(widths.age)}`
@@ -112,8 +113,7 @@ export function listCommand(): void {
   // Print rows
   for (const row of rows) {
     console.log(
-      `  ${row.repo.padEnd(widths.repo)}  ` +
-      `${row.branch.padEnd(widths.branch)}  ` +
+      `  ${row.session.padEnd(widths.session)}  ` +
       `${row.workflow.padEnd(widths.workflow)}  ` +
       `${row.status.padEnd(widths.status)}  ` +
       `${row.age.padStart(widths.age)}`

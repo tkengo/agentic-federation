@@ -685,7 +685,7 @@ export function Home({
     const detailPanel = (
       <DetailPanel
         colWidths={colWidths}
-        worktree={session.meta.worktree}
+        worktree={session.meta.worktree || undefined}
         description={session.description}
         hideDescription={showPreview}
         mode={detailMode}

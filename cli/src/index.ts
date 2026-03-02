@@ -101,11 +101,18 @@ repo
 
 // --- start ---
 program
-  .command("start <workflow> <repo> <branch>")
+  .command("start <workflow> [repo] [branch]")
   .description("Start a development session with a workflow")
   .option("--no-attach", "Skip tmux attach after creation")
-  .action(async (workflow: string, repo: string, branch: string, options: { attach?: boolean }) => {
-    await startCommand(workflow, repo, branch, options.attach === false);
+  .option("--session-name <name>", "Custom tmux session name (auto-generated for standalone if omitted)")
+  .action(async (workflow: string, repo: string | undefined, branch: string | undefined, options: { attach?: boolean; sessionName?: string }) => {
+    if (repo && !branch) {
+      console.error("Error: branch is required when repo is specified.");
+      console.error("  Usage: fed start <workflow> <repo> <branch>");
+      console.error("  For standalone (no repo): fed start <workflow> [--session-name <name>]");
+      process.exit(1);
+    }
+    await startCommand(workflow, repo, branch, options.attach === false, options.sessionName);
   });
 
 // --- state ---

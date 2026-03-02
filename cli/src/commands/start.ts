@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
+import crypto from "node:crypto";
 import { execSync, spawn } from "node:child_process";
 import { AGENTS_DIR, CLAUDE_AGENTS_DIR, WORKFLOWS_DIR } from "../lib/paths.js";
 import { loadRepoConfig } from "../lib/repo.js";
@@ -19,9 +20,10 @@ import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 
 export async function startCommand(
   workflowName: string,
-  repoName: string,
-  branch: string,
-  noAttach?: boolean
+  repoName: string | undefined,
+  branch: string | undefined,
+  noAttach?: boolean,
+  sessionName?: string
 ): Promise<void> {
   // ============================================================
   // Preflight checks (no side effects - fail fast before any mutation)
@@ -36,52 +38,76 @@ export async function startCommand(
   // Ensure ~/.fed/ structure exists
   initCommand();
 
-  const config = loadRepoConfig(repoName);
-  const worktreePath = path.join(config.worktree_base, branch);
-  const tmuxSession = branch;
+  const isStandalone = !repoName;
 
-  // 2. repo_root must be a valid git repo
-  if (!fs.existsSync(config.repo_root)) {
-    console.error(`Error: repo_root does not exist: ${config.repo_root}`);
-    process.exit(1);
-  }
-  try {
-    execSync(`git -C '${config.repo_root}' rev-parse --git-dir`, {
-      stdio: "ignore",
-    });
-  } catch {
-    console.error(`Error: repo_root is not a git repository: ${config.repo_root}`);
-    process.exit(1);
-  }
-
-  // 3. worktree_base must exist
-  if (!fs.existsSync(config.worktree_base)) {
-    console.error(`Error: worktree_base does not exist: ${config.worktree_base}`);
-    console.error(`  Create it first: mkdir -p '${config.worktree_base}'`);
-    process.exit(1);
+  // Determine tmux session name
+  let tmuxSession: string;
+  if (sessionName) {
+    tmuxSession = sessionName;
+  } else if (isStandalone) {
+    // Auto-generate: <workflow>-<HHMM>-<4hex>
+    const now = new Date();
+    const hhmm = String(now.getHours()).padStart(2, "0")
+      + String(now.getMinutes()).padStart(2, "0");
+    const hex = crypto.randomBytes(2).toString("hex");
+    tmuxSession = `${workflowName}-${hhmm}-${hex}`;
+  } else {
+    tmuxSession = branch!;
   }
 
-  // 4. Worktree directory must not already exist
-  if (fs.existsSync(worktreePath)) {
-    console.error(`Error: worktree directory already exists: ${worktreePath}`);
-    console.error(`  Remove it first, or use a different branch name.`);
-    process.exit(1);
-  }
+  // --- Repo-specific preflight checks (skipped for standalone) ---
+  let config: RepoConfig | null = null;
+  let worktreePath = "";
 
-  // 5. Branch must not already exist in git
-  try {
-    const existing = execSync(
-      `git -C '${config.repo_root}' branch --list '${branch}'`,
-      { encoding: "utf-8" }
-    ).trim();
-    if (existing) {
-      console.error(`Error: git branch '${branch}' already exists.`);
-      console.error(`  Delete it first: git -C '${config.repo_root}' branch -d '${branch}'`);
+  if (!isStandalone) {
+    config = loadRepoConfig(repoName!);
+    worktreePath = path.join(config.worktree_base, branch!);
+
+    // 2. repo_root must be a valid git repo
+    if (!fs.existsSync(config.repo_root)) {
+      console.error(`Error: repo_root does not exist: ${config.repo_root}`);
       process.exit(1);
     }
-  } catch {
-    // git branch --list failed, proceed (non-fatal)
+    try {
+      execSync(`git -C '${config.repo_root}' rev-parse --git-dir`, {
+        stdio: "ignore",
+      });
+    } catch {
+      console.error(`Error: repo_root is not a git repository: ${config.repo_root}`);
+      process.exit(1);
+    }
+
+    // 3. worktree_base must exist
+    if (!fs.existsSync(config.worktree_base)) {
+      console.error(`Error: worktree_base does not exist: ${config.worktree_base}`);
+      console.error(`  Create it first: mkdir -p '${config.worktree_base}'`);
+      process.exit(1);
+    }
+
+    // 4. Worktree directory must not already exist
+    if (fs.existsSync(worktreePath)) {
+      console.error(`Error: worktree directory already exists: ${worktreePath}`);
+      console.error(`  Remove it first, or use a different branch name.`);
+      process.exit(1);
+    }
+
+    // 5. Branch must not already exist in git
+    try {
+      const existing = execSync(
+        `git -C '${config.repo_root}' branch --list '${branch}'`,
+        { encoding: "utf-8" }
+      ).trim();
+      if (existing) {
+        console.error(`Error: git branch '${branch!}' already exists.`);
+        console.error(`  Delete it first: git -C '${config.repo_root}' branch -d '${branch}'`);
+        process.exit(1);
+      }
+    } catch {
+      // git branch --list failed, proceed (non-fatal)
+    }
   }
+
+  // --- Common preflight checks ---
 
   // 6. tmux session must not already exist
   if (tmux.hasSession(tmuxSession)) {
@@ -105,11 +131,98 @@ export async function startCommand(
   // Load workflow source (for validation)
   loadWorkflowByName(workflowName);
 
+  if (isStandalone) {
+    startStandalone(workflowName, tmuxSession, noAttach);
+  } else {
+    startWithRepo(workflowName, repoName!, branch!, config!, worktreePath, tmuxSession, noAttach);
+  }
+}
+
+// --- Standalone session (no repo) ---
+function startStandalone(
+  workflowName: string,
+  tmuxSession: string,
+  noAttach?: boolean
+): void {
+  console.log(`=== fed start (standalone) ===`);
+  console.log(`Workflow: ${workflowName}`);
+  console.log(`Session:  ${tmuxSession}`);
+
+  // Create session directory + meta.json
+  const meta: MetaJson = {
+    repo: "",
+    branch: "",
+    workflow: workflowName,
+    worktree: "",
+    tmux_session: tmuxSession,
+    session_dir: "", // set by createSessionDir
+    created_at: new Date().toISOString(),
+  };
+  const sessionPath = createSessionDir("_standalone", meta);
+  const cwd = sessionPath; // Use session dir as tmux cwd
+  console.log(`Dir:      ${sessionPath}`);
+
+  // Active symlink
+  linkActiveSession(tmuxSession, sessionPath);
+
+  // Template-expand workflow YAML (no repo bindings)
+  const workflow = expandAndSaveWorkflowStandalone(sessionPath, workflowName, meta);
+
+  // Create session infrastructure
+  initSession(sessionPath, tmuxSession, workflow);
+
+  // Sync commands (skills)
+  syncCommands();
+
+  // Sync agent prompts to ~/.claude/agents/
+  syncAgents(workflowName);
+
+  // Create logs directory
+  fs.mkdirSync(path.join(sessionPath, "logs"), { recursive: true });
+
+  // Generic window creation loop
+  for (let i = 0; i < workflow.windows.length; i++) {
+    const win = workflow.windows[i]!;
+    if (i === 0) {
+      console.log(`Creating tmux session (window: ${win.name})...`);
+      tmux.newSession(tmuxSession, cwd, win.name);
+      tmux.setEnvironment(tmuxSession, "FED_SESSION", tmuxSession);
+    } else {
+      console.log(`Creating window: ${win.name}...`);
+      tmux.newWindow(tmuxSession, win.name, cwd);
+    }
+    createWindowLayout(tmuxSession, win, cwd);
+  }
+
+  // Customize tmux status bar
+  tmux.setOption(tmuxSession, "status-style", "bg=colour24,fg=white");
+  tmux.setOption(tmuxSession, "status-right", ` ⚡fed ▸ ${workflowName}:${tmuxSession} `);
+
+  // Start notification watcher
+  startNotificationWatcher(sessionPath, tmuxSession);
+
+  // Attach
+  printReadyAndAttach(workflow, tmuxSession, noAttach);
+}
+
+// --- Repo-based session (existing behavior) ---
+function startWithRepo(
+  workflowName: string,
+  repoName: string,
+  branch: string,
+  config: RepoConfig,
+  worktreePath: string,
+  tmuxSession: string,
+  noAttach?: boolean
+): void {
   console.log(`=== fed start ===`);
   console.log(`Workflow: ${workflowName}`);
   console.log(`Repo:     ${repoName}`);
   console.log(`Branch:   ${branch}`);
   console.log(`Worktree: ${worktreePath}`);
+  if (tmuxSession !== branch) {
+    console.log(`Session:  ${tmuxSession}`);
+  }
 
   // Cleanup old Claude project data
   cleanupClaude(config);
@@ -124,7 +237,7 @@ export async function startCommand(
     workflow: workflowName,
     worktree: worktreePath,
     tmux_session: tmuxSession,
-    session_dir: "",  // set by createSessionDir
+    session_dir: "", // set by createSessionDir
     created_at: new Date().toISOString(),
   };
   const sessionPath = createSessionDir(repoName, meta);
@@ -171,12 +284,24 @@ export async function startCommand(
 
   // Customize tmux status bar for fed session
   tmux.setOption(tmuxSession, "status-style", "bg=colour24,fg=white");
-  tmux.setOption(tmuxSession, "status-right", ` ⚡fed ▸ ${workflowName}:${repoName}/${branch} `);
+  const statusLabel = tmuxSession !== branch
+    ? `${workflowName}:${repoName}/${branch} (${tmuxSession})`
+    : `${workflowName}:${repoName}/${branch}`;
+  tmux.setOption(tmuxSession, "status-right", ` ⚡fed ▸ ${statusLabel} `);
 
-  // Start notification watcher (always - needed for stateful and useful for future stateless extensions)
+  // Start notification watcher
   startNotificationWatcher(sessionPath, tmuxSession);
 
   // Attach
+  printReadyAndAttach(workflow, tmuxSession, noAttach);
+}
+
+// --- Print ready message and optionally attach ---
+function printReadyAndAttach(
+  workflow: WorkflowDefinition,
+  tmuxSession: string,
+  noAttach?: boolean
+): void {
   console.log("");
   console.log("=== Environment Ready ===");
   console.log("");
@@ -316,6 +441,22 @@ function expandAndSaveWorkflow(
     path.join(sessionPath, "workflow.yaml"),
     stringifyYaml(wf)
   );
+  return wf;
+}
+
+// --- Template-expand workflow YAML for standalone (no repo config) ---
+function expandAndSaveWorkflowStandalone(
+  sessionPath: string,
+  workflowName: string,
+  meta: MetaJson
+): WorkflowDefinition {
+  const fedRepo = path.resolve(import.meta.dirname, "..", "..", "..");
+  const srcWorkflow = path.join(fedRepo, "workflows", workflowName, "workflow.yaml");
+  const rawYaml = fs.readFileSync(srcWorkflow, "utf-8");
+  // No repo bindings - template vars like {{repo.*}} resolve to ""
+  const expandedYaml = expandTemplateVariables(rawYaml, { repo: {}, meta });
+  const wf = parseYaml(expandedYaml) as WorkflowDefinition;
+  fs.writeFileSync(path.join(sessionPath, "workflow.yaml"), stringifyYaml(wf));
   return wf;
 }
 

@@ -40,9 +40,13 @@ export function stopCommand(sessionName?: string): void {
   const meta = readMeta(sessionDir);
   console.log(`Stopping session: ${targetSession}`);
   if (meta) {
-    console.log(`  Repo:     ${meta.repo}`);
-    console.log(`  Branch:   ${meta.branch}`);
-    console.log(`  Worktree: ${meta.worktree}`);
+    if (meta.repo) {
+      console.log(`  Repo:     ${meta.repo}`);
+      console.log(`  Branch:   ${meta.branch}`);
+      console.log(`  Worktree: ${meta.worktree}`);
+    } else {
+      console.log(`  Type:     Standalone`);
+    }
   }
 
   // 1. Stop watcher processes via PID files
@@ -71,7 +75,7 @@ export function stopCommand(sessionName?: string): void {
   }
 
   // 4. Move session directory to archive
-  const repoName = meta?.repo ?? path.basename(path.dirname(sessionDir));
+  const repoName = meta?.repo || "_standalone";
   const dirName = path.basename(sessionDir);
   const archiveDest = path.join(ARCHIVE_DIR, repoName, dirName);
   fs.mkdirSync(path.join(ARCHIVE_DIR, repoName), { recursive: true });

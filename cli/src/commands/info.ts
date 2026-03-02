@@ -64,10 +64,14 @@ export function infoCommand(sessionName?: string): void {
   // Session metadata
   console.log(`=== Session: ${targetSession} ===`);
   console.log("");
-  console.log(`  Repo:        ${meta.repo}`);
-  console.log(`  Branch:      ${meta.branch}`);
+  if (meta.repo) {
+    console.log(`  Repo:        ${meta.repo}`);
+    console.log(`  Branch:      ${meta.branch}`);
+    console.log(`  Worktree:    ${meta.worktree}`);
+  } else {
+    console.log(`  Type:        Standalone`);
+  }
   console.log(`  Workflow:    ${meta.workflow ?? "solo"}`);
-  console.log(`  Worktree:    ${meta.worktree}`);
   console.log(`  Created:     ${formatTimestamp(meta.created_at)} (${formatAge(meta.created_at)} ago)`);
   console.log(`  Session dir: ${sessionDir}`);
 
