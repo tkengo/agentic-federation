@@ -484,6 +484,7 @@ export function Home({
   useInput(
     (input, key) => {
       if (!showPreview) return;
+      if (previewData.type === "pane") return; // Pane preview: no manual scroll
       // contentHeight = panelHeight - border(2) - title(1) - separator(1)
       const previewContentHeight = Math.max(1, panelHeight - 4);
       const maxScroll = Math.max(0, previewData.lines.length - previewContentHeight);
