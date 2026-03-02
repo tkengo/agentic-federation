@@ -19,7 +19,7 @@ const ICON_PANE = "\u{1F4BB}"; // 💻
 const ICON_PLAY = "\u{25BA}";       // ►
 const ICON_SEND = "\u{1F4E8}"; // 📨
 
-const MAX_VISIBLE = 15;
+export const MAX_VISIBLE = 15;
 export const LOG_MAX_VISIBLE = 9; // 10 total - 1 header line
 
 // --- Script types and hook ---
@@ -139,6 +139,11 @@ type VirtualRow =
 
 export type DetailMode = "browse" | "running" | "done" | "sending";
 
+/** Compute DetailPanel box width from column widths (shared with Home.tsx for layout) */
+export function computeBoxWidth(colWidths: { repoBranch: number; workflow: number; status: number }): number {
+  return 3 + colWidths.repoBranch + 2 + colWidths.workflow + 2 + colWidths.status + 2 + 4 + 2 + 4 + 25;
+}
+
 interface DetailPanelProps {
   colWidths: {
     repoBranch: number;
@@ -208,9 +213,7 @@ export function DetailPanel({
   // Avoids unnecessary re-renders that disrupt IME cursor positioning.
   const blinkOn = useBlink(500, mode === "running");
 
-  // Box width: cursor visual width is 4 (space + arrow(2) + space), minus marginLeft(4)
-  // then repoBranch + 2 + workflow + 2 + status + 2 + [!](4) + 2 + age(4) + extra(50)
-  const boxWidth = 3 + colWidths.repoBranch + 2 + colWidths.workflow + 2 + colWidths.status + 2 + 4 + 2 + 4 + 25;
+  const boxWidth = computeBoxWidth(colWidths);
   const innerWidth = boxWidth - 4;
 
   const worktreeHeader = worktree ? (
@@ -222,7 +225,7 @@ export function DetailPanel({
 
   if (mode === "sending") {
     return (
-      <Box marginLeft={4} width={boxWidth} borderStyle="round" flexDirection="column" paddingX={1}>
+      <Box width={boxWidth} borderStyle="round" flexDirection="column" paddingX={1}>
         {worktreeHeader}
         <Box>
           <Text>{ICON_SEND} </Text>
@@ -244,7 +247,7 @@ export function DetailPanel({
 
   if (mode === "running" || mode === "done") {
     return (
-      <Box marginLeft={4} width={boxWidth} borderStyle="round" flexDirection="column" paddingX={1}>
+      <Box width={boxWidth} borderStyle="round" flexDirection="column" paddingX={1}>
         {worktreeHeader}
         <LogView
           innerWidth={innerWidth}
@@ -261,7 +264,7 @@ export function DetailPanel({
   }
 
   return (
-    <Box marginLeft={4} width={boxWidth} borderStyle="round" flexDirection="column" paddingX={1}>
+    <Box width={boxWidth} borderStyle="round" flexDirection="column" paddingX={1}>
       {worktreeHeader}
       <BrowseView
         innerWidth={innerWidth}
