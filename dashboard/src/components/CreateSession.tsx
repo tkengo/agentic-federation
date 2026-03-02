@@ -7,7 +7,7 @@ import type { SessionData } from "../utils/types.js";
 
 type Step = "workflow" | "repo" | "branch";
 
-const MAX_VISIBLE = 3;
+const MAX_VISIBLE = 6;
 
 interface WorkflowInfo {
   name: string;
