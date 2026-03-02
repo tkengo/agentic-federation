@@ -135,30 +135,75 @@ export function EmacsTextInput({
     }
   }, { isActive: focus });
 
-  // Position the real terminal cursor at the text input cursor for IME support.
-  // The dashboard runs in alternate screen buffer with height={rows}, so Ink's
-  // Yoga coordinate (x, y) maps directly to terminal position (col+1, row+1).
-  // useLayoutEffect runs synchronously after Ink writes output to stdout,
-  // ensuring the cursor is positioned before the next user input.
+  // Stores the ANSI escape sequence to reposition cursor.
+  // Updated by useLayoutEffect on every render, read by the stdout interceptor.
+  const cursorSeqRef = useRef<string | null>(null);
+
+  // Intercept process.stdout.write to reposition cursor after EVERY write.
+  //
+  // Why this is needed:
+  // Ink's onRender (the actual stdout write) is throttled (~32ms).  When the
+  // throttled trailing call fires, it writes screen content to stdout AFTER
+  // our useLayoutEffect has already positioned the cursor.  No React effect
+  // runs after that deferred write, so the cursor stays at whatever position
+  // Ink left it -- causing the IME candidate window to jump.
+  //
+  // By intercepting stdout.write we guarantee the cursor is repositioned
+  // immediately after every write, including Ink's deferred throttled writes.
+  useEffect(() => {
+    if (!focus || !showCursor) {
+      cursorSeqRef.current = null;
+      return;
+    }
+
+    const origWrite = process.stdout.write;
+    let guard = false;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    process.stdout.write = function (this: typeof process.stdout, ...args: any[]): boolean {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const result = (origWrite as any).apply(this, args);
+      const seq = cursorSeqRef.current;
+      if (!guard && seq) {
+        guard = true;
+        (origWrite as any).call(this, seq);
+        guard = false;
+      }
+      return result;
+    } as typeof process.stdout.write;
+
+    return () => {
+      process.stdout.write = origWrite;
+    };
+  }, [focus, showCursor]);
+
+  // Update cursor position on every render and write it immediately.
+  // The cursorSeqRef is also read by the stdout interceptor above so that
+  // deferred Ink writes are always followed by correct cursor positioning.
+  //
+  // We only SET the cursor position (CUP) without making it visible (DECTCEM).
+  // The hardware cursor must stay hidden so it doesn't overlap the chalk.inverse
+  // visual cursor -- a visible hardware cursor at the same cell would double-
+  // invert the character, cancelling out the highlight and making the caret
+  // invisible.  IME candidate windows still track the hidden cursor position.
   useLayoutEffect(() => {
-    if (!focus || !showCursor) return;
+    if (!focus || !showCursor) {
+      cursorSeqRef.current = null;
+      return;
+    }
     const node = boxRef.current;
     if (!node) return;
     const { x, y } = getAbsolutePosition(node);
     const textBeforeCursor = originalValue.slice(0, cursorOffset);
     const col = x + stringWidth(textBeforeCursor) + 1; // ANSI is 1-indexed
     const row = y + 1;
-    // Move cursor to position and make it visible
-    process.stdout.write(`\x1b[${row};${col}H\x1b[?25h`);
+    // CUP only -- no \x1b[?25h so the hardware cursor stays hidden
+    const seq = `\x1b[${row};${col}H`;
+    cursorSeqRef.current = seq;
+    // Position cursor now (goes through interceptor, which adds one
+    // redundant write -- harmless since cursor is already at correct pos)
+    process.stdout.write(seq);
   });
-
-  // Hide terminal cursor when losing focus or unmounting
-  useEffect(() => {
-    if (!focus) return;
-    return () => {
-      process.stdout.write("\x1b[?25l");
-    };
-  }, [focus]);
 
   // Render
   const value = originalValue;

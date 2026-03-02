@@ -28,9 +28,11 @@ function hasAnyStaleSessions(sessions: SessionData[]): boolean {
 }
 
 export function SessionList({ sessions, selectedIndex, dimmed, expandedIndex, hideDescription, renderDetail }: SessionListProps) {
-  const blinkOn = useBlink(500);
   const anyStale = hasAnyStaleSessions(sessions);
   const anyWaiting = sessions.some((s) => s.waitingHuman.waiting);
+  // Only run the blink timer when there are waiting sessions to animate.
+  // This avoids 500ms re-render cycles that disrupt IME cursor positioning.
+  const blinkOn = useBlink(500, anyWaiting);
 
   if (sessions.length === 0) {
     return (

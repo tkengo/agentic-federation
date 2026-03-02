@@ -204,7 +204,9 @@ export function DetailPanel({
   onSendingChange,
   onSendingSubmit,
 }: DetailPanelProps) {
-  const blinkOn = useBlink(500);
+  // Only run the blink timer when a script is running (the play icon blinks).
+  // Avoids unnecessary re-renders that disrupt IME cursor positioning.
+  const blinkOn = useBlink(500, mode === "running");
 
   // Box width: cursor visual width is 4 (space + arrow(2) + space), minus marginLeft(4)
   // then repoBranch + 2 + workflow + 2 + status + 2 + [!](4) + 2 + age(4) + extra(50)
