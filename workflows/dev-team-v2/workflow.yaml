@@ -81,6 +81,9 @@ states:
     description: "人間と対話しながら計画を策定する"
     color: blue
     entry_point: true
+  human_plan_review:
+    description: "人間に計画レビューをお願いする"
+    color: blue
   plan_review:
     description: "複数レビュアーによる並列計画レビュー"
     color: yellow
