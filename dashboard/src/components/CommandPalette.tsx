@@ -3,6 +3,7 @@ import { Box, Text, useInput } from "ink";
 import { EmacsTextInput } from "./EmacsTextInput.js";
 import { ScrollableRows } from "./ScrollableRows.js";
 import { execSync } from "node:child_process";
+import { useFooter } from "../contexts/FooterContext.js";
 import { filterCommands } from "../utils/commands.js";
 import { computeScrollOffset } from "../utils/scroll.js";
 import type { PaletteCommand } from "../utils/commands.js";
@@ -17,7 +18,6 @@ interface CommandPaletteProps {
   onClose: () => void;
   onAction: (commandId: string) => void;
   onScreenTransition: (commandId: string) => void;
-  showMessage: (msg: string) => void;
 }
 
 export function CommandPalette({
@@ -26,8 +26,9 @@ export function CommandPalette({
   onClose,
   onAction,
   onScreenTransition,
-  showMessage,
 }: CommandPaletteProps) {
+  const { showMessage } = useFooter();
+
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [subMode, setSubMode] = useState<SubMode>("search");

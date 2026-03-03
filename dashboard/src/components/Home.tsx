@@ -1,14 +1,15 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { Box, Text, useInput } from "ink";
 import path from "node:path";
-import { execSync } from "node:child_process";
+import { execSync, spawn } from "node:child_process";
 import { SessionList } from "./SessionList.js";
 import { RepoList } from "./RepoList.js";
 import { WorkflowList } from "./WorkflowList.js";
 import { useKeyboard } from "../hooks/useKeyboard.js";
+import { useFooter } from "../contexts/FooterContext.js";
 import { REPOS_DIR } from "../utils/types.js";
 import { switchToTmuxSession } from "../utils/tmux.js";
-import type { SessionData, RepoInfo, FooterOverride, WorkflowInfo } from "../utils/types.js";
+import type { SessionData, RepoInfo, WorkflowInfo } from "../utils/types.js";
 
 interface HomeProps {
   sessions: SessionData[];
@@ -18,13 +19,11 @@ interface HomeProps {
   active: boolean;
   columns: number;
   rows: number;
-  showMessage: (msg: string) => void;
   refresh: () => void;
   refreshRepos: () => void;
   onNavigate: (target: "create" | "palette" | "add-repo") => void;
   onDetailSession: (sessionName: string) => void;
   onSelectedSessionChange: (session: SessionData | undefined) => void;
-  onFooterOverrideChange: (override: FooterOverride) => void;
   pendingAction: string | null;
   onActionHandled: () => void;
 }
@@ -37,16 +36,16 @@ export function Home({
   active,
   columns,
   rows,
-  showMessage,
   refresh,
   refreshRepos,
   onNavigate,
   onDetailSession,
   onSelectedSessionChange,
-  onFooterOverrideChange,
   pendingAction,
   onActionHandled,
 }: HomeProps) {
+  const { showMessage, showError, setOverride, clearOverride } = useFooter();
+
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [confirmingKill, setConfirmingKill] = useState(false);
   const [confirmingClean, setConfirmingClean] = useState(false);
@@ -76,15 +75,22 @@ export function Home({
   // Report footer override to parent
   useEffect(() => {
     if (cleaning) {
-      onFooterOverrideChange({ type: "cleaning" });
+      setOverride({ type: "cleaning" });
     } else if (confirmingClean) {
-      onFooterOverrideChange({ type: "confirmClean", count: cleanableCount });
+      setOverride({ type: "confirmClean", count: cleanableCount });
     } else if (confirmingKill && selectedSession) {
-      onFooterOverrideChange({ type: "confirmKill", name: selectedSession.name });
+      setOverride({ type: "confirmKill", name: selectedSession.name });
     } else {
-      onFooterOverrideChange(null);
+      clearOverride();
     }
-  }, [cleaning, confirmingClean, confirmingKill, cleanableCount, selectedSession]);
+  }, [cleaning, confirmingClean, confirmingKill, cleanableCount, selectedSession, setOverride, clearOverride]);
+
+  // Clear footer override on unmount
+  useEffect(() => {
+    return () => {
+      clearOverride();
+    };
+  }, [clearOverride]);
 
   // Switch to tmux session
   const switchToSession = useCallback(() => {
@@ -134,25 +140,42 @@ export function Home({
     }
   }, [showMessage, refresh]);
 
-  // Run fed clean
+  // Run fed clean (async via spawn)
   const runClean = useCallback((force?: boolean) => {
     setCleaning(true);
-    setTimeout(() => {
-      try {
-        const cmd = force ? "fed clean --force" : "fed clean";
-        const output = execSync(cmd, { encoding: "utf-8" });
-        const doneLine = output.match(/^Done\. (.+)$/m);
-        showMessage(doneLine ? doneLine[1] : "Cleaned worktrees");
-        refresh();
-      } catch (err: unknown) {
-        const output = (err as { stdout?: string }).stdout ?? "";
-        const doneLine = output.match(/^Done\. (.+)$/m);
-        showMessage(doneLine ? doneLine[1] : "Failed to clean worktrees");
-        refresh();
-      }
+    setOverride({ type: "cleaning" });
+
+    const args = force ? ["clean", "--force"] : ["clean"];
+    const proc = spawn("fed", args, { stdio: ["ignore", "pipe", "pipe"] });
+
+    let stdout = "";
+    let stderr = "";
+    proc.stdout?.on("data", (data: Buffer) => { stdout += data.toString(); });
+    proc.stderr?.on("data", (data: Buffer) => { stderr += data.toString(); });
+
+    proc.on("close", (code) => {
       setCleaning(false);
-    }, 50);
-  }, [showMessage, refresh]);
+      clearOverride();
+      const doneLine = stdout.match(/^Done\. (.+)$/m);
+      if (code === 0) {
+        showMessage(doneLine ? doneLine[1]! : "Cleaned worktrees");
+      } else {
+        if (doneLine) {
+          showMessage(doneLine[1]!);
+        } else {
+          showError(stderr.trim() || "Failed to clean worktrees");
+        }
+      }
+      refresh();
+    });
+
+    proc.on("error", () => {
+      setCleaning(false);
+      clearOverride();
+      showError("Failed to clean worktrees");
+      refresh();
+    });
+  }, [refresh, setOverride, clearOverride, showMessage, showError]);
 
   // Open repo config in nvim
   const openRepoConfig = useCallback((repoIndex: number) => {

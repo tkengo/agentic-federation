@@ -1,14 +1,11 @@
 import React from "react";
 import { Box, Text } from "ink";
-import type { FooterOverride } from "../utils/types.js";
+import { useFooter } from "../contexts/FooterContext.js";
 
-interface FooterProps {
-  override?: FooterOverride;
-  ctrlCPending?: boolean;
-  message?: string | null;
-}
+export function Footer() {
+  const { state } = useFooter();
+  const { override, ctrlCPending, message, messageColor } = state;
 
-export function Footer({ override, ctrlCPending, message }: FooterProps) {
   let content: React.ReactNode = <Text>{" "}</Text>;
 
   if (override?.type === "cleaning") {
@@ -34,7 +31,7 @@ export function Footer({ override, ctrlCPending, message }: FooterProps) {
   } else if (ctrlCPending) {
     content = <Text color="yellow">Press Ctrl+C again to quit</Text>;
   } else if (message) {
-    content = <Text color="green">{message}</Text>;
+    content = <Text color={messageColor}>{message}</Text>;
   }
 
   return (

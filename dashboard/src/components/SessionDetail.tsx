@@ -13,19 +13,18 @@ import { useArtifacts } from "./ArtifactList.js";
 import { usePreviewContent } from "../hooks/usePreviewContent.js";
 import { useKeyboard } from "../hooks/useKeyboard.js";
 import { useBlink } from "../hooks/useBlink.js";
+import { useFooter } from "../contexts/FooterContext.js";
 import { shortenHome, formatAge } from "../utils/format.js";
 import { STALE_THRESHOLD_SEC } from "../utils/types.js";
-import type { SessionData, FooterOverride } from "../utils/types.js";
+import type { SessionData } from "../utils/types.js";
 
 interface SessionDetailProps {
   session: SessionData;
   columns: number;
   rows: number;
   headerHeight: number;
-  showMessage: (msg: string) => void;
   refresh: () => void;
   onBack: () => void;
-  onFooterOverrideChange: (override: FooterOverride) => void;
 }
 
 function isStale(session: SessionData): boolean {
@@ -38,11 +37,11 @@ export function SessionDetail({
   columns,
   rows,
   headerHeight,
-  showMessage,
   refresh,
   onBack,
-  onFooterOverrideChange,
 }: SessionDetailProps) {
+  const { showMessage, setOverride, clearOverride } = useFooter();
+
   // Detail state
   const [detailIndex, setDetailIndex] = useState(0);
   const [detailMode, setDetailMode] = useState<DetailMode>("browse");
@@ -100,21 +99,21 @@ export function SessionDetail({
       const scriptIdx = detailIndex - artifacts.length;
       const scriptDef = scripts[scriptIdx];
       if (scriptDef) {
-        onFooterOverrideChange({ type: "confirmScript", name: scriptDef.name });
+        setOverride({ type: "confirmScript", name: scriptDef.name });
       } else {
-        onFooterOverrideChange(null);
+        clearOverride();
       }
     } else {
-      onFooterOverrideChange(null);
+      clearOverride();
     }
-  }, [confirmingScript, detailIndex, artifacts.length, scripts, onFooterOverrideChange]);
+  }, [confirmingScript, detailIndex, artifacts.length, scripts, setOverride, clearOverride]);
 
   // Clear footer override on unmount
   useEffect(() => {
     return () => {
-      onFooterOverrideChange(null);
+      clearOverride();
     };
-  }, [onFooterOverrideChange]);
+  }, [clearOverride]);
 
   // Cleanup script state on unmount
   useEffect(() => {

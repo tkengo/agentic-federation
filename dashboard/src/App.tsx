@@ -12,30 +12,37 @@ import { CommandPalette } from "./components/CommandPalette.js";
 import { Footer } from "./components/Footer.js";
 import { Splash } from "./components/Splash.js";
 import { AddRepo } from "./components/AddRepo.js";
+import { FooterProvider, useFooter } from "./contexts/FooterContext.js";
 import { useSessions } from "./hooks/useSessions.js";
 import { useSessionWatcher } from "./hooks/useSessionWatcher.js";
 import { useTerminalSize } from "./hooks/useTerminalSize.js";
 import { switchToTmuxSession } from "./utils/tmux.js";
 import { REPOS_DIR } from "./utils/types.js";
-import type { SessionData, RepoInfo, FooterOverride, WorkflowInfo } from "./utils/types.js";
+import type { SessionData, RepoInfo, WorkflowInfo } from "./utils/types.js";
 
 type Screen = "splash" | "list" | "create" | "palette" | "add-repo" | "detail";
 
+// Outer shell: wraps with FooterProvider so children can use useFooter()
 export function App() {
+  return (
+    <FooterProvider>
+      <AppInner />
+    </FooterProvider>
+  );
+}
+
+function AppInner() {
   const { exit } = useApp();
   const { columns, rows } = useTerminalSize();
   const { sessions, refresh, refreshSessions, cleanableCount } = useSessions();
   const [screen, setScreen] = useState<Screen>("splash");
-  const [message, setMessage] = useState<string | null>(null);
   const [createStep, setCreateStep] = useState<"workflow" | "repo" | "branch" | "session-name">("workflow");
   const lastCtrlCRef = useRef(0);
-  const [ctrlCPending, setCtrlCPending] = useState(false);
+
+  const { showMessage, setCtrlCPending, state: footerState } = useFooter();
 
   // Active session reported by Home (used by FeedbackInput, CommandPalette)
   const [activeSession, setActiveSession] = useState<SessionData | undefined>();
-
-  // Footer override from Home (confirmation dialogs, cleaning state)
-  const [footerOverride, setFooterOverride] = useState<FooterOverride>(null);
 
   // Pending action from CommandPalette to Home
   const [pendingHomeAction, setPendingHomeAction] = useState<string | null>(null);
@@ -111,11 +118,6 @@ export function App() {
 
   // Watch for file changes (lightweight: session list only, no cleanable count)
   useSessionWatcher(refreshSessions);
-
-  const showMessage = useCallback((msg: string) => {
-    setMessage(msg);
-    setTimeout(() => setMessage(null), 3000);
-  }, []);
 
   // Create new session via fed start --no-attach
   const createSession = useCallback(
@@ -194,7 +196,7 @@ export function App() {
         }
       }
     },
-    { isActive: footerOverride?.type !== "cleaning" }
+    { isActive: footerState.override?.type !== "cleaning" }
   );
 
   if (screen === "splash") {
@@ -238,7 +240,6 @@ export function App() {
             active={screen === "list"}
             columns={columns}
             rows={rows}
-            showMessage={showMessage}
             refresh={refresh}
             refreshRepos={refreshRepos}
             onNavigate={(target) => {
@@ -250,7 +251,6 @@ export function App() {
               setScreen("detail");
             }}
             onSelectedSessionChange={setActiveSession}
-            onFooterOverrideChange={setFooterOverride}
             pendingAction={pendingHomeAction}
             onActionHandled={() => setPendingHomeAction(null)}
           />
@@ -263,13 +263,11 @@ export function App() {
             columns={columns}
             rows={rows}
             headerHeight={HEADER_HEIGHT_COMPACT}
-            showMessage={showMessage}
             refresh={refresh}
             onBack={() => {
               setScreen("list");
               setDetailSessionName(null);
             }}
-            onFooterOverrideChange={setFooterOverride}
           />
         )}
 
@@ -296,7 +294,6 @@ export function App() {
                   setScreen("list");
               }
             }}
-            showMessage={showMessage}
           />
         )}
 
@@ -321,11 +318,7 @@ export function App() {
         )}
       </Box>
 
-      <Footer
-        override={footerOverride}
-        message={message}
-        ctrlCPending={ctrlCPending}
-      />
+      <Footer />
     </Box>
   );
 }
