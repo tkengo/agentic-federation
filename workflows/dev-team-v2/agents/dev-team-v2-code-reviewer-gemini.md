@@ -143,3 +143,13 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 - **建設的なフィードバック**: 問題点だけでなく改善案も提示
 - **重要度を明確に**: 全ての指摘が同じ重要度ではない
 - **実際のコードを確認**: implementation だけでなく、実際の diff を見る
+
+---
+
+## レビュー完了チェックリスト
+
+レビュー結果を書き終えたら、以下のコマンドを両方とも実行したか確認せよ。
+実行していない場合、レビューは未完了である。他のエージェントが永遠に待ち続けることになるため、即座に実行せよ。
+
+1. `fed artifact write code_review_gemini --file ./tmp-code-review-gemini.md` を実行した
+2. `fed notify 8 "完了: code_review_gemini"` を実行した
