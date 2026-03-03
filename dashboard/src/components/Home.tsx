@@ -735,8 +735,8 @@ export function Home({
 
     if (showPreview) {
       const boxWidth = computeBoxWidth(colWidths);
-      // Available width: columns - SessionList paddingX(2) - marginLeft(4) - boxWidth - gap(1)
-      const previewWidth = Math.max(30, columns - 2 - 4 - boxWidth - 1);
+      // Available width: columns - outerBorder(2) - SessionList paddingX(2) - marginLeft(4) - boxWidth - gap(1)
+      const previewWidth = Math.max(30, columns - 2 - 2 - 4 - boxWidth - 1);
 
       return (
         <Box flexDirection="row" marginLeft={4} height={panelHeight} gap={1}>
