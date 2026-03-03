@@ -66,6 +66,23 @@ npm run build
 echo "  Dashboard built."
 echo ""
 
+# Skills symlinks (normal mode only)
+if [ "$DEV_MODE" = false ]; then
+  SKILLS_SRC="$REPO_DIR/skills"
+  SKILLS_DST="$HOME/.claude/skills"
+  if [ -d "$SKILLS_SRC" ]; then
+    echo "Linking skills..."
+    mkdir -p "$SKILLS_DST"
+    for skill_dir in "$SKILLS_SRC"/*/; do
+      [ -d "$skill_dir" ] || continue
+      skill_name="$(basename "$skill_dir")"
+      ln -sfn "$skill_dir" "$SKILLS_DST/$skill_name"
+      echo "  $skill_name -> $skill_dir"
+    done
+    echo ""
+  fi
+fi
+
 # PATH hint (normal mode only)
 if [ "$DEV_MODE" = false ]; then
   if ! echo "$PATH" | tr ':' '\n' | grep -qx "$REPO_DIR/bin"; then
