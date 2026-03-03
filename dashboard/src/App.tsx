@@ -228,8 +228,8 @@ export function App() {
         flexGrow={1}
         overflow="hidden"
       >
-        {/* Home screen - visible on list, create, palette, and add-repo screens */}
-        {(screen === "list" || screen === "create" || screen === "palette" || screen === "add-repo") && (
+        {/* Home screen - always mounted to preserve cursor position, hidden during detail */}
+        <Box display={screen !== "detail" ? "flex" : "none"} flexDirection="column" flexGrow={1}>
           <Home
             sessions={sessions}
             repos={repos}
@@ -254,7 +254,7 @@ export function App() {
             pendingAction={pendingHomeAction}
             onActionHandled={() => setPendingHomeAction(null)}
           />
-        )}
+        </Box>
 
         {/* Detail screen - full-screen session detail */}
         {screen === "detail" && detailSession && (
