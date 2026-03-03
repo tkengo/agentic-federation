@@ -36,8 +36,7 @@ export const ACTIVE_DIR = path.join(FED_HOME, "active");
 export const ARCHIVE_DIR = path.join(FED_HOME, "archive");
 export const REPOS_DIR = path.join(FED_HOME, "repos");
 
-// Stale threshold in seconds (must match stale-watcher.ts)
-export const STALE_THRESHOLD_SEC = 600;
+export const STALE_THRESHOLD_SEC = 3600;
 
 // Status display config (mark + color) per state
 export interface StatusConfig {
