@@ -74,8 +74,9 @@ const repo = program
 repo
   .command("add <clone-url> [base-path]")
   .description("Clone a repository and register it")
-  .action((cloneUrl: string, basePath?: string) => {
-    repoAddCommand(cloneUrl, basePath);
+  .option("--base-branch <branch>", "Base branch for worktree creation (default: main)")
+  .action((cloneUrl: string, basePath: string | undefined, opts: { baseBranch?: string }) => {
+    repoAddCommand(cloneUrl, basePath, opts.baseBranch);
   });
 
 repo

@@ -5,7 +5,7 @@ import { REPOS_DIR, DEFAULT_BASE_PATH } from "../lib/paths.js";
 import { loadRepoConfig, listRepoConfigs, saveNewRepoConfig, parseCloneUrl } from "../lib/repo.js";
 import type { NewRepoConfig } from "../lib/types.js";
 
-export function repoAddCommand(cloneUrl: string, basePath?: string): void {
+export function repoAddCommand(cloneUrl: string, basePath?: string, baseBranch?: string): void {
   const repoName = parseCloneUrl(cloneUrl);
   const configPath = path.join(REPOS_DIR, `${repoName}.json`);
   if (fs.existsSync(configPath)) {
@@ -34,6 +34,7 @@ export function repoAddCommand(cloneUrl: string, basePath?: string): void {
   const config: NewRepoConfig = {
     repo_name: repoName,
     base_path: resolvedBase,
+    ...(baseBranch ? { base_branch: baseBranch } : {}),
     setup_scripts: [],
     symlinks: [],
     copy_files: [],

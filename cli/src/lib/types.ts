@@ -37,6 +37,7 @@ export interface ScriptDef {
 export interface NewRepoConfig {
   repo_name: string;
   base_path: string;
+  base_branch?: string;
   setup_scripts: string[];
   symlinks: string[];
   copy_files: string[];
@@ -49,6 +50,7 @@ export interface RepoConfig {
   repo_root: string;
   worktree_base: string;
   cleanup_pattern: string;
+  base_branch: string;
   symlinks: string[];
   setup_scripts: string[];
   copy_files: string[];
