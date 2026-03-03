@@ -1,11 +1,12 @@
-import React, { useState, useCallback, useMemo, useRef } from "react";
+import React, { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { Box, Text, useApp, useInput } from "ink";
 import fs from "node:fs";
 import path from "node:path";
 import { execSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { Header } from "./components/Header.js";
+import { Header, HEADER_HEIGHT_FULL, HEADER_HEIGHT_COMPACT } from "./components/Header.js";
 import { Home } from "./components/Home.js";
+import { SessionDetail } from "./components/SessionDetail.js";
 import { CreateSession } from "./components/CreateSession.js";
 import { CommandPalette } from "./components/CommandPalette.js";
 import { Footer } from "./components/Footer.js";
@@ -18,7 +19,7 @@ import { switchToTmuxSession } from "./utils/tmux.js";
 import { REPOS_DIR } from "./utils/types.js";
 import type { SessionData, RepoInfo, FooterOverride, WorkflowInfo } from "./utils/types.js";
 
-type Screen = "splash" | "list" | "create" | "palette" | "add-repo";
+type Screen = "splash" | "list" | "create" | "palette" | "add-repo" | "detail";
 
 export function App() {
   const { exit } = useApp();
@@ -38,6 +39,20 @@ export function App() {
 
   // Pending action from CommandPalette to Home
   const [pendingHomeAction, setPendingHomeAction] = useState<string | null>(null);
+
+  // Detail screen: which session to show
+  const [detailSessionName, setDetailSessionName] = useState<string | null>(null);
+  const detailSession = detailSessionName
+    ? sessions.find((s) => s.name === detailSessionName)
+    : undefined;
+
+  // Auto-back if session disappears while on detail screen
+  useEffect(() => {
+    if (screen === "detail" && detailSessionName && !detailSession) {
+      setScreen("list");
+      setDetailSessionName(null);
+    }
+  }, [screen, detailSessionName, detailSession]);
 
   // Load repos from ~/.fed/repos/ with config details
   const loadRepos = useCallback((): RepoInfo[] => {
@@ -192,9 +207,17 @@ export function App() {
     );
   }
 
+  const isDetail = screen === "detail";
+
   return (
     <Box flexDirection="column" width={columns} height={rows}>
-      <Header sessionCount={sessions.length} cleanableCount={cleanableCount} repoCount={repos.length} workflowCount={workflows.length} />
+      <Header
+        sessionCount={sessions.length}
+        cleanableCount={cleanableCount}
+        repoCount={repos.length}
+        workflowCount={workflows.length}
+        compact={isDetail}
+      />
 
       <Box
         borderStyle="single"
@@ -222,10 +245,31 @@ export function App() {
               if (target === "create") setCreateStep("workflow");
               setScreen(target);
             }}
+            onDetailSession={(name) => {
+              setDetailSessionName(name);
+              setScreen("detail");
+            }}
             onSelectedSessionChange={setActiveSession}
             onFooterOverrideChange={setFooterOverride}
             pendingAction={pendingHomeAction}
             onActionHandled={() => setPendingHomeAction(null)}
+          />
+        )}
+
+        {/* Detail screen - full-screen session detail */}
+        {screen === "detail" && detailSession && (
+          <SessionDetail
+            session={detailSession}
+            columns={columns}
+            rows={rows}
+            headerHeight={HEADER_HEIGHT_COMPACT}
+            showMessage={showMessage}
+            refresh={refresh}
+            onBack={() => {
+              setScreen("list");
+              setDetailSessionName(null);
+            }}
+            onFooterOverrideChange={setFooterOverride}
           />
         )}
 

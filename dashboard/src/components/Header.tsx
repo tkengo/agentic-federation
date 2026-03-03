@@ -27,16 +27,23 @@ interface HeaderProps {
   cleanableCount: number;
   repoCount: number;
   workflowCount: number;
+  compact?: boolean;
 }
 
-export function Header({ sessionCount, cleanableCount, repoCount, workflowCount }: HeaderProps) {
+/** Height of the header in terminal rows (used by layout calculations). */
+export const HEADER_HEIGHT_FULL = LOGO.length + 2; // logo lines + border(1) + stats(1)
+export const HEADER_HEIGHT_COMPACT = 2; // border(1) + stats(1)
+
+export function Header({ sessionCount, cleanableCount, repoCount, workflowCount, compact }: HeaderProps) {
   return (
     <Box flexDirection="column">
-      <Box flexDirection="column" paddingX={1}>
-        {LOGO.map((line, i) => (
-          <Text key={i} color="cyan">{line}</Text>
-        ))}
-      </Box>
+      {!compact && (
+        <Box flexDirection="column" paddingX={1}>
+          {LOGO.map((line, i) => (
+            <Text key={i} color="cyan">{line}</Text>
+          ))}
+        </Box>
+      )}
       <Box
         borderStyle="single"
         borderBottom={false}

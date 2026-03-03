@@ -1,25 +1,14 @@
-import React, { useState, useCallback, useRef, useEffect } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { Box, Text, useInput } from "ink";
-import fs from "node:fs";
 import path from "node:path";
-import crypto from "node:crypto";
-import { execSync, spawn } from "node:child_process";
-import type { ChildProcess } from "node:child_process";
+import { execSync } from "node:child_process";
 import { SessionList } from "./SessionList.js";
-import { DetailPanel, useScripts, usePanes, LOG_MAX_VISIBLE, MAX_VISIBLE, computeBoxWidth } from "./DetailPanel.js";
-import type { DetailMode } from "./DetailPanel.js";
-import { PreviewPanel } from "./PreviewPanel.js";
 import { RepoList } from "./RepoList.js";
 import { WorkflowList } from "./WorkflowList.js";
-import { useArtifacts } from "./ArtifactList.js";
-import { usePreviewContent } from "../hooks/usePreviewContent.js";
 import { useKeyboard } from "../hooks/useKeyboard.js";
 import { REPOS_DIR } from "../utils/types.js";
 import { switchToTmuxSession } from "../utils/tmux.js";
 import type { SessionData, RepoInfo, FooterOverride, WorkflowInfo } from "../utils/types.js";
-
-// Minimum terminal width to show the preview side panel
-const PREVIEW_MIN_COLUMNS = 130;
 
 interface HomeProps {
   sessions: SessionData[];
@@ -33,6 +22,7 @@ interface HomeProps {
   refresh: () => void;
   refreshRepos: () => void;
   onNavigate: (target: "create" | "palette" | "add-repo") => void;
+  onDetailSession: (sessionName: string) => void;
   onSelectedSessionChange: (session: SessionData | undefined) => void;
   onFooterOverrideChange: (override: FooterOverride) => void;
   pendingAction: string | null;
@@ -51,35 +41,16 @@ export function Home({
   refresh,
   refreshRepos,
   onNavigate,
+  onDetailSession,
   onSelectedSessionChange,
   onFooterOverrideChange,
   pendingAction,
   onActionHandled,
 }: HomeProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
-  const [detailIndex, setDetailIndex] = useState(0);
-  const [detailMode, setDetailMode] = useState<DetailMode>("browse");
-  const [confirmingScript, setConfirmingScript] = useState(false);
   const [confirmingKill, setConfirmingKill] = useState(false);
   const [confirmingClean, setConfirmingClean] = useState(false);
   const [cleaning, setCleaning] = useState(false);
-
-  // Pane sending state
-  const [sendingValue, setSendingValue] = useState("");
-  const [sendingPaneIndex, setSendingPaneIndex] = useState(-1);
-
-  // Script execution state
-  const [logLines, setLogLines] = useState<string[]>([]);
-  const [logScroll, setLogScroll] = useState(0);
-  const [scriptExitCode, setScriptExitCode] = useState<number | null>(null);
-  const [scriptKilled, setScriptKilled] = useState(false);
-  const [runningScriptName, setRunningScriptName] = useState<string | null>(null);
-  const scriptProcessRef = useRef<ChildProcess | null>(null);
-  const logBufferRef = useRef("");
-  const logFileRef = useRef<fs.WriteStream | null>(null);
-  const logUpdateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const autoScrollRef = useRef(true);
 
   // Navigation: sessions -> clean row -> repos
   const hasCleanRow = cleanableCount > 0;
@@ -110,105 +81,10 @@ export function Home({
       onFooterOverrideChange({ type: "confirmClean", count: cleanableCount });
     } else if (confirmingKill && selectedSession) {
       onFooterOverrideChange({ type: "confirmKill", name: selectedSession.name });
-    } else if (confirmingScript) {
-      const scriptIdx = detailIndex - expandedArtifacts.length;
-      const scriptDef = expandedScripts[scriptIdx];
-      if (scriptDef) {
-        onFooterOverrideChange({ type: "confirmScript", name: scriptDef.name });
-      } else {
-        onFooterOverrideChange(null);
-      }
     } else {
       onFooterOverrideChange(null);
     }
-  }, [cleaning, confirmingClean, confirmingKill, confirmingScript, cleanableCount, selectedSession, detailIndex]);
-
-  // Preview panel state
-  const [previewScroll, setPreviewScroll] = useState(0);
-
-  // Data for expanded session
-  const expandedSession = expandedIndex !== null ? sessions[expandedIndex] : undefined;
-  const expandedArtifacts = useArtifacts(expandedSession?.sessionDir ?? "");
-  const expandedScripts = useScripts(expandedSession?.sessionDir ?? "");
-  const expandedPanes = usePanes(expandedSession?.sessionDir ?? "");
-  const totalDetailItems = expandedArtifacts.length + expandedScripts.length + expandedPanes.length;
-
-  // Preview content for selected detail item
-  const previewData = usePreviewContent(
-    expandedSession?.sessionDir ?? "",
-    expandedArtifacts,
-    expandedScripts,
-    expandedPanes,
-    detailIndex,
-  );
-
-  // Determine if preview side panel should be shown
-  const showPreview = expandedIndex !== null && columns >= PREVIEW_MIN_COLUMNS;
-
-  // Reset preview scroll when detail selection changes
-  const prevDetailIndexRef = useRef(detailIndex);
-  useEffect(() => {
-    if (prevDetailIndexRef.current !== detailIndex) {
-      setPreviewScroll(0);
-      prevDetailIndexRef.current = detailIndex;
-    }
-  }, [detailIndex]);
-
-  // Collapse when expanded session disappears
-  if (expandedIndex !== null && !expandedSession) {
-    setExpandedIndex(null);
-  }
-
-  // Cleanup script state when expanding/collapsing
-  const prevExpandedRef = useRef<number | null>(null);
-  useEffect(() => {
-    if (prevExpandedRef.current !== null && expandedIndex === null) {
-      // Collapsed: kill running script and cleanup
-      if (scriptProcessRef.current) {
-        scriptProcessRef.current.kill("SIGTERM");
-        scriptProcessRef.current = null;
-      }
-      if (logFileRef.current) {
-        logFileRef.current.end();
-        logFileRef.current = null;
-      }
-      if (logUpdateTimerRef.current) {
-        clearTimeout(logUpdateTimerRef.current);
-        logUpdateTimerRef.current = null;
-      }
-      logBufferRef.current = "";
-    }
-    if (expandedIndex !== null && expandedIndex !== prevExpandedRef.current) {
-      // Opened or switched session: reset detail state
-      setDetailIndex(0);
-      setDetailMode("browse");
-      setConfirmingScript(false);
-      setLogLines([]);
-      setLogScroll(0);
-      setRunningScriptName(null);
-      setScriptExitCode(null);
-      setScriptKilled(false);
-      autoScrollRef.current = true;
-      setSendingValue("");
-      setSendingPaneIndex(-1);
-    }
-    prevExpandedRef.current = expandedIndex;
-  }, [expandedIndex]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (scriptProcessRef.current) {
-        scriptProcessRef.current.kill("SIGTERM");
-      }
-      if (logFileRef.current) {
-        logFileRef.current.end();
-      }
-      if (logUpdateTimerRef.current) {
-        clearTimeout(logUpdateTimerRef.current);
-      }
-    };
-  }, []);
+  }, [cleaning, confirmingClean, confirmingKill, cleanableCount, selectedSession]);
 
   // Switch to tmux session
   const switchToSession = useCallback(() => {
@@ -295,106 +171,6 @@ export function Home({
     }
   }, [repos, refreshRepos, showMessage]);
 
-  // Run a script from the expanded session
-  const runScript = useCallback(() => {
-    if (!expandedSession) return;
-    const scriptIdx = detailIndex - expandedArtifacts.length;
-    const scriptDef = expandedScripts[scriptIdx];
-    if (!scriptDef) return;
-
-    const sessionDir = expandedSession.sessionDir;
-    const sessionName = expandedSession.meta.tmux_session;
-
-    // Create log file
-    const logsDir = path.join(sessionDir, "script-logs");
-    fs.mkdirSync(logsDir, { recursive: true });
-    const now = new Date();
-    const ts = [
-      now.getFullYear(),
-      String(now.getMonth() + 1).padStart(2, "0"),
-      String(now.getDate()).padStart(2, "0"),
-      String(now.getHours()).padStart(2, "0"),
-      String(now.getMinutes()).padStart(2, "0"),
-      String(now.getSeconds()).padStart(2, "0"),
-    ].join("");
-    const id = crypto.randomBytes(3).toString("hex");
-    const logFileName = `${ts}_${id}_${scriptDef.name}.log`;
-    const logFilePath = path.join(logsDir, logFileName);
-    const logStream = fs.createWriteStream(logFilePath);
-    logFileRef.current = logStream;
-
-    // Reset state
-    logBufferRef.current = "";
-    autoScrollRef.current = true;
-    setLogLines([]);
-    setLogScroll(0);
-    setScriptExitCode(null);
-    setScriptKilled(false);
-    setRunningScriptName(scriptDef.name);
-    setDetailMode("running");
-
-    const proc = spawn("fed", ["repo-script", "run", scriptDef.name, "--session", sessionName], {
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-    scriptProcessRef.current = proc;
-
-    const handleData = (data: Buffer) => {
-      const text = data.toString();
-      logStream.write(text);
-      logBufferRef.current += text;
-
-      // Debounce UI updates (50ms)
-      if (!logUpdateTimerRef.current) {
-        logUpdateTimerRef.current = setTimeout(() => {
-          logUpdateTimerRef.current = null;
-          const lines = logBufferRef.current.split("\n");
-          setLogLines(lines);
-          if (autoScrollRef.current) {
-            setLogScroll(Math.max(0, lines.length - LOG_MAX_VISIBLE));
-          }
-        }, 50);
-      }
-    };
-
-    proc.stdout?.on("data", handleData);
-    proc.stderr?.on("data", handleData);
-
-    proc.on("close", (code) => {
-      if (logUpdateTimerRef.current) {
-        clearTimeout(logUpdateTimerRef.current);
-        logUpdateTimerRef.current = null;
-      }
-      const lines = logBufferRef.current.split("\n");
-      setLogLines(lines);
-
-      logStream.end();
-      logFileRef.current = null;
-      scriptProcessRef.current = null;
-      setScriptExitCode(code ?? 1);
-      setDetailMode("done");
-    });
-
-    proc.on("error", (err) => {
-      logBufferRef.current += `\nError: ${err.message}\n`;
-      const lines = logBufferRef.current.split("\n");
-      setLogLines(lines);
-
-      logStream.end();
-      logFileRef.current = null;
-      scriptProcessRef.current = null;
-      setScriptExitCode(1);
-      setDetailMode("done");
-    });
-  }, [expandedSession, detailIndex, expandedArtifacts.length, expandedScripts]);
-
-  // Kill a running script
-  const killScript = useCallback(() => {
-    if (scriptProcessRef.current) {
-      setScriptKilled(true);
-      scriptProcessRef.current.kill("SIGTERM");
-    }
-  }, []);
-
   // Handle pending actions from CommandPalette
   useEffect(() => {
     if (!pendingAction) return;
@@ -419,155 +195,6 @@ export function Home({
   }, [pendingAction, onActionHandled, switchToSession, killSession, runClean, archiveSession, archiveAllCompleted]);
 
   // --- Keyboard handlers ---
-
-  // Expanded browse mode
-  useKeyboard(
-    {
-      onUp: () => {
-        setDetailIndex((i) => Math.max(0, i - 1));
-      },
-      onDown: () => {
-        setDetailIndex((i) => Math.min(Math.max(0, totalDetailItems - 1), i + 1));
-      },
-      onEnter: () => {
-        if (!expandedSession) return;
-        if (detailIndex < expandedArtifacts.length) {
-          // Open artifact in nvim
-          const artifactName = expandedArtifacts[detailIndex]?.name;
-          if (!artifactName) return;
-          const artifactPath = path.join(expandedSession.sessionDir, "artifacts", artifactName);
-          try {
-            execSync(`nvim '${artifactPath}'`, { stdio: "inherit" });
-            if (process.stdin.isTTY && process.stdin.setRawMode) {
-              process.stdin.setRawMode(true);
-            }
-            process.stdout.write("\x1b[2J\x1b[H");
-          } catch {
-            showMessage(`Failed to open ${artifactName}`);
-          }
-        } else if (detailIndex < expandedArtifacts.length + expandedScripts.length) {
-          // Confirm script execution
-          setConfirmingScript(true);
-        } else {
-          // Pane selected -> enter sending mode
-          const paneIdx = detailIndex - expandedArtifacts.length - expandedScripts.length;
-          setSendingPaneIndex(paneIdx);
-          setSendingValue("");
-          setDetailMode("sending");
-        }
-      },
-      onSpace: () => {
-        setExpandedIndex(null);
-      },
-      onBack: () => {
-        setExpandedIndex(null);
-      },
-    },
-    active && expandedIndex !== null && detailMode === "browse"
-      && !confirmingScript && !confirmingKill && !confirmingClean && !cleaning
-  );
-
-  // Preview scroll in browse mode (Ctrl+U / Ctrl+D)
-  useInput(
-    (input, key) => {
-      if (!showPreview) return;
-      if (previewData.type === "pane") return; // Pane preview: no manual scroll
-      // contentHeight = panelHeight - border(2)
-      const previewContentHeight = Math.max(1, panelHeight - 2);
-      const maxScroll = Math.max(0, previewData.lines.length - previewContentHeight);
-      if (key.ctrl && input === "u") {
-        setPreviewScroll((s) => Math.max(0, s - previewContentHeight));
-      } else if (key.ctrl && input === "d") {
-        setPreviewScroll((s) => Math.min(maxScroll, s + previewContentHeight));
-      }
-    },
-    { isActive: active && expandedIndex !== null && detailMode === "browse"
-        && !confirmingScript && !confirmingKill && !confirmingClean && !cleaning }
-  );
-
-  // Script confirmation handler
-  useInput(
-    (_input) => {
-      if (_input === "y" || _input === "Y") {
-        setConfirmingScript(false);
-        runScript();
-      } else {
-        setConfirmingScript(false);
-      }
-    },
-    { isActive: active && expandedIndex !== null && confirmingScript }
-  );
-
-  // Script running mode keyboard handler
-  useInput(
-    (input, key) => {
-      const isUp = key.upArrow || input === "k" || (key.ctrl && input === "p");
-      const isDown = key.downArrow || input === "j" || (key.ctrl && input === "n");
-      const isPageUp = key.ctrl && input === "u";
-      const isPageDown = key.ctrl && input === "d";
-      const maxScroll = Math.max(0, logLines.length - LOG_MAX_VISIBLE);
-
-      if (key.escape) {
-        killScript();
-      } else if (isPageUp) {
-        autoScrollRef.current = false;
-        setLogScroll((s) => Math.max(0, s - LOG_MAX_VISIBLE));
-      } else if (isPageDown) {
-        setLogScroll((s) => {
-          const next = Math.min(maxScroll, s + LOG_MAX_VISIBLE);
-          if (next >= maxScroll) autoScrollRef.current = true;
-          return next;
-        });
-      } else if (isUp) {
-        autoScrollRef.current = false;
-        setLogScroll((s) => Math.max(0, s - 1));
-      } else if (isDown) {
-        setLogScroll((s) => {
-          const next = Math.min(maxScroll, s + 1);
-          if (next >= maxScroll) autoScrollRef.current = true;
-          return next;
-        });
-      }
-    },
-    { isActive: active && expandedIndex !== null && detailMode === "running" }
-  );
-
-  // Script done mode keyboard handler
-  useInput(
-    (input, key) => {
-      const isUp = key.upArrow || input === "k" || (key.ctrl && input === "p");
-      const isDown = key.downArrow || input === "j" || (key.ctrl && input === "n");
-      const isPageUp = key.ctrl && input === "u";
-      const isPageDown = key.ctrl && input === "d";
-      const maxScroll = Math.max(0, logLines.length - LOG_MAX_VISIBLE);
-
-      if (key.escape) {
-        // Close detail panel and return to session list
-        setExpandedIndex(null);
-      } else if (isPageUp) {
-        setLogScroll((s) => Math.max(0, s - LOG_MAX_VISIBLE));
-      } else if (isPageDown) {
-        setLogScroll((s) => Math.min(maxScroll, s + LOG_MAX_VISIBLE));
-      } else if (isUp) {
-        setLogScroll((s) => Math.max(0, s - 1));
-      } else if (isDown) {
-        setLogScroll((s) => Math.min(maxScroll, s + 1));
-      }
-    },
-    { isActive: active && expandedIndex !== null && detailMode === "done" }
-  );
-
-  // Sending mode: Esc to cancel (Enter handled by EmacsTextInput's onSubmit)
-  useInput(
-    (_input, key) => {
-      if (key.escape) {
-        setSendingValue("");
-        setSendingPaneIndex(-1);
-        setDetailMode("browse");
-      }
-    },
-    { isActive: active && expandedIndex !== null && detailMode === "sending" }
-  );
 
   // List screen keyboard bindings
   useKeyboard(
@@ -601,12 +228,11 @@ export function Home({
       },
       onSpace: () => {
         if (selectedSession) {
-          setExpandedIndex(selectedIndex);
-          setDetailIndex(0);
+          onDetailSession(selectedSession.name);
         }
       },
     },
-    active && expandedIndex === null && !confirmingKill && !confirmingClean && !cleaning
+    active && !confirmingKill && !confirmingClean && !cleaning
   );
 
   // Kill confirmation handler
@@ -638,122 +264,12 @@ export function Home({
     { isActive: active && confirmingClean && !cleaning }
   );
 
-  // Compute shared panel height for DetailPanel + PreviewPanel (when side by side)
-  const panelHeight = (() => {
-    if (!showPreview) return 0;
-
-    if (detailMode === "running" || detailMode === "done") {
-      // border(2) + worktreeHeader(2) + logHeader(1) + logLines(LOG_MAX_VISIBLE)
-      return 2 + 2 + 1 + LOG_MAX_VISIBLE;
-    }
-    if (detailMode === "sending") {
-      // border(2) + worktreeHeader(2) + paneName(1) + input(1) + blank(1) + help(1)
-      return 2 + 2 + 4;
-    }
-
-    // browse mode
-    const sectionFlags = [
-      expandedArtifacts.length > 0,
-      expandedScripts.length > 0,
-      expandedPanes.length > 0,
-    ];
-    const sectionCount = sectionFlags.filter(Boolean).length;
-    const blanks = Math.max(0, sectionCount - 1);
-    const totalVirtualRows = sectionCount + blanks
-      + expandedArtifacts.length + expandedScripts.length + expandedPanes.length;
-    const visibleRows = totalVirtualRows > 0
-      ? Math.min(totalVirtualRows, MAX_VISIBLE)
-      : 1; // "(empty)"
-    // border(2) + worktreeHeader(2) + visibleRows
-    return 2 + 2 + visibleRows;
-  })();
-
-  const renderDetailPanel = (session: SessionData, colWidths: { repoBranch: number; workflow: number; status: number }) => {
-    const detailPanel = (
-      <DetailPanel
-        colWidths={colWidths}
-        worktree={session.meta.worktree || undefined}
-        description={session.description}
-        hideDescription={showPreview}
-        mode={detailMode}
-        artifacts={expandedArtifacts}
-        scripts={expandedScripts}
-        panes={expandedPanes}
-        selectedIndex={detailIndex}
-        scriptName={runningScriptName ?? undefined}
-        scriptExitCode={scriptExitCode}
-        scriptKilled={scriptKilled}
-        logLines={logLines}
-        logScroll={logScroll}
-        sendingPaneDisplayName={
-          sendingPaneIndex >= 0 ? expandedPanes[sendingPaneIndex]?.displayName : undefined
-        }
-        sendingValue={sendingValue}
-        onSendingChange={setSendingValue}
-        onSendingSubmit={(text) => {
-          if (!text.trim()) return;
-          const pane = expandedPanes[sendingPaneIndex];
-          if (!pane) return;
-          const q = (s: string) => `'${s.replace(/'/g, "'\\''")}'`;
-          try {
-            // Send text literally first (synchronous).
-            execSync(
-              `tmux send-keys -t ${q(pane.tmuxTarget)} -l ${q(text)}`,
-              { stdio: "ignore" }
-            );
-            // Send Enter in the background after a delay so TUI apps
-            // like Claude Code have time to process the pasted text.
-            const child = spawn(
-              "sh",
-              ["-c", `sleep 1 && tmux send-keys -t ${q(pane.tmuxTarget)} Enter`],
-              { stdio: "ignore", detached: true }
-            );
-            child.unref();
-            showMessage(`Sent to ${pane.displayName}`);
-          } catch {
-            showMessage(`Failed to send to ${pane.displayName}`);
-          }
-          setSendingValue("");
-          setSendingPaneIndex(-1);
-          setDetailMode("browse");
-        }}
-      />
-    );
-
-    if (showPreview) {
-      const boxWidth = computeBoxWidth(colWidths);
-      // Available width: columns - outerBorder(2) - SessionList paddingX(2) - marginLeft(4) - boxWidth - gap(1)
-      const previewWidth = Math.max(30, columns - 2 - 2 - 4 - boxWidth - 1);
-
-      return (
-        <Box flexDirection="row" marginLeft={4} height={panelHeight} gap={1}>
-          {detailPanel}
-          <PreviewPanel
-            preview={previewData}
-            width={previewWidth}
-            height={panelHeight}
-            scrollOffset={previewScroll}
-          />
-        </Box>
-      );
-    }
-
-    return (
-      <Box marginLeft={4}>
-        {detailPanel}
-      </Box>
-    );
-  };
-
-  const leftContent = (
+  return (
     <Box flexDirection="column" flexGrow={1}>
       <SessionList
         sessions={sessions}
         selectedIndex={selectedIndex}
         dimmed={!active}
-        expandedIndex={expandedIndex}
-        hideDescription={showPreview}
-        renderDetail={renderDetailPanel}
       />
       {hasCleanRow && (
         <Box paddingX={1} paddingTop={1}>
@@ -784,6 +300,4 @@ export function Home({
       />
     </Box>
   );
-
-  return leftContent;
 }

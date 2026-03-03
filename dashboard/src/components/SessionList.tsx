@@ -15,9 +15,6 @@ interface SessionListProps {
   sessions: SessionData[];
   selectedIndex: number;
   dimmed?: boolean;
-  expandedIndex?: number | null;
-  hideDescription?: boolean;
-  renderDetail?: (session: SessionData, colWidths: ColWidths) => React.ReactNode;
 }
 
 function hasAnyStaleSessions(sessions: SessionData[]): boolean {
@@ -27,7 +24,7 @@ function hasAnyStaleSessions(sessions: SessionData[]): boolean {
   );
 }
 
-export function SessionList({ sessions, selectedIndex, dimmed, expandedIndex, hideDescription, renderDetail }: SessionListProps) {
+export function SessionList({ sessions, selectedIndex, dimmed }: SessionListProps) {
   const anyStale = hasAnyStaleSessions(sessions);
   const anyWaiting = sessions.some((s) => s.waitingHuman.waiting);
   // Only run the blink timer when there are waiting sessions to animate.
@@ -80,18 +77,14 @@ export function SessionList({ sessions, selectedIndex, dimmed, expandedIndex, hi
       </Box>
       {/* Session rows */}
       {sessions.map((session, index) => (
-        <React.Fragment key={session.name}>
-          <SessionRow
-            session={session}
-            selected={index === selectedIndex}
-            dimmed={dimmed}
-            expanded={index === expandedIndex}
-            hideDescription={hideDescription}
-            colWidths={colWidths}
-            blinkOn={anyWaiting ? blinkOn : true}
-          />
-          {index === expandedIndex && renderDetail?.(session, colWidths)}
-        </React.Fragment>
+        <SessionRow
+          key={session.name}
+          session={session}
+          selected={index === selectedIndex}
+          dimmed={dimmed}
+          colWidths={colWidths}
+          blinkOn={anyWaiting ? blinkOn : true}
+        />
       ))}
     </Box>
   );

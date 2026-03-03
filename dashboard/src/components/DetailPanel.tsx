@@ -139,17 +139,8 @@ type VirtualRow =
 
 export type DetailMode = "browse" | "running" | "done" | "sending";
 
-/** Compute DetailPanel box width from column widths (shared with Home.tsx for layout) */
-export function computeBoxWidth(colWidths: { repoBranch: number; workflow: number; status: number }): number {
-  return 3 + colWidths.repoBranch + 2 + colWidths.workflow + 2 + colWidths.status + 2 + 4 + 2 + 4 + 25;
-}
-
 interface DetailPanelProps {
-  colWidths: {
-    repoBranch: number;
-    workflow: number;
-    status: number;
-  };
+  width: number;
   worktree?: string;
   description?: string;
   hideDescription?: boolean;
@@ -159,6 +150,7 @@ interface DetailPanelProps {
   scripts: ScriptEntry[];
   panes: PaneEntry[];
   selectedIndex: number;
+  maxVisible?: number; // Override default MAX_VISIBLE
   // Log mode (running/done)
   scriptName?: string;
   scriptExitCode?: number | null;
@@ -190,7 +182,7 @@ function truncateLines(text: string, lineWidth: number, maxLines: number): strin
 }
 
 export function DetailPanel({
-  colWidths,
+  width,
   worktree,
   description,
   hideDescription,
@@ -199,6 +191,7 @@ export function DetailPanel({
   scripts,
   panes,
   selectedIndex,
+  maxVisible: maxVisibleOverride,
   scriptName,
   scriptExitCode,
   scriptKilled,
@@ -213,7 +206,7 @@ export function DetailPanel({
   // Avoids unnecessary re-renders that disrupt IME cursor positioning.
   const blinkOn = useBlink(500, mode === "running");
 
-  const boxWidth = computeBoxWidth(colWidths);
+  const boxWidth = width;
   const innerWidth = boxWidth - 4;
 
   const worktreeHeader = worktree ? (
@@ -273,6 +266,7 @@ export function DetailPanel({
         scripts={scripts}
         panes={panes}
         selectedIndex={selectedIndex}
+        maxVisible={maxVisibleOverride}
       />
     </Box>
   );
@@ -287,6 +281,7 @@ function BrowseView({
   scripts,
   panes,
   selectedIndex,
+  maxVisible: maxVisibleProp,
 }: {
   innerWidth: number;
   description?: string;
@@ -294,7 +289,9 @@ function BrowseView({
   scripts: ScriptEntry[];
   panes: PaneEntry[];
   selectedIndex: number;
+  maxVisible?: number;
 }) {
+  const effectiveMaxVisible = maxVisibleProp ?? MAX_VISIBLE;
   const hasItems = artifacts.length > 0 || scripts.length > 0 || panes.length > 0;
 
   if (!description && !hasItems) {
@@ -335,14 +332,14 @@ function BrowseView({
   const selectedRowIndex = rows.findIndex(
     (r) => (r.type === "artifact" || r.type === "script" || r.type === "pane") && r.itemIndex === selectedIndex
   );
-  const scrollOffset = computeScrollOffset(Math.max(0, selectedRowIndex), rows.length, MAX_VISIBLE);
+  const scrollOffset = computeScrollOffset(Math.max(0, selectedRowIndex), rows.length, effectiveMaxVisible);
 
   const truncatedDesc = description
     ? truncateLines(description, innerWidth, DESC_MAX_LINES)
     : null;
 
   // Content width accounts for indicator column when scrolling is needed
-  const contentWidth = innerWidth - (rows.length > MAX_VISIBLE ? INDICATOR_COL_WIDTH : 0);
+  const contentWidth = innerWidth - (rows.length > effectiveMaxVisible ? INDICATOR_COL_WIDTH : 0);
 
   // Compute max script name length for alignment
   const maxScriptNameLen = scripts.length > 0
@@ -447,7 +444,7 @@ function BrowseView({
       )}
       <ScrollableRows
         items={rows}
-        maxVisible={MAX_VISIBLE}
+        maxVisible={effectiveMaxVisible}
         scrollOffset={scrollOffset}
         renderRow={(row) => renderRow(row)}
         keyExtractor={(row, index) => {
