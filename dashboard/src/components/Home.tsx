@@ -255,7 +255,7 @@ export function Home({
         }
       },
     },
-    active && !confirmingKill && !confirmingClean && !cleaning
+    active && !confirmingKill && !confirmingClean
   );
 
   // Kill confirmation handler
@@ -268,7 +268,7 @@ export function Home({
         setConfirmingKill(false);
       }
     },
-    { isActive: active && confirmingKill && !cleaning }
+    { isActive: active && confirmingKill }
   );
 
   // Clean confirmation handler
@@ -284,7 +284,7 @@ export function Home({
         setConfirmingClean(false);
       }
     },
-    { isActive: active && confirmingClean && !cleaning }
+    { isActive: active && confirmingClean }
   );
 
   return (

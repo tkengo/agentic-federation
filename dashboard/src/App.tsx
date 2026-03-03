@@ -196,7 +196,7 @@ function AppInner() {
         }
       }
     },
-    { isActive: footerState.override?.type !== "cleaning" }
+    { isActive: true }
   );
 
   if (screen === "splash") {

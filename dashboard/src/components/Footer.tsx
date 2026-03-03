@@ -1,6 +1,7 @@
 import React from "react";
 import { Box, Text } from "ink";
 import { useFooter } from "../contexts/FooterContext.js";
+import { Spinner } from "./Spinner.js";
 
 export function Footer() {
   const { state } = useFooter();
@@ -9,7 +10,11 @@ export function Footer() {
   let content: React.ReactNode = <Text>{" "}</Text>;
 
   if (override?.type === "cleaning") {
-    content = <Text color="yellow">Cleaning worktrees...</Text>;
+    content = (
+      <Text color="yellow">
+        <Spinner /> Cleaning worktrees...
+      </Text>
+    );
   } else if (override?.type === "confirmClean") {
     content = (
       <Text color="yellow">
