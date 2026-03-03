@@ -141,6 +141,7 @@ export type DetailMode = "browse" | "running" | "done" | "sending";
 
 interface DetailPanelProps {
   width: number;
+  height?: number;
   worktree?: string;
   description?: string;
   hideDescription?: boolean;
@@ -157,6 +158,7 @@ interface DetailPanelProps {
   scriptKilled?: boolean;
   logLines?: string[];
   logScroll?: number;
+  logMaxVisible?: number; // Override default LOG_MAX_VISIBLE
   // Sending mode
   sendingPaneDisplayName?: string;
   sendingValue?: string;
@@ -183,6 +185,7 @@ function truncateLines(text: string, lineWidth: number, maxLines: number): strin
 
 export function DetailPanel({
   width,
+  height,
   worktree,
   description,
   hideDescription,
@@ -197,6 +200,7 @@ export function DetailPanel({
   scriptKilled,
   logLines = [],
   logScroll = 0,
+  logMaxVisible: logMaxVisibleOverride,
   sendingPaneDisplayName,
   sendingValue,
   onSendingChange,
@@ -218,7 +222,7 @@ export function DetailPanel({
 
   if (mode === "sending") {
     return (
-      <Box width={boxWidth} borderStyle="round" flexDirection="column" paddingX={1}>
+      <Box width={boxWidth} height={height} borderStyle="round" flexDirection="column" paddingX={1}>
         {worktreeHeader}
         <Box>
           <Text>{ICON_SEND} </Text>
@@ -240,7 +244,7 @@ export function DetailPanel({
 
   if (mode === "running" || mode === "done") {
     return (
-      <Box width={boxWidth} borderStyle="round" flexDirection="column" paddingX={1}>
+      <Box width={boxWidth} height={height} borderStyle="round" flexDirection="column" paddingX={1}>
         {worktreeHeader}
         <LogView
           innerWidth={innerWidth}
@@ -250,6 +254,7 @@ export function DetailPanel({
           scriptKilled={scriptKilled}
           logLines={logLines}
           logScroll={logScroll}
+          maxVisible={logMaxVisibleOverride}
           blinkOn={blinkOn}
         />
       </Box>
@@ -257,7 +262,7 @@ export function DetailPanel({
   }
 
   return (
-    <Box width={boxWidth} borderStyle="round" flexDirection="column" paddingX={1}>
+    <Box width={boxWidth} height={height} borderStyle="round" flexDirection="column" paddingX={1}>
       {worktreeHeader}
       <BrowseView
         innerWidth={innerWidth}
@@ -473,6 +478,7 @@ function LogView({
   scriptKilled,
   logLines,
   logScroll,
+  maxVisible: maxVisibleOverride,
   blinkOn,
 }: {
   innerWidth: number;
@@ -482,8 +488,10 @@ function LogView({
   scriptKilled?: boolean;
   logLines: string[];
   logScroll: number;
+  maxVisible?: number;
   blinkOn: boolean;
 }) {
+  const effectiveMaxVisible = maxVisibleOverride ?? LOG_MAX_VISIBLE;
   // Header
   let headerIcon: React.ReactNode;
   let headerText: string;
@@ -508,7 +516,7 @@ function LogView({
   }
 
   // Content width accounts for indicator column when scrolling is needed
-  const contentWidth = innerWidth - (logLines.length > LOG_MAX_VISIBLE ? INDICATOR_COL_WIDTH : 0);
+  const contentWidth = innerWidth - (logLines.length > effectiveMaxVisible ? INDICATOR_COL_WIDTH : 0);
 
   return (
     <>
@@ -520,7 +528,7 @@ function LogView({
       {/* Log lines */}
       <ScrollableRows
         items={logLines}
-        maxVisible={LOG_MAX_VISIBLE}
+        maxVisible={effectiveMaxVisible}
         scrollOffset={logScroll}
         renderRow={(line) => {
           const displayLine = line.length > contentWidth

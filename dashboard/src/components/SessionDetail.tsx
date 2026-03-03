@@ -5,7 +5,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { execSync, spawn } from "node:child_process";
 import type { ChildProcess } from "node:child_process";
-import { DetailPanel, useScripts, usePanes, LOG_MAX_VISIBLE } from "./DetailPanel.js";
+import { DetailPanel, useScripts, usePanes } from "./DetailPanel.js";
 import type { DetailMode } from "./DetailPanel.js";
 import { PreviewPanel } from "./PreviewPanel.js";
 import { StatusBadge } from "./StatusBadge.js";
@@ -185,7 +185,7 @@ export function SessionDetail({
           const lines = logBufferRef.current.split("\n");
           setLogLines(lines);
           if (autoScrollRef.current) {
-            setLogScroll(Math.max(0, lines.length - LOG_MAX_VISIBLE));
+            setLogScroll(Math.max(0, lines.length - logMaxVisible));
           }
         }, 50);
       }
@@ -251,6 +251,9 @@ export function SessionDetail({
   // Panel height includes border(2) + worktreeHeader(0 for detail screen, worktree shown above)
   // So visible rows = panelHeight - border(2)
   const dynamicMaxVisible = Math.max(5, panelHeight - 2);
+
+  // Dynamic logMaxVisible: panel height - border(2) - header line(1)
+  const logMaxVisible = Math.max(5, panelHeight - 3);
 
   // --- Keyboard handlers ---
 
@@ -334,16 +337,16 @@ export function SessionDetail({
       const isDown = key.downArrow || input === "j" || (key.ctrl && input === "n");
       const isPageUp = key.ctrl && input === "u";
       const isPageDown = key.ctrl && input === "d";
-      const maxScroll = Math.max(0, logLines.length - LOG_MAX_VISIBLE);
+      const maxScroll = Math.max(0, logLines.length - logMaxVisible);
 
       if (key.escape) {
         killScript();
       } else if (isPageUp) {
         autoScrollRef.current = false;
-        setLogScroll((s) => Math.max(0, s - LOG_MAX_VISIBLE));
+        setLogScroll((s) => Math.max(0, s - logMaxVisible));
       } else if (isPageDown) {
         setLogScroll((s) => {
-          const next = Math.min(maxScroll, s + LOG_MAX_VISIBLE);
+          const next = Math.min(maxScroll, s + logMaxVisible);
           if (next >= maxScroll) autoScrollRef.current = true;
           return next;
         });
@@ -368,14 +371,14 @@ export function SessionDetail({
       const isDown = key.downArrow || input === "j" || (key.ctrl && input === "n");
       const isPageUp = key.ctrl && input === "u";
       const isPageDown = key.ctrl && input === "d";
-      const maxScroll = Math.max(0, logLines.length - LOG_MAX_VISIBLE);
+      const maxScroll = Math.max(0, logLines.length - logMaxVisible);
 
       if (key.escape || input === " ") {
         onBack();
       } else if (isPageUp) {
-        setLogScroll((s) => Math.max(0, s - LOG_MAX_VISIBLE));
+        setLogScroll((s) => Math.max(0, s - logMaxVisible));
       } else if (isPageDown) {
-        setLogScroll((s) => Math.min(maxScroll, s + LOG_MAX_VISIBLE));
+        setLogScroll((s) => Math.min(maxScroll, s + logMaxVisible));
       } else if (isUp) {
         setLogScroll((s) => Math.max(0, s - 1));
       } else if (isDown) {
@@ -445,6 +448,7 @@ export function SessionDetail({
       <Box flexDirection="row" height={panelHeight} gap={1}>
         <DetailPanel
           width={detailWidth}
+          height={panelHeight}
           mode={detailMode}
           artifacts={artifacts}
           scripts={scripts}
@@ -456,6 +460,7 @@ export function SessionDetail({
           scriptKilled={scriptKilled}
           logLines={logLines}
           logScroll={logScroll}
+          logMaxVisible={logMaxVisible}
           sendingPaneDisplayName={
             sendingPaneIndex >= 0 ? panes[sendingPaneIndex]?.displayName : undefined
           }
