@@ -15,6 +15,7 @@ import { useArtifacts } from "./ArtifactList.js";
 import { usePreviewContent } from "../hooks/usePreviewContent.js";
 import { useKeyboard } from "../hooks/useKeyboard.js";
 import { REPOS_DIR } from "../utils/types.js";
+import { switchToTmuxSession } from "../utils/tmux.js";
 import type { SessionData, RepoInfo, FooterOverride, WorkflowInfo } from "../utils/types.js";
 
 // Minimum terminal width to show the preview side panel
@@ -213,26 +214,12 @@ export function Home({
   const switchToSession = useCallback(() => {
     if (!selectedSession) return;
     const target = selectedSession.meta.tmux_session;
-    const insideTmux = !!process.env.TMUX;
-    try {
-      if (insideTmux) {
-        // Use display-popup so that detaching from the agent session
-        // automatically closes the popup and returns to the dashboard.
-        execSync(
-          `tmux display-popup -E -w 100% -h 100% "TMUX= exec tmux attach-session -t '${target}'"`,
-          { stdio: "ignore" },
-        );
-      } else {
-        execSync(`tmux attach-session -t '${target}'`, { stdio: "inherit" });
-        if (process.stdin.isTTY && process.stdin.setRawMode) {
-          process.stdin.setRawMode(true);
-        }
-        process.stdout.write("\x1b[2J\x1b[H");
-      }
-    } catch {
+    const ok = switchToTmuxSession(target);
+    if (ok) {
+      showMessage(`Detached from ${selectedSession.name}`);
+    } else {
       showMessage(`Failed to switch to ${selectedSession.name}`);
     }
-    showMessage(`Detached from ${selectedSession.name}`);
   }, [selectedSession, showMessage]);
 
   // Kill session

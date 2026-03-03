@@ -14,6 +14,7 @@ import { AddRepo } from "./components/AddRepo.js";
 import { useSessions } from "./hooks/useSessions.js";
 import { useSessionWatcher } from "./hooks/useSessionWatcher.js";
 import { useTerminalSize } from "./hooks/useTerminalSize.js";
+import { switchToTmuxSession } from "./utils/tmux.js";
 import { REPOS_DIR } from "./utils/types.js";
 import type { SessionData, RepoInfo, FooterOverride, WorkflowInfo } from "./utils/types.js";
 
@@ -120,6 +121,11 @@ export function App() {
         process.stdout.write("\x1b[2J\x1b[H");
         refresh();
         showMessage(`Created session: ${branch}`);
+        // Auto-switch to the new tmux session
+        const ok = switchToTmuxSession(branch);
+        if (ok) {
+          showMessage(`Detached from ${branch}`);
+        }
       } catch {
         if (process.stdin.isTTY && process.stdin.setRawMode) {
           process.stdin.setRawMode(true);
