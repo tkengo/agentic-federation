@@ -1,0 +1,91 @@
+name: test-brushup
+description: "テストコードブラッシュアップ: データ収集・分析 → 改善計画策定 → リファクタリング → コードレビュー"
+
+windows:
+  - name: review
+    panes:
+      - id: terminal
+        name: Terminal
+        pane: 1
+        command: null
+      - id: editor
+        name: Editor
+        pane: 2
+        command: nvim
+    # +-------------------------+-------------------------+
+    # |        terminal         |         editor          |
+    # |        (pane 1)         |        (pane 2)         |
+    # +-------------------------+-------------------------+
+    layout:
+      splits:
+        - { source: 1, direction: h, percent: 50 }
+      focus: 1
+
+  - name: agent-team
+    panes:
+      - id: analyzer
+        name: Analyzer
+        pane: 1
+        command: 'yoloclaude --agent test-brushup-analyzer'
+      - id: refactorer
+        name: Refactorer
+        pane: 2
+        command: 'yoloclaude --agent test-brushup-refactorer'
+      - id: profiler
+        name: Profiler
+        pane: 3
+        command: yologemini
+      - id: static_checker
+        name: Static Checker
+        pane: 4
+        command: yolocodex
+      - id: code_reviewer_gemini
+        name: "Code Reviewer (Gemini)"
+        pane: 5
+        command: yologemini
+      - id: code_reviewer_codex
+        name: "Code Reviewer (Codex)"
+        pane: 6
+        command: yolocodex
+    # +-------------------------+-------------------------+
+    # |                         |                         |
+    # |        analyzer         |       refactorer        |
+    # |        (pane 1)         |        (pane 2)         |
+    # |                         |                         |
+    # +------------+------------+------------+------------+
+    # |  profiler  |   static   |  code-rev  |  code-rev  |
+    # |  (pane 3)  |  (pane 4)  |  (pane 5)  |  (pane 6)  |
+    # +------------+------------+------------+------------+
+    layout:
+      splits:
+        - { source: 1, direction: v, percent: 35 }
+        - { source: 1, direction: h, percent: 50 }
+        - { source: 3, direction: h, percent: 75 }
+        - { source: 4, direction: h, percent: 66 }
+        - { source: 5, direction: h, percent: 50 }
+      focus: 1
+
+states:
+  analysis:
+    description: "テストコードの分析・データ収集・改善計画の策定"
+    color: blue
+    entry_point: true
+  human_plan_review:
+    description: "人間に改善計画をレビューしてもらう"
+    color: yellow
+  refactoring:
+    description: "改善計画に基づくテストコードのリファクタリング"
+    color: blue
+  code_review:
+    description: "Gemini + Codexによる並列コードレビュー"
+    color: yellow
+  code_revision:
+    description: "レビューフィードバックに基づくコード修正"
+    color: yellow
+  completed:
+    description: "全レビュー通過、人間の最終承認待ち"
+    mark: "+"
+    color: green
+  waiting_human:
+    description: "エスカレーション - 人間の判断待ち"
+    color: magenta
