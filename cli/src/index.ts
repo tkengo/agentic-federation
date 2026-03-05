@@ -4,6 +4,7 @@ import { Command } from "commander";
 import { initCommand } from "./commands/init.js";
 import {
   repoAddCommand,
+  repoAddLocalCommand,
   repoListCommand,
   repoShowCommand,
   repoEditCommand,
@@ -77,6 +78,14 @@ repo
   .option("--base-branch <branch>", "Base branch for worktree creation (default: main)")
   .action((cloneUrl: string, basePath: string | undefined, opts: { baseBranch?: string }) => {
     repoAddCommand(cloneUrl, basePath, opts.baseBranch);
+  });
+
+repo
+  .command("add-local <repo-path> [base-path]")
+  .description("Register an existing local repository")
+  .option("--base-branch <branch>", "Base branch for worktree creation (default: main)")
+  .action((repoPath: string, basePath: string | undefined, opts: { baseBranch?: string }) => {
+    repoAddLocalCommand(repoPath, basePath, opts.baseBranch);
   });
 
 repo

@@ -17,7 +17,7 @@ export function parseCloneUrl(url: string): string {
 function deriveFromNewFormat(raw: NewRepoConfig): RepoConfig {
   const workspace = path.join(raw.base_path, `${raw.repo_name}-workspace`);
   return {
-    repo_root: path.join(workspace, "main"),
+    repo_root: raw.repo_root ?? path.join(workspace, "main"),
     worktree_base: workspace,
     cleanup_pattern: `*${raw.repo_name}*`,
     base_branch: raw.base_branch ?? "main",

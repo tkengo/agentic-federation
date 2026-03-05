@@ -72,7 +72,7 @@ function AppInner() {
           const name = f.replace(/\.json$/, "");
           try {
             const raw = JSON.parse(fs.readFileSync(path.join(REPOS_DIR, f), "utf-8"));
-            const repoRoot = path.join(raw.base_path, `${raw.repo_name}-workspace`, "main");
+            const repoRoot = raw.repo_root ?? path.join(raw.base_path, `${raw.repo_name}-workspace`, "main");
             return { name, repoRoot };
           } catch {
             return { name, repoRoot: "" };
@@ -155,8 +155,8 @@ function AppInner() {
     [refresh, showMessage]
   );
 
-  // Add a new repo via fed repo add
-  const addRepo = useCallback(
+  // Add a new repo via fed repo add (clone)
+  const addRepoClone = useCallback(
     (cloneUrl: string, basePath: string) => {
       try {
         const args = ["fed", "repo", "add", `'${cloneUrl}'`];
@@ -176,6 +176,33 @@ function AppInner() {
         }
         process.stdout.write("\x1b[2J\x1b[H");
         showMessage("Failed to add repository");
+      }
+      setScreen("list");
+    },
+    [showMessage, refreshRepos]
+  );
+
+  // Add a local repo via fed repo add-local
+  const addRepoLocal = useCallback(
+    (repoPath: string, basePath: string) => {
+      try {
+        const args = ["fed", "repo", "add-local", `'${repoPath}'`];
+        if (basePath && basePath !== "~/fed/repos") {
+          args.push(`'${basePath}'`);
+        }
+        execSync(args.join(" "), { stdio: "inherit" });
+        if (process.stdin.isTTY && process.stdin.setRawMode) {
+          process.stdin.setRawMode(true);
+        }
+        process.stdout.write("\x1b[2J\x1b[H");
+        refreshRepos();
+        showMessage("Local repository added successfully");
+      } catch {
+        if (process.stdin.isTTY && process.stdin.setRawMode) {
+          process.stdin.setRawMode(true);
+        }
+        process.stdout.write("\x1b[2J\x1b[H");
+        showMessage("Failed to add local repository");
       }
       setScreen("list");
     },
@@ -300,7 +327,8 @@ function AppInner() {
         {/* Add repo panel - bottom-aligned */}
         {screen === "add-repo" && (
           <AddRepo
-            onSubmit={addRepo}
+            onSubmitClone={addRepoClone}
+            onSubmitLocal={addRepoLocal}
             onCancel={() => setScreen("list")}
           />
         )}

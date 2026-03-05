@@ -38,6 +38,7 @@ export interface NewRepoConfig {
   repo_name: string;
   base_path: string;
   base_branch?: string;
+  repo_root?: string; // Override: path to existing local repo
   setup_scripts: string[];
   symlinks: string[];
   copy_files: string[];
