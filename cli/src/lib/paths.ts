@@ -7,6 +7,7 @@ export const SESSIONS_DIR = path.join(FED_HOME, "sessions");
 export const ACTIVE_DIR = path.join(FED_HOME, "active");
 export const ARCHIVE_DIR = path.join(FED_HOME, "archive");
 export const KNOWLEDGE_DIR = path.join(FED_HOME, "knowledge");
+export const LOGS_DIR = path.join(FED_HOME, "logs");
 export const DEFAULT_BASE_PATH = path.join(os.homedir(), "fed", "repos");
 
 // Agents directory in the agentic-federation repo
@@ -37,4 +38,5 @@ export const ALL_DIRS = [
   ACTIVE_DIR,
   ARCHIVE_DIR,
   KNOWLEDGE_DIR,
+  LOGS_DIR,
 ];

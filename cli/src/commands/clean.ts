@@ -3,6 +3,7 @@ import path from "node:path";
 import os from "node:os";
 import { execSync } from "node:child_process";
 import { ACTIVE_DIR } from "../lib/paths.js";
+import { log } from "../lib/logger.js";
 import { resolveSession, readMeta } from "../lib/session.js";
 import type { RepoConfig } from "../lib/types.js";
 import { loadRepoConfig, listRepoConfigs } from "../lib/repo.js";
@@ -136,26 +137,35 @@ export function cleanCommand(dryRun: boolean, force: boolean): void {
     let worktreeRemoved = false;
     try {
       const forceFlag = force ? " --force" : "";
-      execSync(
-        `git -C '${target.repoRoot}' worktree remove '${target.worktreePath}'${forceFlag}`,
-        { stdio: "inherit" }
-      );
+      const cmd = `git -C '${target.repoRoot}' worktree remove '${target.worktreePath}'${forceFlag}`;
+      log(`[clean] exec: ${cmd}`);
+      const wtResult = execSync(cmd, {
+        encoding: "utf-8",
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+      if (wtResult.trim()) log(`[clean] git worktree remove stdout: ${wtResult.trim()}`);
       console.log(`    Removed worktree`);
       worktreeRemoved = true;
-    } catch {
+    } catch (err: unknown) {
+      const e = err as { stdout?: string; stderr?: string; status?: number };
+      log(`[clean] git worktree remove FAILED: exit=${e.status ?? "?"} stderr=${(e.stderr ?? "").trim()} stdout=${(e.stdout ?? "").trim()}`);
       console.error(`    Warning: git worktree remove failed for ${target.worktreePath}`);
       // Fallback: try to remove the directory directly with force
       if (force) {
         try {
           fs.rmSync(target.worktreePath, { recursive: true, force: true });
           // Also prune worktree references
-          execSync(`git -C '${target.repoRoot}' worktree prune`, {
-            stdio: "ignore",
+          const pruneCmd = `git -C '${target.repoRoot}' worktree prune`;
+          log(`[clean] exec: ${pruneCmd}`);
+          execSync(pruneCmd, {
+            encoding: "utf-8",
+            stdio: ["ignore", "pipe", "pipe"],
           });
           console.log(`    Force-removed directory and pruned`);
           worktreeRemoved = true;
-        } catch (err) {
-          console.error(`    Error: ${err}`);
+        } catch (pruneErr) {
+          log(`[clean] force-remove fallback FAILED: ${pruneErr}`);
+          console.error(`    Error: ${pruneErr}`);
         }
       }
     }
@@ -168,12 +178,17 @@ export function cleanCommand(dryRun: boolean, force: boolean): void {
     // Delete the branch associated with the worktree
     try {
       const forceFlag = force ? " -D" : " -d";
-      execSync(
-        `git -C '${target.repoRoot}' branch${forceFlag} '${target.branch}'`,
-        { stdio: "inherit" }
-      );
+      const branchCmd = `git -C '${target.repoRoot}' branch${forceFlag} '${target.branch}'`;
+      log(`[clean] exec: ${branchCmd}`);
+      const branchResult = execSync(branchCmd, {
+        encoding: "utf-8",
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+      if (branchResult.trim()) log(`[clean] git branch delete stdout: ${branchResult.trim()}`);
       console.log(`    Deleted branch: ${target.branch}`);
-    } catch {
+    } catch (err: unknown) {
+      const e = err as { stdout?: string; stderr?: string; status?: number };
+      log(`[clean] git branch delete FAILED: exit=${e.status ?? "?"} stderr=${(e.stderr ?? "").trim()} stdout=${(e.stdout ?? "").trim()}`);
       console.error(`    Warning: could not delete branch ${target.branch}`);
     }
 

@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 
+import { initLogger } from "./lib/logger.js";
 import { Command } from "commander";
+
+// Initialize global logging before any command runs
+initLogger(process.argv);
 import { initCommand } from "./commands/init.js";
 import {
   repoAddCommand,
