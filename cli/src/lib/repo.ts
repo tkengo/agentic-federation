@@ -20,7 +20,7 @@ function deriveFromNewFormat(raw: NewRepoConfig): RepoConfig {
     repo_root: raw.repo_root ?? path.join(workspace, "main"),
     worktree_base: workspace,
     cleanup_pattern: `*${raw.repo_name}*`,
-    base_branch: raw.base_branch ?? "main",
+    base_branch: raw.base_branch ?? "origin/main",
     symlinks: raw.symlinks ?? [],
     setup_scripts: raw.setup_scripts ?? [],
     copy_files: raw.copy_files ?? [],

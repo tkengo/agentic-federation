@@ -105,6 +105,7 @@ export function repoAddLocalCommand(
   }
 
   // Detect base branch if not explicitly specified
+  // Stored as "origin/<branch>" by default for remote-tracking worktree creation
   let detectedBranch = baseBranch;
   if (!detectedBranch) {
     try {
@@ -112,17 +113,18 @@ export function repoAddLocalCommand(
         `git -C '${resolvedRepoPath}' symbolic-ref refs/remotes/origin/HEAD`,
         { encoding: "utf-8" }
       ).trim();
-      // refs/remotes/origin/main -> main
-      detectedBranch = ref.replace(/^refs\/remotes\/origin\//, "");
+      // refs/remotes/origin/main -> origin/main
+      detectedBranch = ref.replace(/^refs\/remotes\//, "");
     } catch {
-      // Fallback: current HEAD branch name
+      // Fallback: current HEAD branch name with origin/ prefix
       try {
-        detectedBranch = execSync(
+        const branchName = execSync(
           `git -C '${resolvedRepoPath}' rev-parse --abbrev-ref HEAD`,
           { encoding: "utf-8" }
         ).trim();
+        detectedBranch = `origin/${branchName}`;
       } catch {
-        detectedBranch = "main";
+        detectedBranch = "origin/main";
       }
     }
   }

@@ -354,8 +354,8 @@ function setupWorktree(
     execSync(`git -C '${config.repo_root}' fetch origin`, {
       stdio: "inherit",
     });
-    console.log(`Creating worktree from origin/${config.base_branch}...`);
-    execSync(`git -C '${config.repo_root}' worktree add '${worktreePath}' -b '${branch}' origin/${config.base_branch}`, {
+    console.log(`Creating worktree from ${config.base_branch}...`);
+    execSync(`git -C '${config.repo_root}' worktree add '${worktreePath}' -b '${branch}' ${config.base_branch}`, {
       stdio: "inherit",
     });
   }
