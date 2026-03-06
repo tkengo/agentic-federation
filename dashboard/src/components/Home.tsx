@@ -1,13 +1,12 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { Box, Text, useInput } from "ink";
-import path from "node:path";
-import { execSync, spawn } from "node:child_process";
+import fs from "node:fs";
+import { execSync, spawnSync, spawn } from "node:child_process";
 import { SessionList } from "./SessionList.js";
 import { RepoList } from "./RepoList.js";
 import { WorkflowList } from "./WorkflowList.js";
 import { useKeyboard } from "../hooks/useKeyboard.js";
 import { useFooter } from "../contexts/FooterContext.js";
-import { REPOS_DIR } from "../utils/types.js";
 import { switchToTmuxSession } from "../utils/tmux.js";
 import type { SessionData, RepoInfo, WorkflowInfo } from "../utils/types.js";
 
@@ -23,6 +22,7 @@ interface HomeProps {
   refreshRepos: () => void;
   onNavigate: (target: "create" | "palette" | "add-repo") => void;
   onDetailSession: (sessionName: string) => void;
+  onDetailRepo: (repoName: string) => void;
   onSelectedSessionChange: (session: SessionData | undefined) => void;
   pendingAction: string | null;
   onActionHandled: () => void;
@@ -40,6 +40,7 @@ export function Home({
   refreshRepos,
   onNavigate,
   onDetailSession,
+  onDetailRepo,
   onSelectedSessionChange,
   pendingAction,
   onActionHandled,
@@ -177,22 +178,34 @@ export function Home({
     });
   }, [refresh, setOverride, clearOverride, showMessage, showError]);
 
-  // Open repo config in nvim
-  const openRepoConfig = useCallback((repoIndex: number) => {
+  // Open shell at repo root directory
+  const openRepoShell = useCallback((repoIndex: number) => {
     const repo = repos[repoIndex];
     if (!repo) return;
-    const jsonPath = path.join(REPOS_DIR, `${repo.name}.json`);
-    try {
-      execSync(`nvim '${jsonPath}'`, { stdio: "inherit" });
-      if (process.stdin.isTTY && process.stdin.setRawMode) {
-        process.stdin.setRawMode(true);
-      }
-      process.stdout.write("\x1b[2J\x1b[H");
-      refreshRepos();
-    } catch {
-      showMessage(`Failed to open ${repo.name}.json`);
+    if (!fs.existsSync(repo.repoRoot)) {
+      showError(`Directory not found: ${repo.repoRoot}`);
+      return;
     }
-  }, [repos, refreshRepos, showMessage]);
+    const shell = process.env.SHELL || "/bin/sh";
+    // Save Ink's terminal settings (stdin must be inherited so stty sees the real tty)
+    const sttyResult = spawnSync("stty", ["-g"], {
+      stdio: ["inherit", "pipe", "pipe"],
+      encoding: "utf-8",
+    });
+    const savedStty = sttyResult.stdout.trim();
+    // Show cursor and clear screen before spawning shell
+    process.stdout.write("\x1b[?25h\x1b[2J\x1b[H");
+    spawnSync(shell, [], { stdio: "inherit", cwd: repo.repoRoot });
+    // Restore Ink's terminal settings (stty needs real tty on stdin)
+    if (savedStty) {
+      spawnSync("stty", [savedStty], { stdio: "inherit" });
+    }
+    if (process.stdin.isTTY && process.stdin.setRawMode) {
+      process.stdin.setRawMode(true);
+    }
+    process.stdin.resume();
+    process.stdout.write("\x1b[?25l\x1b[2J\x1b[H");
+  }, [repos, showMessage, showError]);
 
   // Handle pending actions from CommandPalette
   useEffect(() => {
@@ -232,7 +245,7 @@ export function Home({
         if (cleanRowSelected) {
           setConfirmingClean(true);
         } else if (isRepoSelected) {
-          openRepoConfig(selectedRepoIndex);
+          openRepoShell(selectedRepoIndex);
         } else if (selectedSession) {
           switchToSession();
         }
@@ -252,6 +265,8 @@ export function Home({
       onSpace: () => {
         if (selectedSession) {
           onDetailSession(selectedSession.name);
+        } else if (isRepoSelected) {
+          onDetailRepo(repos[selectedRepoIndex]!.name);
         }
       },
     },

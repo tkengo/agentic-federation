@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { Header, HEADER_HEIGHT_FULL, HEADER_HEIGHT_COMPACT } from "./components/Header.js";
 import { Home } from "./components/Home.js";
 import { SessionDetail } from "./components/SessionDetail.js";
+import { RepoDetail } from "./components/RepoDetail.js";
 import { CreateSession } from "./components/CreateSession.js";
 import { CommandPalette } from "./components/CommandPalette.js";
 import { Footer } from "./components/Footer.js";
@@ -20,7 +21,7 @@ import { switchToTmuxSession } from "./utils/tmux.js";
 import { REPOS_DIR } from "./utils/types.js";
 import type { SessionData, RepoInfo, WorkflowInfo } from "./utils/types.js";
 
-type Screen = "splash" | "list" | "create" | "palette" | "add-repo" | "detail";
+type Screen = "splash" | "list" | "create" | "palette" | "add-repo" | "detail" | "repo-detail";
 
 // Outer shell: wraps with FooterProvider so children can use useFooter()
 export function App() {
@@ -88,6 +89,20 @@ function AppInner() {
   const refreshRepos = useCallback(() => {
     setRepos(loadRepos());
   }, [loadRepos]);
+
+  // Detail screen: which repo to show
+  const [detailRepoName, setDetailRepoName] = useState<string | null>(null);
+  const detailRepo = detailRepoName
+    ? repos.find((r) => r.name === detailRepoName)
+    : undefined;
+
+  // Auto-back if repo disappears while on repo-detail screen
+  useEffect(() => {
+    if (screen === "repo-detail" && detailRepoName && !detailRepo) {
+      setScreen("list");
+      setDetailRepoName(null);
+    }
+  }, [screen, detailRepoName, detailRepo]);
 
   // Read available workflows from workflows/ directory with descriptions
   const workflows: WorkflowInfo[] = useMemo(() => {
@@ -236,7 +251,7 @@ function AppInner() {
     );
   }
 
-  const isDetail = screen === "detail";
+  const isDetail = screen === "detail" || screen === "repo-detail";
 
   return (
     <Box flexDirection="column" width={columns} height={rows}>
@@ -258,7 +273,7 @@ function AppInner() {
         overflow="hidden"
       >
         {/* Home screen - always mounted to preserve cursor position, hidden during detail */}
-        <Box display={screen !== "detail" ? "flex" : "none"} flexDirection="column" flexGrow={1}>
+        <Box display={!isDetail ? "flex" : "none"} flexDirection="column" flexGrow={1}>
           <Home
             sessions={sessions}
             repos={repos}
@@ -277,6 +292,10 @@ function AppInner() {
               setDetailSessionName(name);
               setScreen("detail");
             }}
+            onDetailRepo={(name) => {
+              setDetailRepoName(name);
+              setScreen("repo-detail");
+            }}
             onSelectedSessionChange={setActiveSession}
             pendingAction={pendingHomeAction}
             onActionHandled={() => setPendingHomeAction(null)}
@@ -294,6 +313,21 @@ function AppInner() {
             onBack={() => {
               setScreen("list");
               setDetailSessionName(null);
+            }}
+          />
+        )}
+
+        {/* Repo detail screen */}
+        {screen === "repo-detail" && detailRepo && (
+          <RepoDetail
+            repo={detailRepo}
+            columns={columns}
+            rows={rows}
+            headerHeight={HEADER_HEIGHT_COMPACT}
+            refreshRepos={refreshRepos}
+            onBack={() => {
+              setScreen("list");
+              setDetailRepoName(null);
             }}
           />
         )}
