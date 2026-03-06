@@ -22,6 +22,15 @@ const ICON_SEND = "\u{1F4E8}"; // 📨
 export const MAX_VISIBLE = 15;
 export const LOG_MAX_VISIBLE = 9; // 10 total - 1 header line
 
+// --- Action types ---
+
+export interface ActionEntry {
+  id: string;         // e.g. "attach" | "delete"
+  label: string;      // Display label
+  icon: string;       // Unicode icon character
+  color?: string;     // Optional color (e.g. "red" for destructive actions)
+}
+
 // --- Script types and hook ---
 
 export interface ScriptEntry {
@@ -133,6 +142,7 @@ type VirtualRow =
   | { type: "artifact"; itemIndex: number; name: string; sizeKB: string }
   | { type: "script"; itemIndex: number; name: string; description?: string }
   | { type: "pane"; itemIndex: number; displayName: string; description: string }
+  | { type: "action"; itemIndex: number; id: string; label: string; icon: string; color?: string }
   | { type: "blank" };
 
 // --- Component ---
@@ -159,6 +169,8 @@ interface DetailPanelProps {
   logLines?: string[];
   logScroll?: number;
   logMaxVisible?: number; // Override default LOG_MAX_VISIBLE
+  // Actions
+  actions?: ActionEntry[];
   // Sending mode
   sendingPaneDisplayName?: string;
   sendingValue?: string;
@@ -195,6 +207,7 @@ export function DetailPanel({
   panes,
   selectedIndex,
   maxVisible: maxVisibleOverride,
+  actions,
   scriptName,
   scriptExitCode,
   scriptKilled,
@@ -270,6 +283,7 @@ export function DetailPanel({
         artifacts={artifacts}
         scripts={scripts}
         panes={panes}
+        actions={actions}
         selectedIndex={selectedIndex}
         maxVisible={maxVisibleOverride}
       />
@@ -285,6 +299,7 @@ function BrowseView({
   artifacts,
   scripts,
   panes,
+  actions,
   selectedIndex,
   maxVisible: maxVisibleProp,
 }: {
@@ -293,11 +308,13 @@ function BrowseView({
   artifacts: ArtifactEntry[];
   scripts: ScriptEntry[];
   panes: PaneEntry[];
+  actions?: ActionEntry[];
   selectedIndex: number;
   maxVisible?: number;
 }) {
   const effectiveMaxVisible = maxVisibleProp ?? MAX_VISIBLE;
-  const hasItems = artifacts.length > 0 || scripts.length > 0 || panes.length > 0;
+  const hasActions = actions != null && actions.length > 0;
+  const hasItems = artifacts.length > 0 || scripts.length > 0 || panes.length > 0 || hasActions;
 
   if (!description && !hasItems) {
     return <Text dimColor>(empty)</Text>;
@@ -332,10 +349,25 @@ function BrowseView({
       description: p.description,
     }));
   }
+  if ((artifacts.length > 0 || scripts.length > 0 || panes.length > 0) && hasActions) {
+    rows.push({ type: "blank" });
+  }
+  if (hasActions) {
+    rows.push({ type: "header", label: "Actions" });
+    const baseIndex = artifacts.length + scripts.length + panes.length;
+    actions!.forEach((a, i) => rows.push({
+      type: "action",
+      itemIndex: baseIndex + i,
+      id: a.id,
+      label: a.label,
+      icon: a.icon,
+      color: a.color,
+    }));
+  }
 
   // Compute scroll offset based on selected row position
   const selectedRowIndex = rows.findIndex(
-    (r) => (r.type === "artifact" || r.type === "script" || r.type === "pane") && r.itemIndex === selectedIndex
+    (r) => (r.type === "artifact" || r.type === "script" || r.type === "pane" || r.type === "action") && r.itemIndex === selectedIndex
   );
   const scrollOffset = computeScrollOffset(Math.max(0, selectedRowIndex), rows.length, effectiveMaxVisible);
 
@@ -436,6 +468,17 @@ function BrowseView({
       );
     }
 
+    if (row.type === "action") {
+      const selected = row.itemIndex === selectedIndex;
+      const cursor = selected ? "> " : "  ";
+      const color = selected ? "cyan" : undefined;
+      return (
+        <Text color={color} bold={selected}>
+          {cursor}{row.icon} {row.label}
+        </Text>
+      );
+    }
+
     return null;
   };
 
@@ -459,6 +502,7 @@ function BrowseView({
             case "artifact": return `a-${row.name}`;
             case "script": return `s-${row.name}`;
             case "pane": return `pn-${row.displayName}`;
+            case "action": return `act-${row.id}`;
             default: return `row-${index}`;
           }
         }}

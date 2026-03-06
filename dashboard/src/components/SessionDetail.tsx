@@ -6,7 +6,7 @@ import crypto from "node:crypto";
 import { execSync, spawn } from "node:child_process";
 import type { ChildProcess } from "node:child_process";
 import { DetailPanel, useScripts, usePanes } from "./DetailPanel.js";
-import type { DetailMode } from "./DetailPanel.js";
+import type { DetailMode, ActionEntry } from "./DetailPanel.js";
 import { PreviewPanel } from "./PreviewPanel.js";
 import { StatusBadge } from "./StatusBadge.js";
 import { useArtifacts } from "./ArtifactList.js";
@@ -14,6 +14,7 @@ import { usePreviewContent } from "../hooks/usePreviewContent.js";
 import { useKeyboard } from "../hooks/useKeyboard.js";
 import { useBlink } from "../hooks/useBlink.js";
 import { useFooter } from "../contexts/FooterContext.js";
+import { switchToTmuxSession } from "../utils/tmux.js";
 import { shortenHome, formatAge } from "../utils/format.js";
 import { STALE_THRESHOLD_SEC } from "../utils/types.js";
 import type { SessionData } from "../utils/types.js";
@@ -26,6 +27,11 @@ interface SessionDetailProps {
   refresh: () => void;
   onBack: () => void;
 }
+
+const SESSION_ACTIONS: ActionEntry[] = [
+  { id: "attach", label: "Attach session", icon: "\u{1F4E5}" },  // inbox tray
+  { id: "delete", label: "Delete session", icon: "\u{1F6D1}" },  // stop sign
+];
 
 function isStale(session: SessionData): boolean {
   if (session.stateMtimeMs == null) return false;
@@ -46,6 +52,7 @@ export function SessionDetail({
   const [detailIndex, setDetailIndex] = useState(0);
   const [detailMode, setDetailMode] = useState<DetailMode>("browse");
   const [confirmingScript, setConfirmingScript] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   // Pane sending state
   const [sendingValue, setSendingValue] = useState("");
@@ -70,7 +77,7 @@ export function SessionDetail({
   const artifacts = useArtifacts(session.sessionDir);
   const scripts = useScripts(session.sessionDir);
   const panes = usePanes(session.sessionDir);
-  const totalDetailItems = artifacts.length + scripts.length + panes.length;
+  const totalDetailItems = artifacts.length + scripts.length + panes.length + SESSION_ACTIONS.length;
 
   // Preview content for selected detail item
   const previewData = usePreviewContent(
@@ -103,10 +110,12 @@ export function SessionDetail({
       } else {
         clearOverride();
       }
+    } else if (confirmingDelete) {
+      setOverride({ type: "confirmDeleteSession", name: session.name });
     } else {
       clearOverride();
     }
-  }, [confirmingScript, detailIndex, artifacts.length, scripts, setOverride, clearOverride]);
+  }, [confirmingScript, confirmingDelete, detailIndex, artifacts.length, scripts, session.name, setOverride, clearOverride]);
 
   // Clear footer override on unmount
   useEffect(() => {
@@ -283,12 +292,27 @@ export function SessionDetail({
         } else if (detailIndex < artifacts.length + scripts.length) {
           // Confirm script execution
           setConfirmingScript(true);
-        } else {
+        } else if (detailIndex < artifacts.length + scripts.length + panes.length) {
           // Pane selected -> enter sending mode
           const paneIdx = detailIndex - artifacts.length - scripts.length;
           setSendingPaneIndex(paneIdx);
           setSendingValue("");
           setDetailMode("sending");
+        } else {
+          // Action selected
+          const actionsStart = artifacts.length + scripts.length + panes.length;
+          const actionIdx = detailIndex - actionsStart;
+          const action = SESSION_ACTIONS[actionIdx];
+          if (action?.id === "attach") {
+            const ok = switchToTmuxSession(session.meta.tmux_session);
+            if (ok) {
+              showMessage(`Detached from ${session.name}`);
+            } else {
+              showMessage(`Failed to switch to ${session.name}`);
+            }
+          } else if (action?.id === "delete") {
+            setConfirmingDelete(true);
+          }
         }
       },
       onSpace: () => {
@@ -298,7 +322,7 @@ export function SessionDetail({
         onBack();
       },
     },
-    detailMode === "browse" && !confirmingScript
+    detailMode === "browse" && !confirmingScript && !confirmingDelete
   );
 
   // Preview scroll in browse mode (Ctrl+U / Ctrl+D)
@@ -313,7 +337,7 @@ export function SessionDetail({
         setPreviewScroll((s) => Math.min(maxScroll, s + previewContentHeight));
       }
     },
-    { isActive: detailMode === "browse" && !confirmingScript }
+    { isActive: detailMode === "browse" && !confirmingScript && !confirmingDelete }
   );
 
   // Script confirmation handler
@@ -327,6 +351,26 @@ export function SessionDetail({
       }
     },
     { isActive: confirmingScript }
+  );
+
+  // Delete confirmation handler
+  useInput(
+    (_input) => {
+      if (_input === "y" || _input === "Y") {
+        setConfirmingDelete(false);
+        try {
+          execSync(`fed stop '${session.name}'`, { stdio: "ignore" });
+          showMessage(`Stopped: ${session.name}`);
+          refresh();
+        } catch {
+          showMessage(`Failed to stop ${session.name}`);
+        }
+        onBack();
+      } else {
+        setConfirmingDelete(false);
+      }
+    },
+    { isActive: confirmingDelete }
   );
 
   // Script running mode keyboard handler
@@ -452,6 +496,7 @@ export function SessionDetail({
           artifacts={artifacts}
           scripts={scripts}
           panes={panes}
+          actions={SESSION_ACTIONS}
           selectedIndex={detailIndex}
           maxVisible={dynamicMaxVisible}
           scriptName={runningScriptName ?? undefined}

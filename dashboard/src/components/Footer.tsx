@@ -33,6 +33,12 @@ export function Footer() {
         Run script &quot;{override.name}&quot;? [y]Yes  [any key]Cancel
       </Text>
     );
+  } else if (override?.type === "confirmDeleteSession") {
+    content = (
+      <Text color="yellow">
+        Delete session &quot;{override.name}&quot;? [y]Yes  [any key]Cancel
+      </Text>
+    );
   } else if (ctrlCPending) {
     content = <Text color="yellow">Press Ctrl+C again to quit</Text>;
   } else if (message) {
