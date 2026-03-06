@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { Box, Text, useInput } from "ink";
+import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { execSync } from "node:child_process";
@@ -263,6 +264,17 @@ function LocalForm({ onSubmit, onBack }: {
     }
     if (!repoName) {
       setError("Cannot determine repo name from path");
+      return;
+    }
+    // Validate directory exists
+    const resolved = resolvePath(trimmed);
+    if (!fs.existsSync(resolved) || !fs.statSync(resolved).isDirectory()) {
+      setError("Directory does not exist: " + resolved);
+      return;
+    }
+    // Validate .git exists (directory for normal repos, file for worktrees)
+    if (!fs.existsSync(path.join(resolved, ".git"))) {
+      setError("Not a git repository (no .git found): " + resolved);
       return;
     }
     setError("");
