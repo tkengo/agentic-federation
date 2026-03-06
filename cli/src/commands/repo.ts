@@ -104,11 +104,35 @@ export function repoAddLocalCommand(
     process.exit(1);
   }
 
+  // Detect base branch if not explicitly specified
+  let detectedBranch = baseBranch;
+  if (!detectedBranch) {
+    try {
+      const ref = execSync(
+        `git -C '${resolvedRepoPath}' symbolic-ref refs/remotes/origin/HEAD`,
+        { encoding: "utf-8" }
+      ).trim();
+      // refs/remotes/origin/main -> main
+      detectedBranch = ref.replace(/^refs\/remotes\/origin\//, "");
+    } catch {
+      // Fallback: current HEAD branch name
+      try {
+        detectedBranch = execSync(
+          `git -C '${resolvedRepoPath}' rev-parse --abbrev-ref HEAD`,
+          { encoding: "utf-8" }
+        ).trim();
+      } catch {
+        detectedBranch = "main";
+      }
+    }
+  }
+
   const resolvedBase = basePath ?? DEFAULT_BASE_PATH;
   const workspace = path.join(resolvedBase, `${repoName}-workspace`);
 
   console.log(`Adding local repository: ${repoName}`);
   console.log(`  Repo root:     ${resolvedRepoPath}`);
+  console.log(`  Base branch:   ${detectedBranch}`);
   console.log(`  Base path:     ${resolvedBase}`);
   console.log(`  Worktree base: ${workspace}`);
 
@@ -120,7 +144,7 @@ export function repoAddLocalCommand(
     repo_name: repoName,
     base_path: resolvedBase,
     repo_root: resolvedRepoPath,
-    ...(baseBranch ? { base_branch: baseBranch } : {}),
+    base_branch: detectedBranch,
     setup_scripts: [],
     symlinks: [],
     copy_files: [],
