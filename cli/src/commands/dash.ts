@@ -11,6 +11,7 @@ export function dashCommand(): void {
     execSync(`node '${entryPoint}'`, {
       stdio: "inherit",
       cwd: dashboardDir,
+      env: { ...process.env, FORCE_COLOR: "3" },
     });
   } catch {
     // Normal exit (user pressed q) also throws, so just exit silently
