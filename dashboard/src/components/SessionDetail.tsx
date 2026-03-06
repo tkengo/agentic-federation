@@ -417,7 +417,13 @@ export function SessionDetail({
       const maxScroll = Math.max(0, logLines.length - logMaxVisible);
 
       if (key.escape || input === " ") {
-        onBack();
+        // Return to browse mode (session detail list) instead of session list
+        setLogLines([]);
+        setLogScroll(0);
+        setScriptExitCode(null);
+        setScriptKilled(false);
+        setRunningScriptName(null);
+        setDetailMode("browse");
       } else if (isPageUp) {
         setLogScroll((s) => Math.max(0, s - logMaxVisible));
       } else if (isPageDown) {
