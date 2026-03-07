@@ -197,8 +197,10 @@ export function EmacsTextInput({
     const textBeforeCursor = originalValue.slice(0, cursorOffset);
     const col = x + stringWidth(textBeforeCursor) + 1; // ANSI is 1-indexed
     const row = y + 1;
-    // CUP only -- no \x1b[?25h so the hardware cursor stays hidden
-    const seq = `\x1b[${row};${col}H`;
+    // Hide hardware cursor (DECTCEM reset) + position cursor (CUP).
+    // Re-hiding on every write ensures cursor stays hidden even after
+    // external programs (tmux attach/detach, nvim, etc.) show it.
+    const seq = `\x1b[?25l\x1b[${row};${col}H`;
     cursorSeqRef.current = seq;
     // Position cursor now (goes through interceptor, which adds one
     // redundant write -- harmless since cursor is already at correct pos)
