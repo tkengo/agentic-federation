@@ -1,13 +1,13 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { Box, Text, useInput } from "ink";
 import fs from "node:fs";
-import { execSync, spawnSync, spawn } from "node:child_process";
+import { execSync, spawn } from "node:child_process";
 import { SessionList } from "./SessionList.js";
 import { RepoList } from "./RepoList.js";
 import { WorkflowList } from "./WorkflowList.js";
 import { useKeyboard } from "../hooks/useKeyboard.js";
 import { useFooter } from "../contexts/FooterContext.js";
-import { switchToTmuxSession } from "../utils/tmux.js";
+import { switchToTmuxSession, createOrAttachRepoSession } from "../utils/tmux.js";
 import type { SessionData, RepoInfo, WorkflowInfo } from "../utils/types.js";
 
 interface HomeProps {
@@ -178,34 +178,21 @@ export function Home({
     });
   }, [refresh, setOverride, clearOverride, showMessage, showError]);
 
-  // Open shell at repo root directory
-  const openRepoShell = useCallback((repoIndex: number) => {
+  // Open (or create) a dedicated tmux session for the repo
+  const openRepoTmuxSession = useCallback((repoIndex: number) => {
     const repo = repos[repoIndex];
     if (!repo) return;
     if (!fs.existsSync(repo.repoRoot)) {
       showError(`Directory not found: ${repo.repoRoot}`);
       return;
     }
-    const shell = process.env.SHELL || "/bin/sh";
-    // Save Ink's terminal settings (stdin must be inherited so stty sees the real tty)
-    const sttyResult = spawnSync("stty", ["-g"], {
-      stdio: ["inherit", "pipe", "pipe"],
-      encoding: "utf-8",
-    });
-    const savedStty = sttyResult.stdout.trim();
-    // Show cursor and clear screen before spawning shell
-    process.stdout.write("\x1b[?25h\x1b[2J\x1b[H");
-    spawnSync(shell, [], { stdio: "inherit", cwd: repo.repoRoot });
-    // Restore Ink's terminal settings (stty needs real tty on stdin)
-    if (savedStty) {
-      spawnSync("stty", [savedStty], { stdio: "inherit" });
+    const ok = createOrAttachRepoSession(repo.name, repo.repoRoot);
+    if (ok) {
+      refreshRepos();
+    } else {
+      showError(`Failed to open tmux session for ${repo.name}`);
     }
-    if (process.stdin.isTTY && process.stdin.setRawMode) {
-      process.stdin.setRawMode(true);
-    }
-    process.stdin.resume();
-    process.stdout.write("\x1b[?25l\x1b[2J\x1b[H");
-  }, [repos, showMessage, showError]);
+  }, [repos, showError, refreshRepos]);
 
   // Handle pending actions from CommandPalette
   useEffect(() => {
@@ -245,7 +232,7 @@ export function Home({
         if (cleanRowSelected) {
           setConfirmingClean(true);
         } else if (isRepoSelected) {
-          openRepoShell(selectedRepoIndex);
+          openRepoTmuxSession(selectedRepoIndex);
         } else if (selectedSession) {
           switchToSession();
         }

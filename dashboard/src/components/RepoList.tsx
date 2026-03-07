@@ -35,6 +35,11 @@ export function RepoList({ repos, dimmed, selectedIndex }: RepoListProps) {
             <Box key={repo.name}>
               <Text color={selected ? "cyan" : undefined} bold={selected} dimColor={dimmed}>
                 {cursor}
+              </Text>
+              <Text color={repo.tmuxAlive ? "green" : undefined} dimColor={dimmed && !repo.tmuxAlive}>
+                {repo.tmuxAlive ? "● " : "  "}
+              </Text>
+              <Text color={selected ? "cyan" : undefined} bold={selected} dimColor={dimmed}>
                 {repo.name.padEnd(nameWidth)}
                 {"  "}
                 {repo.repoRoot}

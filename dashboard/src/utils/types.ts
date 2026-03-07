@@ -54,6 +54,7 @@ export interface WaitingHumanData {
 export interface RepoInfo {
   name: string;
   repoRoot: string;
+  tmuxAlive: boolean;
 }
 
 // Footer override state from Home component

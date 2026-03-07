@@ -17,7 +17,7 @@ import { FooterProvider, useFooter } from "./contexts/FooterContext.js";
 import { useSessions } from "./hooks/useSessions.js";
 import { useSessionWatcher } from "./hooks/useSessionWatcher.js";
 import { useTerminalSize } from "./hooks/useTerminalSize.js";
-import { switchToTmuxSession } from "./utils/tmux.js";
+import { switchToTmuxSession, listTmuxSessions } from "./utils/tmux.js";
 import { REPOS_DIR } from "./utils/types.js";
 import type { SessionData, RepoInfo, WorkflowInfo } from "./utils/types.js";
 
@@ -62,10 +62,11 @@ function AppInner() {
     }
   }, [screen, detailSessionName, detailSession]);
 
-  // Load repos from ~/.fed/repos/ with config details
+  // Load repos from ~/.fed/repos/ with config details and tmux session status
   const loadRepos = useCallback((): RepoInfo[] => {
     try {
       if (!fs.existsSync(REPOS_DIR)) return [];
+      const tmuxSessions = listTmuxSessions();
       return fs
         .readdirSync(REPOS_DIR)
         .filter((f) => f.endsWith(".json"))
@@ -74,9 +75,9 @@ function AppInner() {
           try {
             const raw = JSON.parse(fs.readFileSync(path.join(REPOS_DIR, f), "utf-8"));
             const repoRoot = raw.repo_root ?? path.join(raw.base_path, `${raw.repo_name}-workspace`, "main");
-            return { name, repoRoot };
+            return { name, repoRoot, tmuxAlive: tmuxSessions.has(`__repo_${name}`) };
           } catch {
-            return { name, repoRoot: "" };
+            return { name, repoRoot: "", tmuxAlive: tmuxSessions.has(`__repo_${name}`) };
           }
         });
     } catch {
