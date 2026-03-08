@@ -94,9 +94,9 @@ export function CommandPalette({
           executeCommand(filtered[clampedIndex]!);
         }
       } else if (isUp) {
-        setSelectedIndex((i) => Math.max(0, i - 1));
+        setSelectedIndex((i) => (i <= 0 ? Math.max(0, filtered.length - 1) : i - 1));
       } else if (isDown) {
-        setSelectedIndex((i) => Math.min(filtered.length - 1, i + 1));
+        setSelectedIndex((i) => (i >= filtered.length - 1 ? 0 : i + 1));
       }
     },
     { isActive: subMode === "search" },

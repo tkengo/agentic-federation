@@ -223,10 +223,10 @@ export function Home({
   useKeyboard(
     {
       onUp: () => {
-        setSelectedIndex((i) => Math.max(0, i - 1));
+        setSelectedIndex((i) => (i <= 0 ? maxIndex : i - 1));
       },
       onDown: () => {
-        setSelectedIndex((i) => Math.min(maxIndex, i + 1));
+        setSelectedIndex((i) => (i >= maxIndex ? 0 : i + 1));
       },
       onEnter: () => {
         if (cleanRowSelected) {

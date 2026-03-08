@@ -98,9 +98,9 @@ export function CreateSession({
       const isDown = key.downArrow || (key.ctrl && input === 'n');
       if (step === "workflow") {
         if (isUp) {
-          setWorkflowIndex((i) => Math.max(0, i - 1));
+          setWorkflowIndex((i) => (i <= 0 ? Math.max(0, workflowOptions.length - 1) : i - 1));
         } else if (isDown) {
-          setWorkflowIndex((i) => Math.min(workflowOptions.length - 1, i + 1));
+          setWorkflowIndex((i) => (i >= workflowOptions.length - 1 ? 0 : i + 1));
         } else if (key.return) {
           if (workflowOptions.length > 0) {
             const selected = workflowOptions[clampedWorkflowIndex]!;
@@ -113,9 +113,9 @@ export function CreateSession({
         }
       } else if (step === "repo") {
         if (isUp) {
-          setRepoIndex((i) => Math.max(0, i - 1));
+          setRepoIndex((i) => (i <= 0 ? Math.max(0, filteredRepos.length - 1) : i - 1));
         } else if (isDown) {
-          setRepoIndex((i) => Math.min(filteredRepos.length - 1, i + 1));
+          setRepoIndex((i) => (i >= filteredRepos.length - 1 ? 0 : i + 1));
         } else if (key.return) {
           if (filteredRepos.length > 0) {
             const selected = filteredRepos[clampedRepoIndex]!;

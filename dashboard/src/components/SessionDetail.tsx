@@ -269,10 +269,10 @@ export function SessionDetail({
   useKeyboard(
     {
       onUp: () => {
-        setDetailIndex((i) => Math.max(0, i - 1));
+        setDetailIndex((i) => (i <= 0 ? Math.max(0, totalDetailItems - 1) : i - 1));
       },
       onDown: () => {
-        setDetailIndex((i) => Math.min(Math.max(0, totalDetailItems - 1), i + 1));
+        setDetailIndex((i) => (i >= Math.max(0, totalDetailItems - 1) ? 0 : i + 1));
       },
       onEnter: () => {
         if (detailIndex < artifacts.length) {

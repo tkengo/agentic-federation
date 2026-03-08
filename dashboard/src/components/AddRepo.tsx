@@ -45,9 +45,9 @@ function ModeSelect({ onSelect, onCancel }: {
     if (key.escape) {
       onCancel();
     } else if (key.upArrow || (input === "p" && key.ctrl)) {
-      setSelected((s) => Math.max(0, s - 1));
+      setSelected((s) => (s <= 0 ? options.length - 1 : s - 1));
     } else if (key.downArrow || (input === "n" && key.ctrl)) {
-      setSelected((s) => Math.min(options.length - 1, s + 1));
+      setSelected((s) => (s >= options.length - 1 ? 0 : s + 1));
     } else if (key.return) {
       onSelect(options[selected]!.key);
     }
