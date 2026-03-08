@@ -14,7 +14,7 @@ import { usePreviewContent } from "../hooks/usePreviewContent.js";
 import { useKeyboard } from "../hooks/useKeyboard.js";
 import { useBlink } from "../hooks/useBlink.js";
 import { useFooter } from "../contexts/FooterContext.js";
-import { switchToTmuxSession } from "../utils/tmux.js";
+import { switchToTmuxSession, createOrAttachArtifactSession } from "../utils/tmux.js";
 import { shortenHome, formatAge } from "../utils/format.js";
 import { STALE_THRESHOLD_SEC } from "../utils/types.js";
 import type { SessionData } from "../utils/types.js";
@@ -276,17 +276,18 @@ export function SessionDetail({
       },
       onEnter: () => {
         if (detailIndex < artifacts.length) {
-          // Open artifact in nvim
+          // Open artifact in a dedicated tmux session (vertical split)
           const artifactName = artifacts[detailIndex]?.name;
           if (!artifactName) return;
           const artifactPath = path.join(session.sessionDir, "artifacts", artifactName);
-          try {
-            execSync(`nvim '${artifactPath}'`, { stdio: "inherit" });
-            if (process.stdin.isTTY && process.stdin.setRawMode) {
-              process.stdin.setRawMode(true);
-            }
-            process.stdout.write("\x1b[2J\x1b[H");
-          } catch {
+          const worktree = session.meta.worktree ?? session.sessionDir;
+          const ok = createOrAttachArtifactSession(
+            session.meta.tmux_session,
+            artifactPath,
+            artifactName,
+            worktree,
+          );
+          if (!ok) {
             showMessage(`Failed to open ${artifactName}`);
           }
         } else if (detailIndex < artifacts.length + scripts.length) {

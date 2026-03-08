@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { execSync } from "node:child_process";
 import { ACTIVE_DIR, ARCHIVE_DIR } from "../lib/paths.js";
 import {
   getCurrentTmuxSession,
@@ -52,7 +53,10 @@ export function stopCommand(sessionName?: string): void {
   // 1. Stop watcher processes via PID files
   stopWatcherProcesses(sessionDir);
 
-  // 2. Kill tmux session (this also stops all processes in panes)
+  // 2. Kill artifact viewer tmux sessions (pattern: <session>__art__*)
+  killArtifactSessions(targetSession);
+
+  // 3. Kill tmux session (this also stops all processes in panes)
   if (tmux.hasSession(targetSession)) {
     try {
       tmux.tmux(`kill-session -t '${targetSession}'`);
@@ -64,7 +68,7 @@ export function stopCommand(sessionName?: string): void {
     console.log(`  tmux session '${targetSession}' not found (already stopped).`);
   }
 
-  // 3. Remove active symlink
+  // 4. Remove active symlink
   const linkPath = path.join(ACTIVE_DIR, targetSession);
   try {
     fs.lstatSync(linkPath);
@@ -74,7 +78,7 @@ export function stopCommand(sessionName?: string): void {
     // Symlink doesn't exist, ignore
   }
 
-  // 4. Move session directory to archive
+  // 5. Move session directory to archive
   const repoName = meta?.repo || "_standalone";
   const dirName = path.basename(sessionDir);
   const archiveDest = path.join(ARCHIVE_DIR, repoName, dirName);
@@ -95,6 +99,31 @@ export function stopCommand(sessionName?: string): void {
   }
 
   console.log("Session stopped.");
+}
+
+// Kill all artifact viewer tmux sessions associated with a parent session.
+// Artifact sessions follow the naming convention: <parentSession>__art__<name>
+function killArtifactSessions(parentSession: string): void {
+  const prefix = `${parentSession}__art__`;
+  try {
+    const output = execSync("tmux list-sessions -F '#S'", {
+      encoding: "utf-8",
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+    const sessions = output.trim().split("\n").filter(Boolean);
+    for (const s of sessions) {
+      if (s.startsWith(prefix)) {
+        try {
+          tmux.tmux(`kill-session -t '${s}'`);
+          console.log(`  Killed artifact session: ${s}`);
+        } catch {
+          // Best effort
+        }
+      }
+    }
+  } catch {
+    // tmux not running or no sessions
+  }
 }
 
 // Kill watcher processes tracked by PID files in the session directory

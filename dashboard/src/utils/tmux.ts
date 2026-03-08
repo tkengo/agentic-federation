@@ -43,6 +43,77 @@ export function createOrAttachRepoSession(repoName: string, cwd: string): boolea
   }
 }
 
+// Shell-quote a string for safe embedding in tmux/shell commands
+function q(s: string): string {
+  return `'${s.replace(/'/g, "'\\''")}'`;
+}
+
+/**
+ * Build a deterministic tmux session name for an artifact.
+ * Format: <parentSession>__art__<sanitizedArtifactName>
+ */
+function artifactSessionName(parentSession: string, artifactName: string): string {
+  // tmux session names cannot contain '.' or ':'
+  const sanitized = artifactName.replace(/[.:]/g, "_");
+  return `${parentSession}__art__${sanitized}`;
+}
+
+/**
+ * Create or attach to a tmux session for viewing an artifact.
+ * Layout: vertical split, left = nvim <artifactPath>, right = nvim (in worktree cwd).
+ * If the session already exists, just attach to it.
+ */
+export function createOrAttachArtifactSession(
+  parentSession: string,
+  artifactPath: string,
+  artifactName: string,
+  worktreePath: string,
+): boolean {
+  const sessionName = artifactSessionName(parentSession, artifactName);
+  try {
+    let exists = false;
+    try {
+      execSync(`tmux has-session -t ${q(sessionName)}`, { stdio: "ignore" });
+      exists = true;
+    } catch {
+      // Session does not exist
+    }
+
+    if (!exists) {
+      const artifactDir = artifactPath.substring(0, artifactPath.lastIndexOf("/"));
+      // Create session with left pane in artifact directory
+      execSync(
+        `tmux new-session -d -s ${q(sessionName)} -c ${q(artifactDir)} -x 200 -y 50`,
+        { stdio: "ignore" },
+      );
+      // Open nvim with the artifact in the first pane
+      execSync(
+        `tmux send-keys -t ${q(sessionName)} ${q(`nvim ${q(artifactPath)}`)} Enter`,
+        { stdio: "ignore" },
+      );
+      // Split horizontally (side-by-side), right pane in worktree dir
+      execSync(
+        `tmux split-window -h -t ${q(sessionName)} -c ${q(worktreePath)} -p 50`,
+        { stdio: "ignore" },
+      );
+      // Open nvim in the right pane
+      execSync(
+        `tmux send-keys -t ${q(sessionName)} nvim Enter`,
+        { stdio: "ignore" },
+      );
+      // Select left pane (pane 0) so user starts on the artifact
+      execSync(
+        `tmux select-pane -t ${q(`${sessionName}:.0`)}`,
+        { stdio: "ignore" },
+      );
+    }
+
+    return switchToTmuxSession(sessionName);
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Switch to (or attach to) a tmux session.
  * Inside tmux: uses display-popup so detaching returns to the caller.
