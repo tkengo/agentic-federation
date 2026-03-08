@@ -63,9 +63,9 @@ export function RepoDetail({
       const stat = fs.statSync(configPath);
       const kb = stat.size / 1024;
       const sizeKB = kb < 0.1 ? "0.1KB" : kb < 10 ? `${kb.toFixed(1)}KB` : `${Math.round(kb)}KB`;
-      return [{ name: `${repo.name}.json`, sizeKB }];
+      return [{ name: `${repo.name}.json`, sizeKB, tmuxAlive: false }];
     } catch {
-      return [{ name: `${repo.name}.json`, sizeKB: "0KB" }];
+      return [{ name: `${repo.name}.json`, sizeKB: "0KB", tmuxAlive: false }];
     }
   }, [configPath, repo.name]);
 

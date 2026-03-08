@@ -52,7 +52,7 @@ function q(s: string): string {
  * Build a deterministic tmux session name for an artifact.
  * Format: <parentSession>__art__<sanitizedArtifactName>
  */
-function artifactSessionName(parentSession: string, artifactName: string): string {
+export function artifactSessionName(parentSession: string, artifactName: string): string {
   // tmux session names cannot contain '.' or ':'
   const sanitized = artifactName.replace(/[.:]/g, "_");
   return `${parentSession}__art__${sanitized}`;

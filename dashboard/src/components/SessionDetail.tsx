@@ -14,7 +14,7 @@ import { usePreviewContent } from "../hooks/usePreviewContent.js";
 import { useKeyboard } from "../hooks/useKeyboard.js";
 import { useBlink } from "../hooks/useBlink.js";
 import { useFooter } from "../contexts/FooterContext.js";
-import { switchToTmuxSession, createOrAttachArtifactSession } from "../utils/tmux.js";
+import { switchToTmuxSession, createOrAttachArtifactSession, listTmuxSessions } from "../utils/tmux.js";
 import { shortenHome, formatAge } from "../utils/format.js";
 import { STALE_THRESHOLD_SEC } from "../utils/types.js";
 import type { SessionData } from "../utils/types.js";
@@ -74,7 +74,9 @@ export function SessionDetail({
   const [previewScroll, setPreviewScroll] = useState(0);
 
   // Data for session
-  const artifacts = useArtifacts(session.sessionDir);
+  const [tmuxSessions, setTmuxSessions] = useState(() => listTmuxSessions());
+  const refreshTmuxSessions = useCallback(() => setTmuxSessions(listTmuxSessions()), []);
+  const artifacts = useArtifacts(session.sessionDir, tmuxSessions, session.meta.tmux_session);
   const scripts = useScripts(session.sessionDir);
   const panes = usePanes(session.sessionDir);
   const totalDetailItems = artifacts.length + scripts.length + panes.length + SESSION_ACTIONS.length;
@@ -287,7 +289,10 @@ export function SessionDetail({
             artifactName,
             worktree,
           );
-          if (!ok) {
+          if (ok) {
+            // Refresh tmux session list after returning from artifact viewer
+            refreshTmuxSessions();
+          } else {
             showMessage(`Failed to open ${artifactName}`);
           }
         } else if (detailIndex < artifacts.length + scripts.length) {

@@ -139,7 +139,7 @@ export function usePanes(sessionDir: string): PaneEntry[] {
 
 type VirtualRow =
   | { type: "header"; label: string }
-  | { type: "artifact"; itemIndex: number; name: string; sizeKB: string }
+  | { type: "artifact"; itemIndex: number; name: string; sizeKB: string; tmuxAlive: boolean }
   | { type: "script"; itemIndex: number; name: string; description?: string }
   | { type: "pane"; itemIndex: number; displayName: string; description: string }
   | { type: "action"; itemIndex: number; id: string; label: string; icon: string; color?: string }
@@ -325,7 +325,7 @@ function BrowseView({
   if (artifacts.length > 0) {
     rows.push({ type: "header", label: "Artifacts" });
     artifacts.forEach((a, i) => rows.push({
-      type: "artifact", itemIndex: i, name: a.name, sizeKB: a.sizeKB,
+      type: "artifact", itemIndex: i, name: a.name, sizeKB: a.sizeKB, tmuxAlive: a.tmuxAlive,
     }));
   }
   if (artifacts.length > 0 && scripts.length > 0) {
@@ -404,15 +404,21 @@ function BrowseView({
     if (row.type === "artifact") {
       const selected = row.itemIndex === selectedIndex;
       const cursor = selected ? "> " : "  ";
-      // cursor(2) + icon(2) + space(1) + name ... space(1) + sizeKB
-      const nameMax = contentWidth - 2 - 3 - 1 - row.sizeKB.length;
+      // cursor(2) + alive(2) + icon(2) + space(1) + name ... space(1) + sizeKB
+      const nameMax = contentWidth - 2 - 2 - 3 - 1 - row.sizeKB.length;
       const displayName = row.name.length > nameMax
         ? row.name.slice(0, nameMax - 1) + "\u2026"
         : row.name;
       return (
         <>
           <Text color={selected ? "cyan" : undefined} bold={selected}>
-            {cursor}{ICON_ARTIFACT} {displayName}
+            {cursor}
+          </Text>
+          <Text color={row.tmuxAlive ? "green" : undefined}>
+            {row.tmuxAlive ? "● " : "  "}
+          </Text>
+          <Text color={selected ? "cyan" : undefined} bold={selected}>
+            {ICON_ARTIFACT} {displayName}
           </Text>
           <Box flexGrow={1} />
           <Text color={selected ? "cyan" : undefined} bold={selected}>
@@ -428,8 +434,8 @@ function BrowseView({
       const displayName = row.name.length > maxScriptNameLen
         ? row.name.slice(0, maxScriptNameLen - 1) + "\u2026"
         : row.name.padEnd(maxScriptNameLen);
-      // cursor(2) + icon(2) + space(1) + scriptName + space(1)
-      const descSpace = contentWidth - 2 - 3 - maxScriptNameLen - 1;
+      // cursor(2) + pad(2) + icon(2) + space(1) + scriptName + space(1)
+      const descSpace = contentWidth - 2 - 2 - 3 - maxScriptNameLen - 1;
       const desc = row.description
         ? (row.description.length > descSpace
           ? row.description.slice(0, descSpace - 1) + "\u2026"
@@ -438,7 +444,7 @@ function BrowseView({
       return (
         <>
           <Text color={selected ? "cyan" : undefined} bold={selected}>
-            {cursor}{ICON_SCRIPT} {displayName}
+            {cursor}{"  "}{ICON_SCRIPT} {displayName}
           </Text>
           {desc && <Text dimColor> {desc}</Text>}
         </>
@@ -451,8 +457,8 @@ function BrowseView({
       const displayName = row.displayName.length > maxPaneNameLen
         ? row.displayName.slice(0, maxPaneNameLen - 1) + "\u2026"
         : row.displayName.padEnd(maxPaneNameLen);
-      // cursor(2) + icon(2+VS16) + space(1) + name + space(1)
-      const descSpace = contentWidth - 2 - 3 - maxPaneNameLen - 1;
+      // cursor(2) + pad(2) + icon(2+VS16) + space(1) + name + space(1)
+      const descSpace = contentWidth - 2 - 2 - 3 - maxPaneNameLen - 1;
       const desc = row.description
         ? (row.description.length > descSpace
           ? row.description.slice(0, descSpace - 1) + "\u2026"
@@ -461,7 +467,7 @@ function BrowseView({
       return (
         <>
           <Text color={selected ? "cyan" : undefined} bold={selected}>
-            {cursor}{ICON_PANE} {displayName}
+            {cursor}{"  "}{ICON_PANE} {displayName}
           </Text>
           {desc && <Text dimColor> {desc}</Text>}
         </>
@@ -474,7 +480,7 @@ function BrowseView({
       const color = selected ? "cyan" : undefined;
       return (
         <Text color={color} bold={selected}>
-          {cursor}{row.icon} {row.label}
+          {cursor}{"  "}{row.icon} {row.label}
         </Text>
       );
     }

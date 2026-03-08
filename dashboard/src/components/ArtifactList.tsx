@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { Box, Text } from "ink";
 import fs from "node:fs";
 import path from "node:path";
+import { artifactSessionName } from "../utils/tmux.js";
 
 interface ArtifactListProps {
   sessionDir: string;
@@ -17,6 +18,7 @@ interface ArtifactListProps {
 export interface ArtifactEntry {
   name: string;
   sizeKB: string;
+  tmuxAlive: boolean;
 }
 
 function formatKB(bytes: number): string {
@@ -26,7 +28,11 @@ function formatKB(bytes: number): string {
   return `${Math.round(kb)}KB`;
 }
 
-export function useArtifacts(sessionDir: string): ArtifactEntry[] {
+export function useArtifacts(
+  sessionDir: string,
+  tmuxSessions?: Set<string>,
+  parentTmuxSession?: string,
+): ArtifactEntry[] {
   return useMemo(() => {
     const dir = path.join(sessionDir, "artifacts");
     try {
@@ -43,12 +49,15 @@ export function useArtifacts(sessionDir: string): ArtifactEntry[] {
         .sort()
         .map((f) => {
           const stat = fs.statSync(path.join(dir, f));
-          return { name: f, sizeKB: formatKB(stat.size) };
+          const alive = tmuxSessions != null && parentTmuxSession != null
+            ? tmuxSessions.has(artifactSessionName(parentTmuxSession, f))
+            : false;
+          return { name: f, sizeKB: formatKB(stat.size), tmuxAlive: alive };
         });
     } catch {
       return [];
     }
-  }, [sessionDir]);
+  }, [sessionDir, tmuxSessions, parentTmuxSession]);
 }
 
 const DESC_EXPANDED_MAX_LINES = 3;
