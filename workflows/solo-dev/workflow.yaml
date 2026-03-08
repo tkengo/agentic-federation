@@ -1,17 +1,34 @@
 name: solo-dev
 description: "ソロ開発用"
 
+focus: solo-dev
+
 windows:
-  - name: solo-dev
+  - name: review
     panes:
       - id: terminal
         name: Terminal
         pane: 1
-        command: 'yoloclaude --agent solo-dev-developer-agent'
+        command: null
       - id: editor
         name: Editor
         pane: 2
         command: nvim
+    layout:
+      splits:
+        - { source: 1, direction: h, percent: 50 }
+      focus: 1
+
+  - name: solo-dev
+    panes:
+      - id: developer
+        name: Developer
+        pane: 1
+        command: 'yoloclaude --agent solo-dev-developer-agent'
+      - id: human
+        name: Human
+        pane: 2
+        command: "cd {{meta.session_dir}} && nvim"
     layout:
       splits:
         - { source: 1, direction: h, percent: 50 }
