@@ -19,6 +19,7 @@ export function useSessionWatcher(refresh: () => void) {
     const watcher = watch([ACTIVE_DIR, SESSIONS_DIR], {
       ignoreInitial: true,
       depth: 3,
+      followSymlinks: false,
       awaitWriteFinish: { stabilityThreshold: 200, pollInterval: 100 },
     });
 

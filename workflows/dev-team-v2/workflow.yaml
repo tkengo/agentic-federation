@@ -1,6 +1,8 @@
 name: dev-team
 description: "開発チームパイプライン: 計画策定 → 計画レビュー → 実装 → コードレビュー"
 
+focus: planner
+
 windows:
   - name: dev
     panes:

@@ -194,6 +194,10 @@ function startStandalone(
     createWindowLayout(tmuxSession, win, cwd);
   }
 
+  // Focus the specified window (defaults to first window)
+  const focusWindow = workflow.focus || workflow.windows[0]!.name;
+  tmux.selectWindow(`${tmuxSession}:${focusWindow}`);
+
   // Customize tmux status bar
   tmux.setOption(tmuxSession, "status-style", "bg=colour24,fg=white");
   tmux.setOption(tmuxSession, "status-right", ` ⚡fed ▸ ${workflowName}:${tmuxSession} `);
@@ -284,6 +288,10 @@ function startWithRepo(
     }
     createWindowLayout(tmuxSession, win, worktreePath);
   }
+
+  // Focus the specified window (defaults to first window)
+  const focusWindow = workflow.focus || workflow.windows[0]!.name;
+  tmux.selectWindow(`${tmuxSession}:${focusWindow}`);
 
   // Customize tmux status bar for fed session
   tmux.setOption(tmuxSession, "status-style", "bg=colour24,fg=white");

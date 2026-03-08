@@ -8,6 +8,7 @@ import { WORKFLOWS_DIR } from "./paths.js";
 export interface WorkflowDefinition {
   name: string;
   description: string;
+  focus?: string;
   windows: WorkflowWindow[];
   states: Record<string, WorkflowState>;
 }
@@ -172,6 +173,14 @@ export function validateWorkflow(wf: WorkflowDefinition): string[] {
       }
       seenIds.add(pane.id);
       paneIds.add(pane.id);
+    }
+  }
+
+  // Validate top-level focus references an existing window
+  if (wf.focus) {
+    const windowNames = new Set(wf.windows.map((w) => w.name));
+    if (!windowNames.has(wf.focus)) {
+      errors.push(`Top-level focus "${wf.focus}" does not match any window name`);
     }
   }
 
