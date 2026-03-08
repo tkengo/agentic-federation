@@ -101,9 +101,11 @@ export function createOrAttachArtifactSession(
         `tmux send-keys -t ${q(sessionName)} nvim Enter`,
         { stdio: "ignore" },
       );
-      // Select left pane (pane 0) so user starts on the artifact
+      // Select left pane so user starts on the artifact
+      // Use -L (left of active pane) instead of hardcoded pane index
+      // to work regardless of pane-base-index setting
       execSync(
-        `tmux select-pane -t ${q(`${sessionName}:.0`)}`,
+        `tmux select-pane -t ${q(sessionName)} -L`,
         { stdio: "ignore" },
       );
     }
