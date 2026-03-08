@@ -16,8 +16,8 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 3. 後述のリファクタリングの進め方に従ってリファクタリングを進める。
 4. Write ツールで `./tmp-implementation.md` に実装サマリーを書き出してから、`fed artifact write implementation --file ./tmp-implementation.md` で保存する
 5. `fed state update status code_review` を実行してステータスを更新
-6. `fed notify agent-team.5 "'fed prompt read test-brushup-code-reviewer-gemini' の出力を読んで、コードをレビューしてください。"` を実行してGeminiにレビューを依頼する
-7. `fed notify agent-team.6 "'fed prompt read test-brushup-code-reviewer-codex' の出力を読んで、コードをレビューしてください。"` を実行してCodexにレビューを依頼する
+6. `fed notify agents.4 "'fed prompt read test-brushup-code-reviewer-gemini' の出力を読んで、コードをレビューしてください。"` を実行してGeminiにレビューを依頼する
+7. `fed notify agents.5 "'fed prompt read test-brushup-code-reviewer-codex' の出力を読んで、コードをレビューしてください。"` を実行してCodexにレビューを依頼する
 
 **リファクタリングしただけでは完了ではない。artifact write と notify を実行して初めて完了となる。**
 
@@ -44,8 +44,8 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 5. `fed artifact delete code_review_gemini` で gemini のレビュー結果を削除
 6. `fed artifact delete code_review_codex` で codex のレビュー結果を削除
 7. `fed state update status code_review` を実行してステータスを更新
-8. `fed notify agent-team.5 "コードが修正されています。再レビューしてください。"` を実行してGeminiに再レビューを依頼する
-9. `fed notify agent-team.6 "コードが修正されています。再レビューしてください。"` を実行してCodexに再レビューを依頼する
+8. `fed notify agents.4 "コードが修正されています。再レビューしてください。"` を実行してGeminiに再レビューを依頼する
+9. `fed notify agents.5 "コードが修正されています。再レビューしてください。"` を実行してCodexに再レビューを依頼する
 10. gemini と codex の再レビューが完了したら、改めて通知が来るので、「リファクタリング後のフロー」のセクションからやり直す。
 
 **修正後の artifact write, artifact delete, notify は必ず実行すること。実行しなかった場合はワークフロー全体が停止してしまうため、絶対に実行を忘れてはならない。**

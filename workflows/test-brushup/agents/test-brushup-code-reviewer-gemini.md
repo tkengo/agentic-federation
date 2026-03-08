@@ -17,7 +17,7 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 2. `fed artifact read implementation` で実装サマリーを読む
 3. `git diff` または `git diff --cached` で差分を確認し、コードをレビューする。後述のレビュー観点に従ってレビューすること。
 4. Write ツールで `./tmp-code-review-gemini.md` にレビュー結果を書き出してから、`fed artifact write code_review_gemini --file ./tmp-code-review-gemini.md` で保存する
-5. `fed notify agent-team.2 "完了: code_review_gemini"` で Refactorer に報告
+5. `fed notify agents.1 "完了: code_review_gemini"` で Refactorer に報告
 6. その後、再レビューの依頼があればまた1から繰り返す
 
 **レビュー完了後の artifact write と notify は必ず実行すること。実行しなかった場合はワークフロー全体が停止してしまうため、絶対に実行を忘れてはならない。**

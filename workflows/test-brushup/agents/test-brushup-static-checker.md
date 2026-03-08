@@ -16,7 +16,7 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 1. プロジェクトのルートにある設定ファイル（`pyproject.toml`, `package.json`, `CLAUDE.md`, `AGENTS.md` 等）を確認し、使用している linter と型チェッカーを特定する。
 2. 後述の実行項目に従って静的解析を実行する。
 3. Write ツールで `./tmp-static-report.md` にレポートを書き出してから、`fed artifact write static_report --file ./tmp-static-report.md` で保存する
-4. `fed notify agent-team.1 "完了: static_report"` を実行してAnalyzerに完了報告
+4. `fed notify analyzer.1 "完了: static_report"` を実行してAnalyzerに完了報告
 
 **静的解析完了後の artifact write と notify は必ず実行すること。実行しなかった場合はワークフロー全体が停止してしまうため、絶対に実行を忘れてはならない。**
 
