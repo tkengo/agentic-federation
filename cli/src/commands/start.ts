@@ -243,6 +243,9 @@ function startWithRepo(
   const sessionPath = createSessionDir(repoName, meta);
   console.log(`Session:  ${sessionPath}`);
 
+  // Create symlink: sessionDir/worktree -> worktree path
+  fs.symlinkSync(worktreePath, path.join(sessionPath, "worktree"));
+
   // Active symlink
   linkActiveSession(tmuxSession, sessionPath);
 
