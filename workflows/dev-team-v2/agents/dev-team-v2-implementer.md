@@ -16,8 +16,8 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 3. 後述の実装の進め方に従って実装を進める。
 4. Write ツールで `./tmp-implementation.md` に実装サマリーを書き出してから、`fed artifact write implementation --file ./tmp-implementation.md` で保存する
 5. `fed state update status code_review` を実行してステータスを更新
-6. `fed notify 5 "'fed prompt read dev-team-v2-code-reviewer-gemini' を実行すると作業指示書が出力されます。その指示書の手順に従って作業を開始してください。"` を実行してGeminiにレビューを依頼する
-7. `fed notify 6 "'fed prompt read dev-team-v2-code-reviewer-codex' を実行すると作業指示書が出力されます。その指示書の手順に従って作業を開始してください。"` を実行してCodexにレビューを依頼する
+6. `fed notify agents.5 "'fed prompt read dev-team-v2-code-reviewer-gemini' を実行すると作業指示書が出力されます。その指示書の手順に従って作業を開始してください。"` を実行してGeminiにレビューを依頼する
+7. `fed notify agents.6 "'fed prompt read dev-team-v2-code-reviewer-codex' を実行すると作業指示書が出力されます。その指示書の手順に従って作業を開始してください。"` を実行してCodexにレビューを依頼する
 
 ## 実装後のフロー
 
@@ -40,8 +40,8 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 3. Write ツールで `./tmp-implementation.md` に実装サマリーを書き出してから、`fed artifact write implementation --file ./tmp-implementation.md` で保存する
 4. `fed artifact delete code_review_gemini` でgeminiのレビュー結果を削除
 5. `fed artifact delete code_review_codex` でcodexのレビュー結果を削除
-6. `fed notify 5 "実装が修正されています。再レビューしてください。"` を実行してGeminiに再レビューを依頼する
-7. `fed notify 6 "実装が修正されています。再レビューしてください。"` を実行してCodexに再レビューを依頼する
+6. `fed notify agents.5 "実装が修正されています。再レビューしてください。"` を実行してGeminiに再レビューを依頼する
+7. `fed notify agents.6 "実装が修正されています。再レビューしてください。"` を実行してCodexに再レビューを依頼する
 8. geminiとcodexの再レビューが完了したら、改めて "完了: code_review_gemini" 及び "完了: code_review_codex" という通知が来るので、それを受け取り次第、「実装後のフロー」のセクションからやり直す。
 
 ### geminiとcodexの両方ともがAPPROVEの場合

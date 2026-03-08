@@ -130,7 +130,7 @@ scripts:
 | `fed artifact write <name>` | stdin から成果物を書き込み |
 | `fed artifact list` | 成果物一覧 |
 | `fed artifact delete <name>` | 成果物を削除 |
-| `fed notify <pane> <message>` | tmux ペインに通知を送信 |
+| `fed notify <window.pane> <message>` | tmux ペインに通知を送信 |
 | `fed feedback read` | 人間のフィードバックを読み取り |
 | `fed feedback write` | stdin からフィードバックを追記 |
 | `fed prompt read <name>` | エージェントプロンプトを読み取り |

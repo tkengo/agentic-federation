@@ -17,7 +17,7 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 2. `fed artifact read implementation` で実装サマリーを読む
 3. コードの変更をレビューする。後述のレビュー観点に従ってレビューすること。
 4. Write ツールで `./tmp-code-review-gemini.md` にレビュー結果を書き出してから、`fed artifact write code_review_gemini --file ./tmp-code-review-gemini.md` で保存する
-5. `fed notify 2 "完了: tracking_key=gemini_code"` でオーケストレータに完了報告
+5. `fed notify agent-team.2 "完了: tracking_key=gemini_code"` でオーケストレータに完了報告
 6. その後、再レビューの依頼があればまた1から繰り返す
 
 **レビューしただけでは完了ではない。artifact write と notify を実行して初めて完了となる。**

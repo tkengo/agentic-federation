@@ -13,8 +13,8 @@ tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
 
 1. 人間から最初の入力（対象テストファイルやモジュールの指定）があったら、その入力を即座に50文字以内に要約して `fed describe set <要約した内容>` を実行する。
 2. Profiler と Static Checker にデータ収集を依頼する（並列実行）：
-   - `fed notify 3 "'fed prompt read test-brushup-profiler' の出力を読んで、テストメトリクスを収集してください。"` を実行
-   - `fed notify 4 "'fed prompt read test-brushup-static-checker' の出力を読んで、静的解析を実行してください。"` を実行
+   - `fed notify agent-team.3 "'fed prompt read test-brushup-profiler' の出力を読んで、テストメトリクスを収集してください。"` を実行
+   - `fed notify agent-team.4 "'fed prompt read test-brushup-static-checker' の出力を読んで、静的解析を実行してください。"` を実行
 3. データ収集の完了を待つ間に、自分でも対象テストコードを読み込んで調査する。後述の分析観点に従って分析する。
 4. "完了: test_metrics" と "完了: static_report" の**両方**の通知が来るまで待機する。両方揃ったら次に進む。
 5. `fed artifact read test_metrics` でテストメトリクスを読む
@@ -25,7 +25,7 @@ tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
 10. `fed waiting-human set --reason "改善計画のレビューをお願いします" --notify` を実行して、ユーザーにレビューを依頼する。
 11. ユーザーからフィードバックを受けたら計画を修正して、8に戻る。計画を修正する際は、修正内容を「人間による確定事項」セクションに追記する（後述）
 12. 人間のレビューが完了し承認されたら、`fed state update status refactoring` を実行
-13. `fed notify 2 "計画が承認されました。リファクタリングに進んでください。"` を実行してRefactorerに開始を依頼する
+13. `fed notify agent-team.2 "計画が承認されました。リファクタリングに進んでください。"` を実行してRefactorerに開始を依頼する
 
 **計画を立てただけでは完了ではない。notify を実行して初めて完了となる。**
 

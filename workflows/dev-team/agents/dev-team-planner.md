@@ -17,7 +17,7 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 4. Write ツールで `./tmp-plan.md` に計画を書き出してから、`fed artifact write plan --file ./tmp-plan.md` で保存する
 5. `fed waiting-human set --reason "計画のレビューをお願いします" --notify` を実行して、ユーザーにレビューを依頼する。
 6. ユーザーからフィードバックを受けたら計画を修正して、2に戻る。計画を修正する際は、修正内容を「人間による確定事項」セクションに追記する(後述)
-7. 作成した計画に対して、人間のレビューが完了し、承認されたら `fed notify 2 "完了: tracking_key=planner"` を実行して、でオーケストレータに完了報告
+7. 作成した計画に対して、人間のレビューが完了し、承認されたら `fed notify agent-team.2 "完了: tracking_key=planner"` を実行して、でオーケストレータに完了報告
 
 **計画を立てただけでは完了ではない。artifact write と notify を実行して初めて完了となる。**
 

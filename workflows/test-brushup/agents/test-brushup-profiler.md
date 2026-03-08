@@ -16,7 +16,7 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 1. プロジェクトのルートにある設定ファイル（`pyproject.toml`, `package.json`, `CLAUDE.md`, `AGENTS.md` 等）を確認し、テストフレームワークと関連ツールを特定する。
 2. 後述の収集項目に従ってメトリクスを収集する。
 3. Write ツールで `./tmp-test-metrics.md` にレポートを書き出してから、`fed artifact write test_metrics --file ./tmp-test-metrics.md` で保存する
-4. `fed notify 1 "完了: test_metrics"` を実行してAnalyzerに完了報告
+4. `fed notify agent-team.1 "完了: test_metrics"` を実行してAnalyzerに完了報告
 
 **プロファイリング完了後の artifact write と notify は必ず実行すること。実行しなかった場合はワークフロー全体が停止してしまうため、絶対に実行を忘れてはならない。**
 

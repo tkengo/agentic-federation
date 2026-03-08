@@ -14,14 +14,14 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 1. `fed artifact read plan` で実装計画を読む
 2. 後述の実装の進め方に従って実装を進める。
 3. Write ツールで `./tmp-implementation.md` に実装サマリーを書き出してから、`fed artifact write implementation --file ./tmp-implementation.md` で保存する
-4. `fed notify 2 "完了: tracking_key=implementer"` でオーケストレータに完了報告
+4. `fed notify agent-team.2 "完了: tracking_key=implementer"` でオーケストレータに完了報告
 5. AIコードレビューのステップへ移るので、コードレビューが終わるまで待機する。
 6. AIからのコードレビューがあった場合は以下のステップへ進む。
 7. `fed artifact read code_review_gemini` でレビュー結果を読む
 8. `fed artifact read code_review_codex` でレビュー結果を読む
 9. 後述の実装の進め方に従って実装を進める。
 10. Write ツールで `./tmp-implementation.md` に更新済み実装サマリーを書き出してから、`fed artifact write implementation --file ./tmp-implementation.md` で保存する
-11. `fed notify 2 "完了: tracking_key=implementer"` でオーケストレータに完了報告
+11. `fed notify agent-team.2 "完了: tracking_key=implementer"` でオーケストレータに完了報告
 
 **実装しただけでは完了ではない。artifact write と notify を実行して初めて完了となる。必ず毎回artifact write と notify を実行すること。**
 また、完了報告は人間の許可不要で即座に実行すること。そして、完了報告は毎回必ず送信すること（再実行時も含む）

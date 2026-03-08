@@ -10,10 +10,12 @@ export function notifyCommand(pane: string, message: string): void {
     process.exit(1);
   }
 
-  // Resolve full pane target: <tmux_session>:agent-team.<pane>
+  // Resolve full pane target: <tmux_session>:<window>.<pane>
+  // Callers must specify window.pane format (e.g., "agent-team.3", "planner.1").
+  // Full target with ":" (e.g., "session:window.pane") is also accepted.
   const target = pane.includes(":")
     ? pane
-    : `${meta.tmux_session}:agent-team.${pane}`;
+    : `${meta.tmux_session}:${pane}`;
 
   // Write notification file
   const notifyDir = path.join(sessionDir, "notifications");

@@ -42,7 +42,7 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 | 人間待ちの設定 | `fed waiting-human set --reason "<理由>" [--notify]` |
 | 人間待ちの解除 | `fed waiting-human clear` |
 | 人間待ちの確認 | `fed waiting-human show` |
-| ペインへの通知 | `fed notify <pane番号> "<メッセージ>"` |
+| ペインへの通知 | `fed notify <window.pane> "<メッセージ>"` |
 | ワークフロー表示 | `fed workflow show <name>` |
 
 ## 通知の送信方法
@@ -50,7 +50,7 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 **【絶対厳守】** 他のエージェントに指示を送るには `fed notify` を使う：
 
 ```bash
-fed notify <pane番号> "<メッセージ>"
+fed notify <window.pane> "<メッセージ>"
 ```
 
 ## ワークフロー YAML の読み方
@@ -72,7 +72,7 @@ fed notify <pane番号> "<メッセージ>"
 |------|------|
 | `id` | ペインの識別子（タスク定義の `pane` で参照される） |
 | `name` | ペインの表示名 |
-| `pane` | tmux ペイン番号（`fed notify` の宛先） |
+| `pane` | tmux ペイン番号（`fed notify` では `<window>.<pane>` 形式で指定） |
 | `command` | ペインで起動されるコマンド |
 
 ### `states` の各ステート
@@ -109,7 +109,7 @@ fed notify <pane番号> "<メッセージ>"
 
 送信コマンド:
 ```bash
-fed notify <pane番号> '<メッセージ>'
+fed notify <window.pane> '<メッセージ>'
 ```
 
 ## state.json の形式

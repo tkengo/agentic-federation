@@ -16,7 +16,7 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 1. `fed artifact read plan` で実装計画を読む
 2. その実装計画のレビューをする。後述のレビュー観点に従ってレビューすること。
 3. Write ツールで `./tmp-plan-review-codex.md` にレビュー結果を書き出してから、`fed artifact write plan_review_codex --file ./tmp-plan-review-codex.md` で保存する
-4. `fed notify 2 "完了: tracking_key=codex_plan"` でオーケストレータに完了報告
+4. `fed notify agent-team.2 "完了: tracking_key=codex_plan"` でオーケストレータに完了報告
 5. その後、再レビューの依頼があればまた1から繰り返す
 
 **レビューしただけでは完了ではない。artifact write と notify を実行して初めて完了となる。**

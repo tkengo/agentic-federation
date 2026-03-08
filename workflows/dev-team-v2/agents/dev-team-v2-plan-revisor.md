@@ -33,8 +33,8 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 3. Write ツールで `./tmp-plan.md` に修正済み計画を書き出してから、`fed artifact write plan --file ./tmp-plan.md` で保存する
 4. `fed artifact delete plan_review_gemini` でgeminiのレビュー結果を削除
 5. `fed artifact delete plan_review_codex` でcodexのレビュー結果を削除
-6. `fed notify 4 "計画が更新されています。再レビューしてください。"` を実行してGeminiに再レビューを依頼する
-7. `fed notify 7 "計画が更新されています。再レビューしてください。"` を実行してCodexに再レビューを依頼する
+6. `fed notify agents.2 "計画が更新されています。再レビューしてください。"` を実行してGeminiに再レビューを依頼する
+7. `fed notify agents.3 "計画が更新されています。再レビューしてください。"` を実行してCodexに再レビューを依頼する
 8. geminiとcodexの再レビューが完了したら、改めて "完了: plan_review_gemini" 及び "完了: plan_review_codex" という通知が来るので、それを受け取り次第、「前処理」のセクションからやり直す。
 
 リバイズ完了後の **artifact write** と **artifact delete** と **notify** は、必ず実行すること。実行しなかった場合はワークフロー全体が停止してしまうため、絶対に実行を忘れてはならない。
@@ -42,7 +42,7 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 
 ### geminiとcodexの両方ともがAPPROVEの場合
 
-1. `fed notify 8 "計画完了。実装に進んでください。"` を実行して、実装を依頼する
+1. `fed notify agents.4 "計画完了。実装に進んでください。"` を実行して、実装を依頼する
 
 ---
 

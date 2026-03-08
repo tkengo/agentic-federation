@@ -17,7 +17,7 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 4. 「人間による確定事項」セクションを確認し、確定事項に矛盾するフィードバックを特定する
 5. 確定事項に矛盾しない指摘事項のみ plan に反映する
 6. Write ツールで `./tmp-plan.md` に修正済み計画を書き出してから、`fed artifact write plan --file ./tmp-plan.md` で保存する
-7. `fed notify 2 "完了: tracking_key=plan_revisor"` でオーケストレータに完了報告
+7. `fed notify agent-team.2 "完了: tracking_key=plan_revisor"` でオーケストレータに完了報告
 
 **計画をリバイズしただけでは完了ではない。artifact write と notify を実行して初めて完了となる。**
 また、完了報告は人間の許可不要で即座に実行すること。そして、完了報告は毎回必ず送信すること（再実行時も含む）

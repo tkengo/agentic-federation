@@ -58,7 +58,7 @@ user_invocable: true
 
 加えて、以下を手動で確認する：
 - ペインコマンドの `--agent <name>` に対応する `agents/<name>.md` ファイルが存在すること
-- エージェントインストラクション内の `fed notify <pane>` で参照されるペイン番号が正しいこと
+- エージェントインストラクション内の `fed notify <window.pane>` で参照されるターゲットが正しいこと
 - あるエージェントの出力artifact名が、次のエージェントの入力artifact名と一致すること
 
 ---
@@ -110,8 +110,8 @@ windows:
 | パターン | 用途 |
 |---------|------|
 | `'yoloclaude --agent <agent-name>'` | Claude Codeエージェント（agents/<agent-name>.mdから読み込み） |
-| `yologemini` | Geminiエージェント（`fed notify` で指示を送信） |
-| `yolocodex` | Codexエージェント（`fed notify` で指示を送信） |
+| `yologemini` | Geminiエージェント（`fed notify <window.pane>` で指示を送信） |
+| `yolocodex` | Codexエージェント（`fed notify <window.pane>` で指示を送信） |
 | `nvim` | エディタペイン |
 | `null` | 空ペイン（人間用ターミナル） |
 | `"{{repo.extra.dev_server}}"` | テンプレート変数（`fed start` 時に展開） |
@@ -137,7 +137,7 @@ windows:
 ### ステート
 
 statesはワークフローの進行状況を表す。各stateは description と color を持つシンプルな定義。
-エージェントが `fed state update status <next-state>` と `fed notify <pane> "message"` で自ら遷移を管理する。
+エージェントが `fed state update status <next-state>` と `fed notify <window.pane> "message"` で自ら遷移を管理する。
 
 ```yaml
 states:
@@ -234,7 +234,7 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 1. `fed artifact read plan` で現在の計画を読む
 2. 後述のレビュー観点に従ってレビューする
 3. Write ツールで `./tmp-review.md` にレビュー結果を書き出してから、`fed artifact write plan_review_gemini --file ./tmp-review.md` で保存する
-4. `fed notify 3 "完了: plan_review_gemini"` を実行して完了報告
+4. `fed notify agent-team.3 "完了: plan_review_gemini"` を実行して完了報告
 5. 再レビューの依頼があれば1から繰り返す
 ```
 
@@ -353,9 +353,9 @@ Planner --[plan]--> Reviewer --[plan_review_gemini]--> Revisor --[plan (更新)]
 
 ```bash
 # エージェント間の直接通知
-fed notify <target-pane> "計画が更新されています。再レビューしてください。"
+fed notify <window.pane> "計画が更新されています。再レビューしてください。"
 # 完了シグナル
-fed notify <target-pane> "完了: plan_review_gemini"
+fed notify <window.pane> "完了: plan_review_gemini"
 ```
 
 **複数エージェントの待ち合わせ:** 期待されるすべての通知が揃うまで待機する。これをインストラクションに明示的に記述すること：
@@ -432,6 +432,6 @@ AIによる計画レビューではこれらの項目を変更要求の対象に
 - エージェントの `.md` ファイル名はペインコマンドの `--agent <name>` と一致させる
 - 出力フォーマットのテンプレートはエージェント間の通信プロトコル。変更すると後続エージェントが壊れる
 - エージェントが最初に人間から入力を受け取った際、最初のアクションとして `fed describe set <要約>` を実行する
-- `yologemini` や `yolocodex` を使うエージェントには `fed notify` で指示を送信する（起動時に.mdファイルを読まない）
+- `yologemini` や `yolocodex` を使うエージェントには `fed notify <window.pane>` で指示を送信する（起動時に.mdファイルを読まない）
 - `yoloclaude --agent <name>` を使うエージェントは.mdファイルから自動的にインストラクションを読み込む
 - ワークフローのテストは、各エージェントのフローを1ステップずつ読み進め、すべての artifact write に対応する artifact read が後続に存在するかを検証する
