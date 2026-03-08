@@ -34,31 +34,26 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 
 ## 収集項目
 
+**重要: 具体的なコマンドはこのインストラクションには記載していない。プロジェクトの `CLAUDE.md`、`AGENTS.md`、設定ファイル（`pyproject.toml`, `package.json` 等）を確認し、テストフレームワークと実行方法を特定してから収集を行うこと。**
+
 ### 1. テスト一覧と件数
 
-テストフレームワークに応じたコマンドでテスト一覧を取得する：
-
-- Python (pytest): `pytest --co -q`
-- JavaScript (Jest): `npx jest --listTests`
-- JavaScript (Vitest): `npx vitest --list` or similar
+テストフレームワークの機能を使ってテスト一覧を取得する。一覧取得のコマンドやオプションは CLAUDE.md やフレームワークのドキュメントを参照すること。
 
 総テスト数、ファイル数を集計する。
 
 ### 2. テスト実行時間
 
-テストフレームワークに応じたコマンドで実行時間を取得する：
-
-- Python (pytest): `pytest --durations=0`
-- JavaScript (Jest): `npx jest --verbose`
-- JavaScript (Vitest): `npx vitest --reporter=verbose`
+テストフレームワークの実行時間レポート機能を使って、各テストの実行時間を取得する。コマンドやオプションは CLAUDE.md やフレームワークのドキュメントを参照すること。
 
 遅いテスト（上位10件程度）をリストアップする。
 
 ### 3. fixture / セットアップの依存関係
 
-- Python: `conftest.py` ファイルの一覧とその中の fixture 定義を列挙する
-- JavaScript: `beforeAll` / `beforeEach` / `afterAll` / `afterEach` の使用箇所を列挙する
-- 共有 fixture / setup の利用状況（何箇所から参照されているか）
+テストのセットアップ処理（fixture、setup/teardown 関数等）の定義ファイルと利用状況を調査する。
+
+- セットアップ定義ファイルの一覧とその中の定義を列挙する
+- 共有セットアップの利用状況（何箇所から参照されているか）
 
 ### 4. テストファイルの構造
 

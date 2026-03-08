@@ -63,14 +63,13 @@ tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
 
 ### 3. テストフレームワーク機能の活用
 
-- `@pytest.mark.parametrize` で統合できる類似テストはないか
-- fixture の階層化（conftest.py の適切な配置）は適切か
-- `@pytest.fixture` のスコープ（function/class/module/session）は適切か
-- `@pytest.mark.skip` / `@pytest.mark.xfail` の使い方は適切か
-- Jest/Vitest の `describe` / `it` / `beforeEach` の構造は適切か
-- テストユーティリティ（factory, builder パターン）を活用できないか
+プロジェクトの CLAUDE.md や設定ファイルからテストフレームワークを特定し、そのフレームワークのベストプラクティスに基づいて分析すること。
 
-**注意: プロジェクトの言語やテストフレームワークによって該当する観点は異なる。プロジェクトの設定ファイル（pyproject.toml, package.json 等）や CLAUDE.md / AGENTS.md を確認して、適切な観点を選択すること。**
+確認すべき一般的な観点：
+- パラメータ化テストで統合できる類似テストはないか
+- セットアップ処理の共通化・階層化は適切か
+- セットアップのスコープ（テストごと / ファイルごと / セッション全体）は適切か
+- テストユーティリティ（factory, builder パターン）を活用できないか
 
 ---
 

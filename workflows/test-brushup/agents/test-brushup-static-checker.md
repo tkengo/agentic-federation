@@ -34,28 +34,16 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 
 ## 実行項目
 
+**重要: 具体的なコマンドはこのインストラクションには記載していない。プロジェクトの `CLAUDE.md`、`AGENTS.md`、設定ファイル（`pyproject.toml`, `package.json` 等）を確認し、linter・型チェッカーとその実行方法を特定してから解析を行うこと。**
+
 ### 1. Linter
 
 プロジェクトで使用している linter を特定して実行する。テストファイルのみを対象にする。
-
-**Python の場合:**
-- `ruff check <test-directory>` または設定ファイルで指定された linter
-- `pylint <test-directory>` （使用されている場合）
-
-**JavaScript/TypeScript の場合:**
-- `npx eslint <test-directory>` または設定ファイルで指定された linter
-
 警告とエラーを件数と詳細の両方で記録する。
 
 ### 2. 型チェック
 
 プロジェクトで使用している型チェッカーを特定して実行する。
-
-**Python の場合:**
-- `mypy <test-directory>` （使用されている場合）
-
-**TypeScript の場合:**
-- `npx tsc --noEmit` （テストファイルが対象に含まれる場合）
 
 ### 3. テストコード特有のチェック
 
