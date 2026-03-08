@@ -29,7 +29,9 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 ### geminiとcodexのいずれかがREQUEST_CHANGESの場合
 
 1. `fed state update status plan_revision` を実行してステータスを更新
-2. レビューでの指摘事項を計画に反映する。ただし「人間による確定事項」に矛盾するフィードバックは反映しない。
+2. レビューでの指摘事項を計画に反映する。ただし以下の判断基準に従うこと：
+    -「人間による確定事項」に矛盾するフィードバックがある場合、それは反映しない（人間による確定事項を優先）
+    - 両者の指摘が矛盾する場合や、根本からの計画修正が必要な場合は、対応方針を考えた上で人間へエスカレーションする。
 3. Write ツールで `./tmp-plan.md` に修正済み計画を書き出してから、`fed artifact write plan --file ./tmp-plan.md` で保存する
 4. `fed artifact delete plan_review_gemini` でgeminiのレビュー結果を削除
 5. `fed artifact delete plan_review_codex` でcodexのレビュー結果を削除
