@@ -98,7 +98,7 @@ states:
     color: yellow
   completed:
     description: "全レビュー通過、人間の最終承認待ち"
-    mark: "+"
+    mark: "✓"
     color: green
   waiting_human:
     description: "エスカレーション - 人間の判断待ち"

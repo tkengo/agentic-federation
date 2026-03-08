@@ -62,7 +62,7 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 - **言語**: Python / TypeScript / JavaScript
 - **Linter**: ruff / eslint / etc.
 - **型チェッカー**: mypy / tsc / N/A
-- **対象ディレクトリ**: `tests/` etc.
+- **対象ディレクトリ**: （テストディレクトリ）
 
 ## サマリー
 | カテゴリ | エラー | 警告 |
@@ -76,7 +76,7 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 ### エラー一覧
 | ファイル | 行 | ルール | メッセージ |
 |---------|-----|-------|----------|
-| `test_file.py` | 42 | E501 | Line too long |
+| `test_file` | 42 | （ルールID） | （メッセージ） |
 
 ### 警告一覧
 | ファイル | 行 | ルール | メッセージ |
@@ -85,7 +85,7 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 ### ルール別集計
 | ルール | 件数 | 説明 |
 |-------|------|------|
-| E501 | XX | Line too long |
+| （ルールID） | XX | （説明） |
 
 ## 型チェック結果
 

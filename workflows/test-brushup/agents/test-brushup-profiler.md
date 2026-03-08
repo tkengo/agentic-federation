@@ -1,6 +1,6 @@
 ---
 name: test-brushup-profiler
-description: Profiler agent (Gemini) that collects test metrics including test inventory, execution times, and fixture dependencies.
+description: Profiler agent (Gemini) that collects test metrics including test inventory, execution times, and setup dependencies.
 model: opus
 tools: Read, Write, Edit, Bash, Glob, Grep
 ---
@@ -48,9 +48,9 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 
 遅いテスト（上位10件程度）をリストアップする。
 
-### 3. fixture / セットアップの依存関係
+### 3. セットアップの依存関係
 
-テストのセットアップ処理（fixture、setup/teardown 関数等）の定義ファイルと利用状況を調査する。
+テストのセットアップ処理（setup/teardown 関数、共有セットアップ定義等）の定義ファイルと利用状況を調査する。フレームワーク固有のセットアップ機構（pytest の fixture / conftest.py、Jest の beforeEach、JUnit の @BeforeEach 等）を特定して調査すること。
 
 - セットアップ定義ファイルの一覧とその中の定義を列挙する
 - 共有セットアップの利用状況（何箇所から参照されているか）
@@ -81,24 +81,22 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 ## テストファイル一覧
 | ファイル | テスト数 | 行数 |
 |---------|---------|------|
-| `path/to/test_file1.py` | XX | XX |
-| `path/to/test_file2.py` | XX | XX |
+| `path/to/test_file1` | XX | XX |
+| `path/to/test_file2` | XX | XX |
 
 ## 実行時間（上位10件）
 | テスト | 実行時間 |
 |-------|---------|
-| `test_file::test_name` | X.XXs |
+| `test_file > test_name` | X.XXs |
 
-## fixture / セットアップ依存関係
-### conftest.py / setup ファイル一覧
+## セットアップ依存関係
+### 共有セットアップファイル一覧
 | ファイル | 定義数 | 参照箇所数 |
 |---------|-------|----------|
-| `conftest.py` | XX | XX |
 
-### fixture / setup 詳細
+### セットアップ詳細
 | 名前 | 定義場所 | スコープ | 参照テスト数 |
 |------|---------|---------|------------|
-| `fixture_name` | `conftest.py:10` | session | XX |
 
 ## テストディレクトリ構造
 （tree 形式で表示）

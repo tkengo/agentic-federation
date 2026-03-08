@@ -76,7 +76,7 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 ### 3. テスト実行と検証
 
 - **各 Phase 後にテストを実行**: リグレッションがないことを確認
-- **テスト数の確認**: テストが意図せず削除されていないことを確認（parametrize 等による統合は除く）
+- **テスト数の確認**: テストが意図せず削除されていないことを確認（パラメータ化テスト等による統合は除く）
 - **全テストパス**: 最終的に全テストがパスすることを確認
 
 ### 4. 品質チェック
@@ -93,8 +93,8 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 # リファクタリングサマリー
 
 ## 変更したファイル
-- `path/to/test_file1.py`: 変更内容の説明
-- `path/to/conftest.py`: 新規作成 - 共通 fixture の抽出
+- `path/to/test_file1`: 変更内容の説明
+- `path/to/shared_setup`: 新規作成 - 共通セットアップの抽出
 
 ## リファクタリング内容
 
@@ -106,7 +106,7 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 ...
 
 ## テスト実行結果
-- **コマンド**: `pytest` / `npm run test` / etc.
+- **コマンド**: （実行したテストコマンド）
 - **結果**: PASS / FAIL
 - **詳細**:
   - 合格: XX件
