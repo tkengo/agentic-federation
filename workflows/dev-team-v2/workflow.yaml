@@ -79,7 +79,7 @@ windows:
         - { source: 1, direction: v, percent: 50 }
         - { source: 1, direction: h, percent: 66 }
         - { source: 2, direction: h, percent: 50 }
-        - { source: 3, direction: h, percent: 66 }
+        - { source: 4, direction: h, percent: 66 }
         - { source: 5, direction: h, percent: 50 }
       focus: 1
 
