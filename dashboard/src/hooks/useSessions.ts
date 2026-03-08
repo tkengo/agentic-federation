@@ -11,16 +11,6 @@ function readMeta(sessionDir: string): MetaJson | null {
     const meta = JSON.parse(
       fs.readFileSync(path.join(sessionDir, "meta.json"), "utf-8")
     ) as MetaJson;
-    // Backward compat: old format has mode, no workflow
-    if (!meta.workflow && meta.mode) {
-      if (meta.mode === "team") {
-        // Try to get workflow from state.json
-        const state = readState(sessionDir);
-        meta.workflow = state?.workflow ?? "dev-team";
-      } else {
-        meta.workflow = "solo";
-      }
-    }
     return meta;
   } catch {
     return null;

@@ -125,21 +125,6 @@ export function readMeta(sessionPath: string): MetaJson | null {
   const metaPath = path.join(sessionPath, "meta.json");
   try {
     const meta = JSON.parse(fs.readFileSync(metaPath, "utf-8")) as MetaJson;
-    // Backward compat: old format has mode, no workflow
-    if (!meta.workflow && meta.mode) {
-      if (meta.mode === "team") {
-        // Try to get workflow name from state.json
-        const statePath = path.join(sessionPath, "state.json");
-        try {
-          const state = JSON.parse(fs.readFileSync(statePath, "utf-8")) as { workflow?: string };
-          meta.workflow = state.workflow ?? "dev-team";
-        } catch {
-          meta.workflow = "dev-team";
-        }
-      } else {
-        meta.workflow = "solo";
-      }
-    }
     return meta;
   } catch {
     return null;
