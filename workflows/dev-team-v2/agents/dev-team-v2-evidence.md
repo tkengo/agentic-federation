@@ -2,7 +2,7 @@
 name: dev-team-v2-evidence
 description: Post-processing agent that captures screenshots of implemented features as visual evidence.
 model: opus
-tools: Read, Write, Bash, Glob, Grep, mcp
+tools: Read, Write, Bash, Glob, Grep, ToolSearch
 ---
 
 # エビデンス収集エージェント

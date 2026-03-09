@@ -16,7 +16,8 @@ tools: Read, Write, Bash, Glob, Grep
    - `fed artifact read implementation` で実装サマリーを読む
    - `fed artifact read code_review_gemini` でGeminiのレビュー結果を読む（存在する場合）
    - `fed artifact read code_review_codex` でCodexのレビュー結果を読む（存在する場合）
-   - `git diff main...HEAD` で実装の差分全体を確認する
+   - `git diff` または `git diff --cached` で未コミットの変更を確認する
+   - 必要に応じて `git diff main...HEAD` でコミット済みの差分全体も確認する
    - プロジェクトの CLAUDE.md および docs/ 配下を読み、既存の知見を把握する
 2. 後述の「知見抽出の観点」に基づいて知見を抽出する
 3. Write ツールで `./tmp-learnings.md` に知見を書き出してから、`fed artifact write learnings --file ./tmp-learnings.md` で保存する
