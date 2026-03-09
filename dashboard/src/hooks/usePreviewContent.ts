@@ -14,6 +14,10 @@ export interface PreviewData {
 
 const MAX_PREVIEW_LINES = 200;
 
+const IMAGE_EXTENSIONS = new Set([
+  ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp", ".svg", ".ico", ".tiff", ".tif",
+]);
+
 /**
  * Return preview content for the currently selected detail item.
  * - Artifact: reads file from <sessionDir>/artifacts/<name>
@@ -61,6 +65,12 @@ export function usePreviewContent(
       if (!artifact) {
         setFileLines([]);
         setFileTitle("");
+        return;
+      }
+      const ext = path.extname(artifact.name).toLowerCase();
+      if (IMAGE_EXTENSIONS.has(ext)) {
+        setFileLines(["", "🖼  Image file — preview not available"]);
+        setFileTitle(artifact.name);
         return;
       }
       const filePath = path.join(sessionDir, "artifacts", artifact.name);
