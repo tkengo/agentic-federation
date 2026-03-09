@@ -1,5 +1,5 @@
 ---
-name: dev-team-v2-evidence
+name: dev-team-v2-frontend-evidence
 description: Post-processing agent that captures screenshots of implemented features as visual evidence.
 model: opus
 ---
@@ -47,18 +47,21 @@ model: opus
 
 1. プロジェクトの `package.json`、`Makefile`、`docker-compose.yml` 等を確認し、dev server の起動コマンドを特定する
 2. バックグラウンドで dev server を起動する（例: `npm run dev &`）
-3. サーバーが起動するまで待機する（ポートへの curl でヘルスチェック）
-4. 作業完了後、起動した dev server プロセスを `kill` で終了する
+3. **起動ログからポート番号を読み取る**（ポートは固定とは限らない。5173, 5174 等、空きポートが使われる）
+4. 読み取ったポート番号を以降のアクセスに使用する
+5. 作業完了後、起動した dev server プロセスを `kill` で終了する
 
 ---
 
 ## スクリーンショットの撮影と保存
 
-1. Chrome DevTools MCP を使ってページにアクセスする
-2. 必要に応じてページ操作（ナビゲーション、フォーム入力等）を行う
-3. スクリーンショットをワーキングディレクトリに保存する: `./tmp-evidence-{N}.png`
-4. `fed artifact write evidence_{N}.png --file ./tmp-evidence-{N}.png` でアーティファクトに保存する（ソースファイルは自動削除される）
-5. 各スクリーンショットの情報（何の画面か、どの状態か）をエビデンスサマリーに記録する
+1. **プロジェクトの CLAUDE.md を確認し、Chrome DevTools MCP に関する記述があれば従う**（認証セットアップ、アクセスURL等）
+2. Chrome DevTools MCP を使ってページにアクセスする
+3. **ページアクセス後、ログインページにリダイレクトされていないか確認する**
+4. 必要に応じてページ操作（ナビゲーション、フォーム入力等）を行う
+5. スクリーンショットをワーキングディレクトリに保存する: `./tmp-evidence-{N}.png`
+6. `fed artifact write evidence_{N}.png --file ./tmp-evidence-{N}.png` でアーティファクトに保存する（ソースファイルは自動削除される）
+7. 各スクリーンショットの情報（何の画面か、どの状態か）をエビデンスサマリーに記録する
 
 ---
 
@@ -71,6 +74,7 @@ model: opus
 - **CAPTURED**: スクリーンショットを撮影した
 - **SKIPPED**: UIに関わる変更がないためスキップ
 - **MCP_UNAVAILABLE**: Chrome DevTools MCP が利用できないためスキップ
+- **AUTH_EXPIRED**: 認証セッションが切れているためスキップ
 
 ## スクリーンショット一覧
 （CAPTUREDの場合）
@@ -85,7 +89,7 @@ model: opus
 ...
 
 ## スキップ理由
-（SKIPPED / MCP_UNAVAILABLE の場合）
+（SKIPPED / MCP_UNAVAILABLE / AUTH_EXPIRED の場合）
 - （なぜスクショ不要・不可と判断したか）
 ```
 
@@ -96,6 +100,14 @@ model: opus
 MCP が設定されていない環境では、スクリーンショットの撮影をスキップする。
 エビデンスサマリーに「MCP未設定のためスキップ」と記載し、完了とする。
 **MCP が利用できないことを理由にワークフローを停止してはならない。**
+
+---
+
+## 認証が必要なページでセッションが切れている場合
+
+ページアクセス後にログインページにリダイレクトされた場合、認証セッションが切れていると判断する。
+エビデンスサマリーに「AUTH_EXPIRED: 認証セッション切れのためスキップ。Chrome DevTools MCP のブラウザで再ログインが必要」と記載し、完了とする。
+**認証切れを理由にワークフローを停止してはならない。**
 
 ---
 

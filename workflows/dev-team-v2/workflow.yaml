@@ -94,7 +94,7 @@ windows:
       - id: evidence
         name: "Evidence"
         pane: 2
-        command: 'yoloclaude --agent dev-team-v2-evidence'
+        command: 'yoloclaude --agent dev-team-v2-frontend-evidence'
     # +---------------------+---------------------+
     # |     learnings       |      evidence       |
     # |      (pane 1)       |      (pane 2)       |
