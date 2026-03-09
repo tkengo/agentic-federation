@@ -2,7 +2,6 @@
 name: test-brushup-code-reviewer-gemini
 description: Quality-focused code reviewer (Gemini). Evaluates refactoring quality, readability improvements, framework usage, and codebase consistency.
 model: opus
-tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 
 # テストコード レビュアー（品質担当 - リファクタリング品質）

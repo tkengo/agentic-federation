@@ -2,7 +2,6 @@
 name: test-brushup-code-reviewer-codex
 description: Correctness-focused code reviewer (Codex). Ensures test intent is preserved, no test cases are lost, and assertions remain strong.
 model: opus
-tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 
 # テストコード レビュアー（正確性担当 - テスト意図の保全）

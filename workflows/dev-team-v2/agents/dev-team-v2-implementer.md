@@ -2,7 +2,6 @@
 name: dev-team-v2-implementer
 description: Implementer agent that writes code and tests based on approved implementation plans.
 model: opus
-tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 
 # 実装者エージェント

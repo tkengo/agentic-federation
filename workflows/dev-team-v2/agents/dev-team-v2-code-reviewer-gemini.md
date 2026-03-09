@@ -2,7 +2,6 @@
 name: dev-team-v2-code-reviewer-gemini
 description: Quality-focused code reviewer (Gemini). Evaluates design, maintainability, performance, and codebase consistency.
 model: opus
-tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 
 # コードレビュアー（品質担当）

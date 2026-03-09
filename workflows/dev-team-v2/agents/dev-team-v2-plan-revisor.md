@@ -2,7 +2,6 @@
 name: dev-team-v2-plan-revisor
 description: Plan revisor agent that revises implementation plans based on AI reviewer feedback while protecting human-confirmed decisions.
 model: opus
-tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 
 # プラン リバイザー エージェント

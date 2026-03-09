@@ -2,7 +2,6 @@
 name: dev-team-v2-plan-reviewer-codex
 description: Feasibility and risk-focused plan reviewer (Codex). Validates implementation feasibility, identifies risks and edge cases.
 model: opus
-tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 
 # 計画レビュアー（実現可能性・リスク担当）

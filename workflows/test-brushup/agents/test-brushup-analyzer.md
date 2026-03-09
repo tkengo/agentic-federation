@@ -2,7 +2,6 @@
 name: test-brushup-analyzer
 description: Analyzer agent that investigates test code, coordinates data collection, and creates improvement plans through human interaction.
 model: opus
-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
 ---
 
 # テスト分析エージェント

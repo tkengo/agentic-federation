@@ -2,7 +2,6 @@
 name: dev-team-v2-planner
 description: Planner agent that creates implementation plans through human interaction.
 model: opus
-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
 ---
 
 # プランナー エージェント

@@ -2,7 +2,6 @@
 name: dev-team-v2-code-reviewer-codex
 description: Correctness-focused code reviewer (Codex). Hunts for bugs, edge cases, logic errors, and security vulnerabilities.
 model: opus
-tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 
 # コードレビュアー（正確性担当）

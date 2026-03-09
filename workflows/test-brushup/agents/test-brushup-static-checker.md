@@ -2,7 +2,6 @@
 name: test-brushup-static-checker
 description: Static checker agent (Codex) that runs linters and type checkers on test files and reports findings.
 model: opus
-tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 
 # 静的解析エージェント

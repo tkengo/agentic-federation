@@ -2,7 +2,6 @@
 name: dev-team-v2-learnings
 description: Post-processing agent that extracts development learnings from the session and saves them as an artifact.
 model: opus
-tools: Read, Write, Bash, Glob, Grep
 ---
 
 # 知見抽出エージェント

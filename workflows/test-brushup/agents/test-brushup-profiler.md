@@ -2,7 +2,6 @@
 name: test-brushup-profiler
 description: Profiler agent (Gemini) that collects test metrics including test inventory, execution times, and setup dependencies.
 model: opus
-tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 
 # テストプロファイラー エージェント

@@ -2,7 +2,6 @@
 name: dev-team-v2-plan-reviewer-gemini
 description: Design and architecture-focused plan reviewer (Gemini). Evaluates design quality, explores alternatives, and checks codebase consistency.
 model: opus
-tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 
 # 計画レビュアー（設計妥当性・代替案担当）
