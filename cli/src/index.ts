@@ -119,14 +119,25 @@ program
   .description("Start a development session with a workflow")
   .option("--no-attach", "Skip tmux attach after creation")
   .option("--session-name <name>", "Custom tmux session name (auto-generated for standalone if omitted)")
-  .action(async (workflow: string, repo: string | undefined, branch: string | undefined, options: { attach?: boolean; sessionName?: string }) => {
+  .option("-e, --env <KEY=VALUE...>", "Environment variables to set in all panes (repeatable)")
+  .action(async (workflow: string, repo: string | undefined, branch: string | undefined, options: { attach?: boolean; sessionName?: string; env?: string[] }) => {
     if (repo && !branch) {
       console.error("Error: branch is required when repo is specified.");
       console.error("  Usage: fed start <workflow> <repo> <branch>");
       console.error("  For standalone (no repo): fed start <workflow> [--session-name <name>]");
       process.exit(1);
     }
-    await startCommand(workflow, repo, branch, options.attach === false, options.sessionName);
+    // Parse --env KEY=VALUE pairs into a record
+    const envVars: Record<string, string> = {};
+    for (const pair of options.env ?? []) {
+      const eq = pair.indexOf("=");
+      if (eq === -1) {
+        console.error(`Error: invalid --env format: '${pair}' (expected KEY=VALUE)`);
+        process.exit(1);
+      }
+      envVars[pair.slice(0, eq)] = pair.slice(eq + 1);
+    }
+    await startCommand(workflow, repo, branch, options.attach === false, options.sessionName, envVars);
   });
 
 // --- state ---

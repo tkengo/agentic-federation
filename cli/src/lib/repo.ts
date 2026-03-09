@@ -26,6 +26,7 @@ function deriveFromNewFormat(raw: NewRepoConfig): RepoConfig {
     copy_files: raw.copy_files ?? [],
     extra: raw.extra ?? {},
     scripts: raw.scripts ?? {},
+    env: raw.env ?? {},
   };
 }
 

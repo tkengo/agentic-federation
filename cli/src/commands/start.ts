@@ -23,7 +23,8 @@ export async function startCommand(
   repoName: string | undefined,
   branch: string | undefined,
   noAttach?: boolean,
-  sessionName?: string
+  sessionName?: string,
+  cliEnvVars?: Record<string, string>
 ): Promise<void> {
   // ============================================================
   // Preflight checks (no side effects - fail fast before any mutation)
@@ -132,9 +133,9 @@ export async function startCommand(
   loadWorkflowByName(workflowName);
 
   if (isStandalone) {
-    startStandalone(workflowName, tmuxSession, noAttach);
+    startStandalone(workflowName, tmuxSession, noAttach, cliEnvVars);
   } else {
-    startWithRepo(workflowName, repoName!, branch!, config!, worktreePath, tmuxSession, noAttach);
+    startWithRepo(workflowName, repoName!, branch!, config!, worktreePath, tmuxSession, noAttach, cliEnvVars);
   }
 }
 
@@ -142,7 +143,8 @@ export async function startCommand(
 function startStandalone(
   workflowName: string,
   tmuxSession: string,
-  noAttach?: boolean
+  noAttach?: boolean,
+  cliEnvVars?: Record<string, string>
 ): void {
   console.log(`=== fed start (standalone) ===`);
   console.log(`Workflow: ${workflowName}`);
@@ -187,6 +189,8 @@ function startStandalone(
       console.log(`Creating tmux session (window: ${win.name})...`);
       tmux.newSession(tmuxSession, cwd, win.name);
       tmux.setEnvironment(tmuxSession, "FED_SESSION", tmuxSession);
+      // Apply CLI --env variables (standalone has no repo config env)
+      applyEnvironmentVars(tmuxSession, {}, cliEnvVars);
     } else {
       console.log(`Creating window: ${win.name}...`);
       tmux.newWindow(tmuxSession, win.name, cwd);
@@ -217,7 +221,8 @@ function startWithRepo(
   config: RepoConfig,
   worktreePath: string,
   tmuxSession: string,
-  noAttach?: boolean
+  noAttach?: boolean,
+  cliEnvVars?: Record<string, string>
 ): void {
   console.log(`=== fed start ===`);
   console.log(`Workflow: ${workflowName}`);
@@ -281,6 +286,8 @@ function startWithRepo(
       // Agents like Codex that cannot access the tmux socket rely on this
       // environment variable to identify the session.
       tmux.setEnvironment(tmuxSession, "FED_SESSION", tmuxSession);
+      // Apply repo config env + CLI --env variables
+      applyEnvironmentVars(tmuxSession, config.env, cliEnvVars);
     } else {
       // Subsequent windows
       console.log(`Creating window: ${win.name}...`);
@@ -328,6 +335,22 @@ function printReadyAndAttach(
     console.log("Attaching to tmux session...");
     execSync(`tmux attach -t '${tmuxSession}'`, { stdio: "inherit" });
   }
+}
+
+// --- Apply environment variables to tmux session ---
+// Merges repo config env and CLI --env, with CLI taking precedence.
+function applyEnvironmentVars(
+  session: string,
+  repoEnv?: Record<string, string>,
+  cliEnv?: Record<string, string>
+): void {
+  const merged = { ...repoEnv, ...cliEnv };
+  const keys = Object.keys(merged);
+  if (keys.length === 0) return;
+  for (const key of keys) {
+    tmux.setEnvironment(session, key, merged[key]!);
+  }
+  console.log(`Set ${keys.length} environment variable(s): ${keys.join(", ")}`);
 }
 
 // --- Create window layout from WorkflowWindow definition ---

@@ -44,6 +44,7 @@ export interface NewRepoConfig {
   copy_files: string[];
   extra: Record<string, unknown>;
   scripts?: Record<string, ScriptDef>;
+  env?: Record<string, string>;
 }
 
 // Normalized runtime type — all consumers use this
@@ -57,4 +58,5 @@ export interface RepoConfig {
   copy_files: string[];
   extra: Record<string, unknown>;
   scripts: Record<string, ScriptDef>;
+  env: Record<string, string>;
 }
