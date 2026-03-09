@@ -48,35 +48,40 @@ windows:
         name: Refactorer
         pane: 1
         command: 'yoloclaude --agent test-brushup-refactorer'
-      - id: static_checker
-        name: Static Checker
-        pane: 2
-        command: yolocodex
       - id: profiler
         name: Profiler
-        pane: 3
+        pane: 2
         command: yologemini
+      - id: learnings
+        name: Learnings
+        pane: 3
+        command: 'yoloclaude --agent test-brushup-learnings'
+      - id: static_checker
+        name: Static Checker
+        pane: 4
+        command: yolocodex
       - id: code_reviewer_gemini
         name: "Code Reviewer (Gemini)"
-        pane: 4
+        pane: 5
         command: yologemini
       - id: code_reviewer_codex
         name: "Code Reviewer (Codex)"
-        pane: 5
+        pane: 6
         command: yolocodex
-    # +--------------+--------------+
-    # |  refactorer  |   profiler   |
-    # |   (pane 1)   |   (pane 3)   |
-    # +---------+----+----+---------+
-    # | static  | gem-cr  | cdx-cr  |
-    # | (pane 2)| (pane 4)| (pane 5)|
-    # +---------+---------+---------+
+    # +----------+----------+----------+
+    # |refactorer| profiler |learnings |
+    # | (pane 1) | (pane 2) | (pane 3) |
+    # +----------+----------+----------+
+    # | static   | gem-cr   | cdx-cr   |
+    # | (pane 4) | (pane 5) | (pane 6) |
+    # +----------+----------+----------+
     layout:
       splits:
         - { source: 1, direction: v, percent: 50 }
-        - { source: 1, direction: h, percent: 50 }
-        - { source: 3, direction: h, percent: 66 }
-        - { source: 4, direction: h, percent: 50 }
+        - { source: 1, direction: h, percent: 66 }
+        - { source: 2, direction: h, percent: 50 }
+        - { source: 4, direction: h, percent: 66 }
+        - { source: 5, direction: h, percent: 50 }
       focus: 1
 
 states:
@@ -96,6 +101,9 @@ states:
   code_revision:
     description: "レビューフィードバックに基づくコード修正"
     color: yellow
+  post_processing:
+    description: "知見抽出の後処理フェーズ"
+    color: cyan
   completed:
     description: "全レビュー通過、人間の最終承認待ち"
     mark: "✓"

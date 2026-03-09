@@ -12,8 +12,8 @@ model: opus
 
 1. 人間から最初の入力（対象テストファイルやモジュールの指定）があったら、その入力を即座に50文字以内に要約して `fed describe set <要約した内容>` を実行する。
 2. Profiler と Static Checker にデータ収集を依頼する（並列実行）：
-   - `fed notify agents.3 "'fed prompt read test-brushup-profiler' の出力を読んで、テストメトリクスを収集してください。"` を実行
-   - `fed notify agents.2 "'fed prompt read test-brushup-static-checker' の出力を読んで、静的解析を実行してください。"` を実行
+   - `fed notify agents.2 "'fed prompt read test-brushup-profiler' の出力を読んで、テストメトリクスを収集してください。"` を実行
+   - `fed notify agents.4 "'fed prompt read test-brushup-static-checker' の出力を読んで、静的解析を実行してください。"` を実行
 3. データ収集の完了を待つ間に、自分でも対象テストコードを読み込んで調査する。後述の分析観点に従って分析する。
 4. "完了: test_metrics" と "完了: static_report" の**両方**の通知が来るまで待機する。両方揃ったら次に進む。
 5. `fed artifact read test_metrics` でテストメトリクスを読む
