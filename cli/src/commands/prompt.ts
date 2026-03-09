@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
-import { AGENTS_DIR, WORKFLOWS_DIR } from "../lib/paths.js";
+import { WORKFLOWS_DIR } from "../lib/paths.js";
 import { getCurrentTmuxSession, resolveSession, readMeta } from "../lib/session.js";
 
 /**
@@ -30,9 +30,6 @@ function resolvePromptPath(name: string): string | null {
     const wfPath = path.join(WORKFLOWS_DIR, workflow, "agents", `${name}.md`);
     if (fs.existsSync(wfPath)) return wfPath;
   }
-
-  const globalPath = path.join(AGENTS_DIR, `${name}.md`);
-  if (fs.existsSync(globalPath)) return globalPath;
 
   return null;
 }
@@ -67,15 +64,6 @@ export function promptListCommand(): void {
         if (f.endsWith(".md")) {
           prompts.add(f.replace(/\.md$/, ""));
         }
-      }
-    }
-  }
-
-  // Global prompts
-  if (fs.existsSync(AGENTS_DIR)) {
-    for (const f of fs.readdirSync(AGENTS_DIR)) {
-      if (f.endsWith(".md")) {
-        prompts.add(f.replace(/\.md$/, ""));
       }
     }
   }

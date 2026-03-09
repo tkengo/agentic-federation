@@ -3,7 +3,7 @@ import path from "node:path";
 import os from "node:os";
 import crypto from "node:crypto";
 import { execSync, spawn } from "node:child_process";
-import { AGENTS_DIR, CLAUDE_AGENTS_DIR, WORKFLOWS_DIR } from "../lib/paths.js";
+import { CLAUDE_AGENTS_DIR, WORKFLOWS_DIR } from "../lib/paths.js";
 import { loadRepoConfig } from "../lib/repo.js";
 import { createSessionDir, linkActiveSession, resolveSession } from "../lib/session.js";
 import * as tmux from "../lib/tmux.js";
@@ -524,17 +524,6 @@ function syncAgents(workflowName: string): void {
   fs.mkdirSync(CLAUDE_AGENTS_DIR, { recursive: true });
 
   let count = 0;
-
-  // Global agents: agents/*.md -> ~/.claude/agents/*.md
-  if (fs.existsSync(AGENTS_DIR)) {
-    const files = fs.readdirSync(AGENTS_DIR).filter((f) => f.endsWith(".md"));
-    for (const file of files) {
-      const src = path.join(AGENTS_DIR, file);
-      const dest = path.join(CLAUDE_AGENTS_DIR, file);
-      syncSymlink(src, dest);
-      count++;
-    }
-  }
 
   // Workflow-specific agents: workflows/<name>/agents/*.md -> ~/.claude/agents/*.md
   const wfAgentsDir = path.join(WORKFLOWS_DIR, workflowName, "agents");

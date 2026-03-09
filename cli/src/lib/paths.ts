@@ -10,15 +10,6 @@ export const KNOWLEDGE_DIR = path.join(FED_HOME, "knowledge");
 export const LOGS_DIR = path.join(FED_HOME, "logs");
 export const DEFAULT_BASE_PATH = path.join(os.homedir(), "fed", "repos");
 
-// Agents directory in the agentic-federation repo
-export const AGENTS_DIR = path.resolve(
-  import.meta.dirname,
-  "..",
-  "..",
-  "..",
-  "agents"
-);
-
 // Claude Code agents directory (~/.claude/agents/)
 export const CLAUDE_AGENTS_DIR = path.join(os.homedir(), ".claude", "agents");
 
