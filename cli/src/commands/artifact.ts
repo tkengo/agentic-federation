@@ -41,22 +41,24 @@ export function artifactWriteCommand(
 
   const filePath = path.join(dir, resolved);
 
-  let content: string;
   if (options.file) {
     if (!fs.existsSync(options.file)) {
       console.error(`Error: File '${options.file}' does not exist.`);
       process.exit(1);
     }
-    content = fs.readFileSync(options.file, "utf-8");
+    // Use copyFileSync to support both text and binary files
+    fs.copyFileSync(options.file, filePath);
+    const stat = fs.statSync(filePath);
+    console.error(`Written: ${resolved} (${stat.size} bytes)`);
     if (!options.keep) {
       fs.unlinkSync(options.file);
     }
   } else {
-    content = fs.readFileSync("/dev/stdin", "utf-8");
+    // stdin: read as text
+    const content = fs.readFileSync("/dev/stdin", "utf-8");
+    fs.writeFileSync(filePath, content);
+    console.error(`Written: ${resolved} (${content.length} bytes)`);
   }
-
-  fs.writeFileSync(filePath, content);
-  console.error(`Written: ${resolved} (${content.length} bytes)`);
 }
 
 export function artifactListCommand(): void {

@@ -46,8 +46,12 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 
 ### geminiとcodexの両方ともがAPPROVEの場合
 
-1. `fed state update status completed` を実行してステータスを更新
-2. `fed waiting-human set --reason "実装が完了しました。レビューしてください" --notify` を使って、人間に完了を通知する
+1. `fed state update status post_processing` を実行してステータスを更新
+2. `fed notify postprocess.1 "'fed prompt read dev-team-v2-learnings' を実行すると作業指示書が出力されます。その指示書の手順に従って作業を開始してください。"` を実行して知見抽出エージェントを起動する
+3. `fed notify postprocess.2 "'fed prompt read dev-team-v2-evidence' を実行すると作業指示書が出力されます。その指示書の手順に従って作業を開始してください。"` を実行してエビデンス収集エージェントを起動する
+4. 両エージェントが完了するまで待機する。"完了: learnings" 及び "完了: evidence" という通知が来るので、両方の通知が揃うまで待つ。
+5. 両方の通知が揃ったら `fed state update status completed` を実行してステータスを更新
+6. `fed waiting-human set --reason "実装が完了しました。レビューしてください。知見(learnings)とエビデンス(evidence)も確認できます。" --notify` を使って、人間に完了を通知する
 
 ---
 

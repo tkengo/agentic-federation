@@ -1,5 +1,5 @@
 name: dev-team
-description: "開発チームパイプライン: 計画策定 → 計画レビュー → 実装 → コードレビュー"
+description: "開発チームパイプライン: 計画策定 → 計画レビュー → 実装 → コードレビュー → 後処理"
 
 focus: planner
 
@@ -85,6 +85,25 @@ windows:
         - { source: 5, direction: h, percent: 50 }
       focus: 1
 
+  - name: postprocess
+    panes:
+      - id: learnings
+        name: "Learnings"
+        pane: 1
+        command: 'yoloclaude --agent dev-team-v2-learnings'
+      - id: evidence
+        name: "Evidence"
+        pane: 2
+        command: 'yoloclaude --agent dev-team-v2-evidence'
+    # +---------------------+---------------------+
+    # |     learnings       |      evidence       |
+    # |      (pane 1)       |      (pane 2)       |
+    # +---------------------+---------------------+
+    layout:
+      splits:
+        - { source: 1, direction: h, percent: 50 }
+      focus: 1
+
 states:
   planning:
     description: "人間と対話しながら計画を策定する"
@@ -108,6 +127,9 @@ states:
   code_revision:
     description: "レビューフィードバックに基づくコード修正"
     color: yellow
+  post_processing:
+    description: "知見抽出・エビデンス収集の後処理フェーズ"
+    color: cyan
   completed:
     description: "全レビュー通過、人間の最終承認待ち"
     mark: "✓"
