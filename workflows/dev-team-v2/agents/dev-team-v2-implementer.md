@@ -15,35 +15,35 @@ model: opus
 3. 後述の実装の進め方に従って実装を進める。
 4. Write ツールで `./tmp-implementation.md` に実装サマリーを書き出してから、`fed artifact write implementation --file ./tmp-implementation.md` で保存する
 5. `fed state update status code_review` を実行してステータスを更新
-6. `fed notify agents.5 "'fed prompt read dev-team-v2-code-reviewer-gemini' を実行すると作業指示書が出力されます。その指示書の手順に従って作業を開始してください。"` を実行してGeminiにレビューを依頼する
-7. `fed notify agents.6 "'fed prompt read dev-team-v2-code-reviewer-codex' を実行すると作業指示書が出力されます。その指示書の手順に従って作業を開始してください。"` を実行してCodexにレビューを依頼する
+6. `fed notify agents.5 "'fed prompt read dev-team-v2-code-reviewer-quality' を実行すると作業指示書が出力されます。その指示書の手順に従って作業を開始してください。"` を実行して品質レビュアーにレビューを依頼する
+7. `fed notify agents.6 "'fed prompt read dev-team-v2-code-reviewer-correctness' を実行すると作業指示書が出力されます。その指示書の手順に従って作業を開始してください。"` を実行して正確性レビュアーにレビューを依頼する
 
 ## 実装後のフロー
 
-実装が完了したら、AIコードレビューのステップへ移るので、コードレビューが終わるまで待機してください。AIコードレビューが完了したら "完了: code_review_gemini" 及び "完了: code_review_codex" という通知が来ます。両方の通知が揃ったらレビュー結果を読み取ります。
+実装が完了したら、AIコードレビューのステップへ移るので、コードレビューが終わるまで待機してください。AIコードレビューが完了したら "完了: code_review_quality" 及び "完了: code_review_correctness" という通知が来ます。両方の通知が揃ったらレビュー結果を読み取ります。
 
-1. `fed artifact read code_review_gemini` でレビュー結果を読む
-2. `fed artifact read code_review_codex` でレビュー結果を読む
+1. `fed artifact read code_review_quality` でレビュー結果を読む
+2. `fed artifact read code_review_correctness` でレビュー結果を読む
 
 レビュー結果を読んだ後、以下の判断基準に従って次のステップに進んでください。
 
-### geminiとcodexのいずれかがESCALATEの場合
+### 品質レビュアーと正確性レビュアーのいずれかがESCALATEの場合
 
 1. `fed waiting-human set --reason "<escalation-reason>" --notify` を使って、エスカレーション理由を人間に通知する。
 2. 人間の指示がでるまで待機し、人間からの指示に従ってください。
 
-### geminiとcodexのいずれかがREQUEST_CHANGESの場合
+### 品質レビュアーと正確性レビュアーのいずれかがREQUEST_CHANGESの場合
 
 1. `fed state update status code_revision` を実行してステータスを更新
 2. レビューでの指摘事項を元に実装を修正する。
 3. Write ツールで `./tmp-implementation.md` に実装サマリーを書き出してから、`fed artifact write implementation --file ./tmp-implementation.md` で保存する
-4. `fed artifact delete code_review_gemini` でgeminiのレビュー結果を削除
-5. `fed artifact delete code_review_codex` でcodexのレビュー結果を削除
-6. `fed notify agents.5 "実装が修正されています。再レビューしてください。"` を実行してGeminiに再レビューを依頼する
-7. `fed notify agents.6 "実装が修正されています。再レビューしてください。"` を実行してCodexに再レビューを依頼する
-8. geminiとcodexの再レビューが完了したら、改めて "完了: code_review_gemini" 及び "完了: code_review_codex" という通知が来るので、それを受け取り次第、「実装後のフロー」のセクションからやり直す。
+4. `fed artifact delete code_review_quality` で品質レビューの結果を削除
+5. `fed artifact delete code_review_correctness` で正確性レビューの結果を削除
+6. `fed notify agents.5 "実装が修正されています。再レビューしてください。"` を実行して品質レビュアーに再レビューを依頼する
+7. `fed notify agents.6 "実装が修正されています。再レビューしてください。"` を実行して正確性レビュアーに再レビューを依頼する
+8. 品質レビュアーと正確性レビュアーの再レビューが完了したら、改めて "完了: code_review_quality" 及び "完了: code_review_correctness" という通知が来るので、それを受け取り次第、「実装後のフロー」のセクションからやり直す。
 
-### geminiとcodexの両方ともがAPPROVEの場合
+### 品質レビュアーと正確性レビュアーの両方ともがAPPROVEの場合
 
 1. `fed state update status post_processing` を実行してステータスを更新
 2. `fed notify postprocess.1 "作業を開始してください。"` を実行して知見抽出エージェントを起動する
@@ -133,7 +133,7 @@ model: opus
 
 ## コードレビューフィードバックへの対応
 
-コードレビューフェーズではCodex(バグ、エッジケース、セキュリティ脆弱性)とGemini(設計、保守性、パフォーマンス、一貫性)がそれぞれの観点からレビューをします。レビュー結果を受け取った場合は、以下の手順に従って対応してください。
+コードレビューフェーズでは正確性レビュアー(バグ、エッジケース、セキュリティ脆弱性)と品質レビュアー(設計、保守性、パフォーマンス、一貫性)がそれぞれの観点からレビューをします。レビュー結果を受け取った場合は、以下の手順に従って対応してください。
 
 1. レビュー結果を読み取る
 2. 指摘事項を理解し、コードを修正。もし、両者の指摘が矛盾する場合や、大規模なリファクタリングが必要な場合は、対応方針を考えた上で人間へエスカレーションする。

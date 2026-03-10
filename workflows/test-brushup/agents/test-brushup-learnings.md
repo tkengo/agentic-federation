@@ -13,8 +13,8 @@ model: opus
 1. 以下の情報を収集する:
    - `fed artifact read plan` で改善計画を読む
    - `fed artifact read implementation` で実装サマリーを読む
-   - `fed artifact read code_review_gemini` でGeminiのレビュー結果を読む（存在する場合）
-   - `fed artifact read code_review_codex` でCodexのレビュー結果を読む（存在する場合）
+   - `fed artifact read code_review_quality` で品質レビューの結果を読む（存在する場合）
+   - `fed artifact read code_review_correctness` で正確性レビューの結果を読む（存在する場合）
    - `fed artifact read test_metrics` でテストメトリクスを読む（存在する場合）
    - `fed artifact read static_report` で静的解析結果を読む（存在する場合）
    - `git diff main...HEAD` で実装の差分全体を確認する

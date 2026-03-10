@@ -49,32 +49,32 @@ windows:
         name: "Plan Revisor"
         pane: 1
         command: 'yoloclaude --agent dev-team-v2-plan-revisor'
-      - id: plan_reviewer_gemini
-        name: "Plan Reviewer (Gemini)"
+      - id: plan_reviewer_design
+        name: "Plan Reviewer (Design)"
         pane: 2
         command: yologemini
-      - id: plan_reviewer_codex
-        name: "Plan Reviewer (Codex)"
+      - id: plan_reviewer_feasibility
+        name: "Plan Reviewer (Feasibility)"
         pane: 3
         command: yolocodex
       - id: implementer
         name: Implementer
         pane: 4
         command: 'yoloclaude --agent dev-team-v2-implementer'
-      - id: code_reviewer_gemini
-        name: "Code Reviewer (Gemini)"
+      - id: code_reviewer_quality
+        name: "Code Reviewer (Quality)"
         pane: 5
         command: yologemini
-      - id: code_reviewer_codex
-        name: "Code Reviewer (Codex)"
+      - id: code_reviewer_correctness
+        name: "Code Reviewer (Correctness)"
         pane: 6
         command: yolocodex
     # +----------+----------+----------+
     # | revisor  | pln-rev  | pln-rev  |
-    # | (pane 1) | gem (2)  | codex(3) |
+    # | (pane 1) | desgn(2) | feasb(3) |
     # +----------+----------+----------+
     # | implmtr  | code-rev | code-rev |
-    # | (pane 4) | gem (5)  | codex(6) |
+    # | (pane 4) | qual (5) | corr (6) |
     # +----------+----------+----------+
     layout:
       splits:

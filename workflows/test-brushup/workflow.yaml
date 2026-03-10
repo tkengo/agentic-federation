@@ -60,19 +60,19 @@ windows:
         name: Static Checker
         pane: 4
         command: yolocodex
-      - id: code_reviewer_gemini
-        name: "Code Reviewer (Gemini)"
+      - id: code_reviewer_quality
+        name: "Code Reviewer (Quality)"
         pane: 5
         command: yologemini
-      - id: code_reviewer_codex
-        name: "Code Reviewer (Codex)"
+      - id: code_reviewer_correctness
+        name: "Code Reviewer (Correctness)"
         pane: 6
         command: yolocodex
     # +----------+----------+----------+
     # |refactorer| profiler |learnings |
     # | (pane 1) | (pane 2) | (pane 3) |
     # +----------+----------+----------+
-    # | static   | gem-cr   | cdx-cr   |
+    # | static   | qual-cr  | corr-cr  |
     # | (pane 4) | (pane 5) | (pane 6) |
     # +----------+----------+----------+
     layout:
@@ -96,7 +96,7 @@ states:
     description: "改善計画に基づくテストコードのリファクタリング"
     color: blue
   code_review:
-    description: "Gemini + Codexによる並列コードレビュー"
+    description: "品質・正確性レビュアーによる並列コードレビュー"
     color: yellow
   code_revision:
     description: "レビューフィードバックに基づくコード修正"

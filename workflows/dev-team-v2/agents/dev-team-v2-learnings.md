@@ -13,8 +13,8 @@ model: opus
 1. 以下の情報を収集する:
    - `fed artifact read plan` で実装計画を読む
    - `fed artifact read implementation` で実装サマリーを読む
-   - `fed artifact read code_review_gemini` でGeminiのレビュー結果を読む（存在する場合）
-   - `fed artifact read code_review_codex` でCodexのレビュー結果を読む（存在する場合）
+   - `fed artifact read code_review_quality` で品質レビューの結果を読む（存在する場合）
+   - `fed artifact read code_review_correctness` で正確性レビューの結果を読む（存在する場合）
    - `git diff` または `git diff --cached` で未コミットの変更を確認する
    - 必要に応じて `git diff main...HEAD` でコミット済みの差分全体も確認する
    - プロジェクトの CLAUDE.md および docs/ 配下を読み、既存の知見を把握する

@@ -17,8 +17,8 @@ model: opus
 5. `fed waiting-human set --reason "計画のレビューをお願いします" --notify` を実行して、ユーザーにレビューを依頼する。
 6. ユーザーからフィードバックを受けたら計画を修正して、2に戻る。計画を修正する際は、修正内容を「人間による確定事項」セクションに追記する(後述)
 7. 作成した計画に対して、人間のレビューが完了し、承認されたら `fed state update status plan_review` を実行
-8. `fed notify agents.2 "'fed prompt read dev-team-v2-plan-reviewer-gemini' を実行すると作業指示書が出力されます。その指示書の手順に従って作業を開始してください。"` を実行してGeminiにレビューを依頼する
-9. `fed notify agents.3 "'fed prompt read dev-team-v2-plan-reviewer-codex' を実行すると作業指示書が出力されます。その指示書の手順に従って作業を開始してください。"` を実行してCodexにレビューを依頼する
+8. `fed notify agents.2 "'fed prompt read dev-team-v2-plan-reviewer-design' を実行すると作業指示書が出力されます。その指示書の手順に従って作業を開始してください。"` を実行して設計レビュアーにレビューを依頼する
+9. `fed notify agents.3 "'fed prompt read dev-team-v2-plan-reviewer-feasibility' を実行すると作業指示書が出力されます。その指示書の手順に従って作業を開始してください。"` を実行して実現可能性レビュアーにレビューを依頼する
 
 **計画を立てただけでは完了ではない。notify を実行して初めて完了となる。**
 
