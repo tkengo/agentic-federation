@@ -15,35 +15,31 @@ model: opus
 3. 後述の実装の進め方に従って実装を進める。
 4. Write ツールで `./tmp-implementation.md` に実装サマリーを書き出してから、`fed artifact write implementation --file ./tmp-implementation.md` で保存する
 5. `fed state update status code_review` を実行してステータスを更新
-6. `fed notify agents.5 "'fed prompt read dev-team-v2-code-reviewer-quality' を実行すると作業指示書が出力されます。その指示書の手順に従って作業を開始してください。"` を実行して品質レビュアーにレビューを依頼する
-7. `fed notify agents.6 "'fed prompt read dev-team-v2-code-reviewer-correctness' を実行すると作業指示書が出力されます。その指示書の手順に従って作業を開始してください。"` を実行して正確性レビュアーにレビューを依頼する
+6. `fed notify review.5 "コードレビューを開始してください。"` を実行して統合レビュアーにレビューを依頼する
 
 ## 実装後のフロー
 
-実装が完了したら、AIコードレビューのステップへ移るので、コードレビューが終わるまで待機してください。AIコードレビューが完了したら "完了: code_review_quality" 及び "完了: code_review_correctness" という通知が来ます。両方の通知が揃ったらレビュー結果を読み取ります。
+実装が完了したら、AIコードレビューのステップへ移るので、コードレビューが終わるまで待機してください。統合レビュアーがレビュー結果を集約した後、"完了: code_review_integrated" という通知が来ます。
 
-1. `fed artifact read code_review_quality` でレビュー結果を読む
-2. `fed artifact read code_review_correctness` でレビュー結果を読む
+1. `fed artifact read code_review_integrated` で統合レビュー結果を読む
 
 レビュー結果を読んだ後、以下の判断基準に従って次のステップに進んでください。
 
-### 品質レビュアーと正確性レビュアーのいずれかがESCALATEの場合
+### 統合レビューがESCALATEの場合
 
 1. `fed waiting-human set --reason "<escalation-reason>" --notify` を使って、エスカレーション理由を人間に通知する。
 2. 人間の指示がでるまで待機し、人間からの指示に従ってください。
 
-### 品質レビュアーと正確性レビュアーのいずれかがREQUEST_CHANGESの場合
+### 統合レビューがREQUEST_CHANGESの場合
 
 1. `fed state update status code_revision` を実行してステータスを更新
-2. レビューでの指摘事項を元に実装を修正する。
+2. 統合レビューの「対応が必要な指摘（confidence >= 70）」セクションの指摘事項を元に実装を修正する。
 3. Write ツールで `./tmp-implementation.md` に実装サマリーを書き出してから、`fed artifact write implementation --file ./tmp-implementation.md` で保存する
-4. `fed artifact delete code_review_quality` で品質レビューの結果を削除
-5. `fed artifact delete code_review_correctness` で正確性レビューの結果を削除
-6. `fed notify agents.5 "実装が修正されています。再レビューしてください。"` を実行して品質レビュアーに再レビューを依頼する
-7. `fed notify agents.6 "実装が修正されています。再レビューしてください。"` を実行して正確性レビュアーに再レビューを依頼する
-8. 品質レビュアーと正確性レビュアーの再レビューが完了したら、改めて "完了: code_review_quality" 及び "完了: code_review_correctness" という通知が来るので、それを受け取り次第、「実装後のフロー」のセクションからやり直す。
+4. `fed artifact delete code_review_integrated` で統合レビュー結果を削除する
+5. `fed notify review.5 "実装が修正されています。再レビューしてください。"` を実行して統合レビュアーに再レビューを依頼する
+6. 統合レビュアーの再統合が完了したら、改めて "完了: code_review_integrated" という通知が来るので、それを受け取り次第、「実装後のフロー」のセクションからやり直す。
 
-### 品質レビュアーと正確性レビュアーの両方ともがAPPROVEの場合
+### 統合レビューがAPPROVEの場合
 
 1. `fed state update status post_processing` を実行してステータスを更新
 2. `fed notify postprocess.1 "作業を開始してください。"` を実行して知見抽出エージェントを起動する
@@ -133,10 +129,10 @@ model: opus
 
 ## コードレビューフィードバックへの対応
 
-コードレビューフェーズでは正確性レビュアー(バグ、エッジケース、セキュリティ脆弱性)と品質レビュアー(設計、保守性、パフォーマンス、一貫性)がそれぞれの観点からレビューをします。レビュー結果を受け取った場合は、以下の手順に従って対応してください。
+コードレビューフェーズでは複数の専門レビュアーがそれぞれの観点からレビューを行い、統合レビュアーが結果を集約・confidence scoring してフィードバックを生成します。あなたが読むのは統合レビュー結果（`code_review_integrated`）のみです。
 
-1. レビュー結果を読み取る
-2. 指摘事項を理解し、コードを修正。もし、両者の指摘が矛盾する場合や、大規模なリファクタリングが必要な場合は、対応方針を考えた上で人間へエスカレーションする。
+1. 統合レビュー結果を読み取る
+2. 「対応が必要な指摘（confidence >= 70）」の指摘事項を理解し、コードを修正。大規模なリファクタリングが必要な場合は、対応方針を考えた上で人間へエスカレーションする。
 3. テストを再実行（修正に伴うテスト更新も含む）
 4. 品質チェックを再実行
 5. 実装サマリーを更新：

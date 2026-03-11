@@ -43,46 +43,65 @@ windows:
         - { source: 1, direction: h, percent: 50 }
       focus: 1
 
-  - name: agents
+  - name: implement
     panes:
       - id: plan_revisor
         name: "Plan Revisor"
         pane: 1
         command: 'yoloclaude --agent dev-team-v2-plan-revisor'
-      - id: plan_reviewer_design
-        name: "Plan Reviewer (Design)"
+      - id: plan_reviewer
+        name: "Plan Reviewer"
         pane: 2
-        command: yologemini
-      - id: plan_reviewer_feasibility
-        name: "Plan Reviewer (Feasibility)"
-        pane: 3
         command: yolocodex
       - id: implementer
         name: Implementer
-        pane: 4
+        pane: 3
         command: 'yoloclaude --agent dev-team-v2-implementer'
-      - id: code_reviewer_quality
-        name: "Code Reviewer (Quality)"
-        pane: 5
-        command: yologemini
-      - id: code_reviewer_correctness
-        name: "Code Reviewer (Correctness)"
-        pane: 6
+    # +-------------+-------------+-------------+
+    # | plan_revisor| plan_reviewer| implementer |
+    # |   (pane 1)  |   (pane 2)  |   (pane 3)  |
+    # +-------------+-------------+-------------+
+    layout:
+      splits:
+        - { source: 1, direction: h, percent: 66 }
+        - { source: 2, direction: h, percent: 50 }
+      focus: 1
+
+  - name: review
+    panes:
+      - id: code_reviewer_diff
+        name: "Code Reviewer (Diff)"
+        pane: 1
         command: yolocodex
-    # +----------+----------+----------+
-    # | revisor  | pln-rev  | pln-rev  |
-    # | (pane 1) | desgn(2) | feasb(3) |
-    # +----------+----------+----------+
-    # | implmtr  | code-rev | code-rev |
-    # | (pane 4) | qual (5) | corr (6) |
-    # +----------+----------+----------+
+      - id: code_reviewer_history
+        name: "Code Reviewer (History)"
+        pane: 2
+        command: yologemini
+      - id: code_reviewer_impact
+        name: "Code Reviewer (Impact)"
+        pane: 3
+        command: 'yoloclaude --agent dev-team-v2-code-reviewer-impact'
+      - id: code_reviewer_conventions
+        name: "Code Reviewer (Conventions)"
+        pane: 4
+        command: yolocodex
+      - id: code_review_integrator
+        name: "Code Review Integrator"
+        pane: 5
+        command: 'yoloclaude --agent dev-team-v2-code-review-integrator'
+    # +------+------+------+------+
+    # |  A   |  B   |  C   |  D   |
+    # | (1)  | (2)  | (3)  | (4)  |
+    # +------+------+------+------+
+    # |             E              |
+    # |            (5)             |
+    # +------+------+------+------+
     layout:
       splits:
         - { source: 1, direction: v, percent: 50 }
-        - { source: 1, direction: h, percent: 66 }
-        - { source: 2, direction: h, percent: 50 }
-        - { source: 4, direction: h, percent: 66 }
-        - { source: 5, direction: h, percent: 50 }
+        - { source: 1, direction: h, percent: 75 }
+        - { source: 2, direction: h, percent: 66 }
+        - { source: 3, direction: h, percent: 50 }
       focus: 1
 
   - name: postprocess
@@ -113,7 +132,7 @@ states:
     description: "人間に計画レビューをお願いする"
     color: blue
   plan_review:
-    description: "複数レビュアーによる並列計画レビュー"
+    description: "計画レビュー"
     color: yellow
   plan_revision:
     description: "レビューフィードバックに基づく計画修正"

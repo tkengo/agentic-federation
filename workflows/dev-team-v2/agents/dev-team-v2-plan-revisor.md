@@ -12,38 +12,35 @@ model: opus
 
 ### 前処理
 
-レビューが完了したら "完了: plan_review_design" 及び "完了: plan_review_feasibility" という通知が来ます。両方からの通知が来るまで待機しておき、両方の通知が揃ったらプランのリバイズに進んでください。
+レビューが完了したら "完了: plan_review" という通知が来ます。通知が来たらプランのリバイズに進んでください。
 
 1. `fed artifact read plan` で現在の計画を読む
-2. `fed artifact read plan_review_design` でレビュー結果を読む
-3. `fed artifact read plan_review_feasibility` でレビュー結果を読む
+2. `fed artifact read plan_review` でレビュー結果を読む
 
 レビュー結果を読んだ後、以下の判断基準に従って次のステップに進んでください。
 
-### 設計レビュアーと実現可能性レビュアーのいずれかがESCALATEの場合
+### レビュアーがESCALATEの場合
 
 1. `fed waiting-human set --reason "<escalation-reason>" --notify` を使って、エスカレーション理由を人間に通知する。
 2. 人間の指示がでるまで待機し、人間からの指示に従ってください。
 
-### 設計レビュアーと実現可能性レビュアーのいずれかがREQUEST_CHANGESの場合
+### レビュアーがREQUEST_CHANGESの場合
 
 1. `fed state update status plan_revision` を実行してステータスを更新
 2. レビューでの指摘事項を計画に反映する。ただし以下の判断基準に従うこと：
     -「人間による確定事項」に矛盾するフィードバックがある場合、それは反映しない（人間による確定事項を優先）
-    - 両者の指摘が矛盾する場合や、根本からの計画修正が必要な場合は、対応方針を考えた上で人間へエスカレーションする。
+    - 根本からの計画修正が必要な場合は、対応方針を考えた上で人間へエスカレーションする。
 3. Write ツールで `./tmp-plan.md` に修正済み計画を書き出してから、`fed artifact write plan --file ./tmp-plan.md` で保存する
-4. `fed artifact delete plan_review_design` で設計レビューの結果を削除
-5. `fed artifact delete plan_review_feasibility` で実現可能性レビューの結果を削除
-6. `fed notify agents.2 "計画が更新されています。再レビューしてください。"` を実行して設計レビュアーに再レビューを依頼する
-7. `fed notify agents.3 "計画が更新されています。再レビューしてください。"` を実行して実現可能性レビュアーに再レビューを依頼する
-8. 設計レビュアーと実現可能性レビュアーの再レビューが完了したら、改めて "完了: plan_review_design" 及び "完了: plan_review_feasibility" という通知が来るので、それを受け取り次第、「前処理」のセクションからやり直す。
+4. `fed artifact delete plan_review` でレビューの結果を削除
+5. `fed notify implement.2 "計画が更新されています。再レビューしてください。"` を実行して計画レビュアーに再レビューを依頼する
+6. 計画レビュアーの再レビューが完了したら、改めて "完了: plan_review" という通知が来るので、それを受け取り次第、「前処理」のセクションからやり直す。
 
 リバイズ完了後の **artifact write** と **artifact delete** と **notify** は、必ず実行すること。実行しなかった場合はワークフロー全体が停止してしまうため、絶対に実行を忘れてはならない。
 また、完了報告は人間の許可不要で即座に実行すること。そして、完了報告は毎回必ず送信すること（再実行時も含む）
 
-### 設計レビュアーと実現可能性レビュアーの両方ともがAPPROVEの場合
+### レビュアーがAPPROVEの場合
 
-1. `fed notify agents.4 "計画完了。実装に進んでください。"` を実行して、実装を依頼する
+1. `fed notify implement.3 "計画完了。実装に進んでください。"` を実行して、実装を依頼する
 
 ---
 

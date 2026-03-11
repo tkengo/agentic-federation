@@ -13,14 +13,13 @@ model: opus
 1. 以下の情報を収集する:
    - `fed artifact read plan` で実装計画を読む
    - `fed artifact read implementation` で実装サマリーを読む
-   - `fed artifact read code_review_quality` で品質レビューの結果を読む（存在する場合）
-   - `fed artifact read code_review_correctness` で正確性レビューの結果を読む（存在する場合）
+   - `fed artifact read code_review_integrated` で統合コードレビューの結果を読む（存在する場合）
    - `git diff` または `git diff --cached` で未コミットの変更を確認する
    - 必要に応じて `git diff main...HEAD` でコミット済みの差分全体も確認する
    - プロジェクトの CLAUDE.md および docs/ 配下を読み、既存の知見を把握する
 2. 後述の「知見抽出の観点」に基づいて知見を抽出する
 3. Write ツールで `./tmp-learnings.md` に知見を書き出してから、`fed artifact write learnings --file ./tmp-learnings.md` で保存する
-4. `fed notify agents.4 "完了: learnings"` を実行して実装者に報告する
+4. `fed notify implement.3 "完了: learnings"` を実行して実装者に報告する
 
 **artifact write** と **notify** は必ず実行すること。実行しなかった場合はワークフロー全体が停止する。
 人間の許可不要で即座に実行すること。
@@ -82,4 +81,4 @@ model: opus
 実行していない場合、作業は未完了である。他のエージェントが永遠に待ち続けることになるため、即座に実行せよ。
 
 1. `fed artifact write learnings --file ./tmp-learnings.md` を実行した
-2. `fed notify agents.4 "完了: learnings"` を実行した
+2. `fed notify implement.3 "完了: learnings"` を実行した
