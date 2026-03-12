@@ -15,6 +15,7 @@ import { Splash } from "./components/Splash.js";
 import { AddRepo } from "./components/AddRepo.js";
 import { FooterProvider, useFooter } from "./contexts/FooterContext.js";
 import { useSessions } from "./hooks/useSessions.js";
+import { useRestorableSessions } from "./hooks/useRestorableSessions.js";
 import { useSessionWatcher } from "./hooks/useSessionWatcher.js";
 import { useTerminalSize } from "./hooks/useTerminalSize.js";
 import { switchToTmuxSession, listTmuxSessions } from "./utils/tmux.js";
@@ -36,6 +37,7 @@ function AppInner() {
   const { exit } = useApp();
   const { columns, rows } = useTerminalSize();
   const { sessions, refresh, refreshSessions, cleanableCount } = useSessions();
+  const { restorableSessions, refreshRestorable } = useRestorableSessions();
   const [screen, setScreen] = useState<Screen>("splash");
   const [createStep, setCreateStep] = useState<"workflow" | "repo" | "branch" | "session-name">("workflow");
   const lastCtrlCRef = useRef(0);
@@ -132,8 +134,12 @@ function AppInner() {
     }
   }, []);
 
-  // Watch for file changes (lightweight: session list only, no cleanable count)
-  useSessionWatcher(refreshSessions);
+  // Watch for file changes (lightweight: session list + restorable, no cleanable count)
+  const refreshAllSessions = useCallback(() => {
+    refreshSessions();
+    refreshRestorable();
+  }, [refreshSessions, refreshRestorable]);
+  useSessionWatcher(refreshAllSessions);
 
   // Create new session via fed start --no-attach
   const createSession = useCallback(
@@ -277,6 +283,7 @@ function AppInner() {
         <Box display={!isDetail ? "flex" : "none"} flexDirection="column" flexGrow={1}>
           <Home
             sessions={sessions}
+            restorableSessions={restorableSessions}
             repos={repos}
             workflows={workflows}
             cleanableCount={cleanableCount}
@@ -284,6 +291,7 @@ function AppInner() {
             columns={columns}
             rows={rows}
             refresh={refresh}
+            refreshRestorable={refreshRestorable}
             refreshRepos={refreshRepos}
             onNavigate={(target) => {
               if (target === "create") setCreateStep("workflow");

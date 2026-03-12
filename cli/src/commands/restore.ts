@@ -208,8 +208,9 @@ export function restoreCommand(
   noAttach?: boolean
 ): void {
   // 1. Preflight checks
-  if (process.env.TMUX) {
+  if (process.env.TMUX && !noAttach) {
     console.error("Error: fed restore must be run outside of tmux.");
+    console.error("  Use --no-attach to restore from within tmux.");
     process.exit(1);
   }
 

@@ -57,6 +57,16 @@ export interface RepoInfo {
   tmuxAlive: boolean;
 }
 
+// Restorable session data (dead tmux session with active symlink)
+export interface RestorableSessionData {
+  name: string;
+  sessionDir: string;
+  meta: MetaJson;
+  status: string;
+  workflow?: string;
+  age: string;
+}
+
 // Footer override state from Home component
 export type FooterOverride =
   | null
@@ -64,7 +74,9 @@ export type FooterOverride =
   | { type: "confirmClean"; count: number }
   | { type: "confirmKill"; name: string }
   | { type: "confirmScript"; name: string }
-  | { type: "confirmDeleteSession"; name: string };
+  | { type: "confirmDeleteSession"; name: string }
+  | { type: "confirmRestore"; name: string }
+  | { type: "restoring" };
 
 // Workflow info for dashboard display
 export interface WorkflowInfo {
