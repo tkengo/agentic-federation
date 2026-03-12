@@ -13,15 +13,25 @@ export interface ClaudeSessionEntry {
 
 export type SessionsJson = Record<string, ClaudeSessionEntry>;
 
-// Read sessions.json from a session directory
+// Load Claude session entries from per-pane files in claude-sessions/
 export function loadSessionsJson(sessionDir: string): SessionsJson | null {
-  const sessionsPath = path.join(sessionDir, "sessions.json");
-  if (!fs.existsSync(sessionsPath)) return null;
-  try {
-    return JSON.parse(fs.readFileSync(sessionsPath, "utf-8")) as SessionsJson;
-  } catch {
-    return null;
+  const claudeSessionsDir = path.join(sessionDir, "claude-sessions");
+  if (!fs.existsSync(claudeSessionsDir)) return null;
+
+  const sessions: SessionsJson = {};
+  for (const file of fs.readdirSync(claudeSessionsDir)) {
+    if (!file.endsWith(".json")) continue;
+    const paneKey = file.replace(/\.json$/, "");
+    try {
+      const entry = JSON.parse(
+        fs.readFileSync(path.join(claudeSessionsDir, file), "utf-8")
+      ) as ClaudeSessionEntry;
+      sessions[paneKey] = entry;
+    } catch {
+      // Skip corrupted files
+    }
   }
+  return Object.keys(sessions).length > 0 ? sessions : null;
 }
 
 // Quote a string for shell safety
@@ -44,25 +54,19 @@ export function claudeCommand(args: string[]): void {
     // Not in tmux or tmux query failed
   }
 
-  // Load or create sessions.json
-  const sessionsPath = path.join(sessionDir, "sessions.json");
-  let sessions: SessionsJson = {};
-  if (fs.existsSync(sessionsPath)) {
-    try {
-      sessions = JSON.parse(fs.readFileSync(sessionsPath, "utf-8")) as SessionsJson;
-    } catch {
-      sessions = {};
-    }
-  }
-
-  // Save session entry
-  sessions[paneKey] = {
+  // Write per-pane session file (no shared file = no race condition)
+  const claudeSessionsDir = path.join(sessionDir, "claude-sessions");
+  fs.mkdirSync(claudeSessionsDir, { recursive: true });
+  const entry: ClaudeSessionEntry = {
     tool: "claude",
     session_id: uuid,
     args,
     started_at: new Date().toISOString(),
   };
-  fs.writeFileSync(sessionsPath, JSON.stringify(sessions, null, 2) + "\n");
+  fs.writeFileSync(
+    path.join(claudeSessionsDir, `${paneKey}.json`),
+    JSON.stringify(entry, null, 2) + "\n"
+  );
 
   console.log(`[fed] Claude session: ${uuid} (pane: ${paneKey})`);
 
