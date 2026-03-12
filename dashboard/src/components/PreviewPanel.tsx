@@ -27,13 +27,9 @@ export function PreviewPanel({ preview, width, height, scrollOffset }: PreviewPa
   const innerWidth = width - 4; // border(2) + paddingX(2)
   // Content area: total height - border(2)
   const contentHeight = Math.max(1, height - 2);
-  // Pane preview: always show the bottom (tail -f style), no scroll
-  const isPane = preview.type === "pane";
-  const visibleLines = isPane
-    ? preview.lines.slice(Math.max(0, preview.lines.length - contentHeight))
-    : preview.lines.slice(scrollOffset, scrollOffset + contentHeight);
-  const hasMoreUp = isPane ? false : scrollOffset > 0;
-  const hasMoreDown = isPane ? false : scrollOffset + contentHeight < preview.lines.length;
+  const visibleLines = preview.lines.slice(scrollOffset, scrollOffset + contentHeight);
+  const hasMoreUp = scrollOffset > 0;
+  const hasMoreDown = scrollOffset + contentHeight < preview.lines.length;
 
   return (
     <Box

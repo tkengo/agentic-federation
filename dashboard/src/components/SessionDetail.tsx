@@ -5,16 +5,15 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { execSync, spawn } from "node:child_process";
 import type { ChildProcess } from "node:child_process";
-import { DetailPanel, useScripts, usePanes } from "./DetailPanel.js";
+import { DetailPanel, useScripts } from "./DetailPanel.js";
 import type { DetailMode, ActionEntry } from "./DetailPanel.js";
 import { PreviewPanel } from "./PreviewPanel.js";
 import { StatusBadge } from "./StatusBadge.js";
-import { useArtifacts } from "./ArtifactList.js";
 import { usePreviewContent } from "../hooks/usePreviewContent.js";
 import { useKeyboard } from "../hooks/useKeyboard.js";
 import { useBlink } from "../hooks/useBlink.js";
 import { useFooter } from "../contexts/FooterContext.js";
-import { switchToTmuxSession, createOrAttachArtifactSession, listTmuxSessions } from "../utils/tmux.js";
+import { switchToTmuxSession } from "../utils/tmux.js";
 import { shortenHome, formatAge } from "../utils/format.js";
 import { STALE_THRESHOLD_SEC } from "../utils/types.js";
 import type { SessionData } from "../utils/types.js";
@@ -54,10 +53,6 @@ export function SessionDetail({
   const [confirmingScript, setConfirmingScript] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
-  // Pane sending state
-  const [sendingValue, setSendingValue] = useState("");
-  const [sendingPaneIndex, setSendingPaneIndex] = useState(-1);
-
   // Script execution state
   const [logLines, setLogLines] = useState<string[]>([]);
   const [logScroll, setLogScroll] = useState(0);
@@ -74,19 +69,12 @@ export function SessionDetail({
   const [previewScroll, setPreviewScroll] = useState(0);
 
   // Data for session
-  const [tmuxSessions, setTmuxSessions] = useState(() => listTmuxSessions());
-  const refreshTmuxSessions = useCallback(() => setTmuxSessions(listTmuxSessions()), []);
-  const artifacts = useArtifacts(session.sessionDir, tmuxSessions, session.meta.tmux_session);
   const scripts = useScripts(session.sessionDir);
-  const panes = usePanes(session.sessionDir);
-  const totalDetailItems = artifacts.length + scripts.length + panes.length + SESSION_ACTIONS.length;
+  const totalDetailItems = scripts.length + SESSION_ACTIONS.length;
 
   // Preview content for selected detail item
   const previewData = usePreviewContent(
-    session.sessionDir,
-    artifacts,
     scripts,
-    panes,
     detailIndex,
   );
 
@@ -105,8 +93,7 @@ export function SessionDetail({
   // Report footer override to parent
   useEffect(() => {
     if (confirmingScript) {
-      const scriptIdx = detailIndex - artifacts.length;
-      const scriptDef = scripts[scriptIdx];
+      const scriptDef = scripts[detailIndex];
       if (scriptDef) {
         setOverride({ type: "confirmScript", name: scriptDef.name });
       } else {
@@ -117,7 +104,7 @@ export function SessionDetail({
     } else {
       clearOverride();
     }
-  }, [confirmingScript, confirmingDelete, detailIndex, artifacts.length, scripts, session.name, setOverride, clearOverride]);
+  }, [confirmingScript, confirmingDelete, detailIndex, scripts, session.name, setOverride, clearOverride]);
 
   // Clear footer override on unmount
   useEffect(() => {
@@ -143,8 +130,7 @@ export function SessionDetail({
 
   // Run a script
   const runScript = useCallback(() => {
-    const scriptIdx = detailIndex - artifacts.length;
-    const scriptDef = scripts[scriptIdx];
+    const scriptDef = scripts[detailIndex];
     if (!scriptDef) return;
 
     const sessionDir = session.sessionDir;
@@ -230,7 +216,7 @@ export function SessionDetail({
       setScriptExitCode(1);
       setDetailMode("done");
     });
-  }, [session, detailIndex, artifacts.length, scripts]);
+  }, [session, detailIndex, scripts]);
 
   // Kill a running script
   const killScript = useCallback(() => {
@@ -277,37 +263,12 @@ export function SessionDetail({
         setDetailIndex((i) => (i >= Math.max(0, totalDetailItems - 1) ? 0 : i + 1));
       },
       onEnter: () => {
-        if (detailIndex < artifacts.length) {
-          // Open artifact in a dedicated tmux session (vertical split)
-          const artifactName = artifacts[detailIndex]?.name;
-          if (!artifactName) return;
-          const artifactPath = path.join(session.sessionDir, "artifacts", artifactName);
-          const worktree = session.meta.worktree ?? session.sessionDir;
-          const ok = createOrAttachArtifactSession(
-            session.meta.tmux_session,
-            artifactPath,
-            artifactName,
-            worktree,
-          );
-          if (ok) {
-            // Refresh tmux session list after returning from artifact viewer
-            refreshTmuxSessions();
-          } else {
-            showMessage(`Failed to open ${artifactName}`);
-          }
-        } else if (detailIndex < artifacts.length + scripts.length) {
+        if (detailIndex < scripts.length) {
           // Confirm script execution
           setConfirmingScript(true);
-        } else if (detailIndex < artifacts.length + scripts.length + panes.length) {
-          // Pane selected -> enter sending mode
-          const paneIdx = detailIndex - artifacts.length - scripts.length;
-          setSendingPaneIndex(paneIdx);
-          setSendingValue("");
-          setDetailMode("sending");
         } else {
           // Action selected
-          const actionsStart = artifacts.length + scripts.length + panes.length;
-          const actionIdx = detailIndex - actionsStart;
+          const actionIdx = detailIndex - scripts.length;
           const action = SESSION_ACTIONS[actionIdx];
           if (action?.id === "attach") {
             const ok = switchToTmuxSession(session.meta.tmux_session);
@@ -334,7 +295,6 @@ export function SessionDetail({
   // Preview scroll in browse mode (Ctrl+U / Ctrl+D)
   useInput(
     (input, key) => {
-      if (previewData.type === "pane") return; // Pane preview: no manual scroll
       const previewContentHeight = Math.max(1, panelHeight - 2);
       const maxScroll = Math.max(0, previewData.lines.length - previewContentHeight);
       if (key.ctrl && input === "u") {
@@ -443,25 +403,11 @@ export function SessionDetail({
     { isActive: detailMode === "done" }
   );
 
-  // Sending mode: Esc to cancel (Enter handled by EmacsTextInput's onSubmit)
-  useInput(
-    (_input, key) => {
-      if (key.escape) {
-        setSendingValue("");
-        setSendingPaneIndex(-1);
-        setDetailMode("browse");
-      }
-    },
-    { isActive: detailMode === "sending" }
-  );
-
   // --- Render ---
 
   const sessionLabel = session.meta.repo
     ? `${session.meta.repo}/${session.meta.branch}`
     : session.name;
-
-  const q = (s: string) => `'${s.replace(/'/g, "'\\''")}'`;
 
   return (
     <Box flexDirection="column" flexGrow={1} paddingX={1}>
@@ -505,9 +451,7 @@ export function SessionDetail({
           width={detailWidth}
           height={panelHeight}
           mode={detailMode}
-          artifacts={artifacts}
           scripts={scripts}
-          panes={panes}
           actions={SESSION_ACTIONS}
           selectedIndex={detailIndex}
           maxVisible={dynamicMaxVisible}
@@ -517,37 +461,6 @@ export function SessionDetail({
           logLines={logLines}
           logScroll={logScroll}
           logMaxVisible={logMaxVisible}
-          sendingPaneDisplayName={
-            sendingPaneIndex >= 0 ? panes[sendingPaneIndex]?.displayName : undefined
-          }
-          sendingValue={sendingValue}
-          onSendingChange={setSendingValue}
-          onSendingSubmit={(text) => {
-            if (!text.trim()) return;
-            const pane = panes[sendingPaneIndex];
-            if (!pane) return;
-            try {
-              // Send text literally first (synchronous).
-              execSync(
-                `tmux send-keys -t ${q(pane.tmuxTarget)} -l ${q(text)}`,
-                { stdio: "ignore" }
-              );
-              // Send Enter in the background after a delay so TUI apps
-              // like Claude Code have time to process the pasted text.
-              const child = spawn(
-                "sh",
-                ["-c", `sleep 1 && tmux send-keys -t ${q(pane.tmuxTarget)} Enter`],
-                { stdio: "ignore", detached: true }
-              );
-              child.unref();
-              showMessage(`Sent to ${pane.displayName}`);
-            } catch {
-              showMessage(`Failed to send to ${pane.displayName}`);
-            }
-            setSendingValue("");
-            setSendingPaneIndex(-1);
-            setDetailMode("browse");
-          }}
         />
         <PreviewPanel
           preview={previewData}

@@ -11,8 +11,7 @@ import { shortenHome } from "../utils/format.js";
 import { REPOS_DIR } from "../utils/types.js";
 import type { RepoInfo } from "../utils/types.js";
 import type { PreviewData } from "../hooks/usePreviewContent.js";
-import type { ArtifactEntry } from "./ArtifactList.js";
-import type { ScriptEntry, PaneEntry } from "./DetailPanel.js";
+import type { ScriptEntry } from "./DetailPanel.js";
 
 interface RepoDetailProps {
   repo: RepoInfo;
@@ -46,31 +45,18 @@ export function RepoDetail({
       return {
         title: `${repo.name}.json`,
         lines: content.split("\n").slice(0, 200),
-        type: "artifact" as const,
+        type: "script" as const,
       };
     } catch {
       return {
         title: `${repo.name}.json`,
         lines: ["(read error)"],
-        type: "artifact" as const,
+        type: "script" as const,
       };
     }
   }, [configPath, repo.name]);
 
-  // DetailPanel uses artifacts array for the config file entry
-  const configArtifact: ArtifactEntry[] = useMemo(() => {
-    try {
-      const stat = fs.statSync(configPath);
-      const kb = stat.size / 1024;
-      const sizeKB = kb < 0.1 ? "0.1KB" : kb < 10 ? `${kb.toFixed(1)}KB` : `${Math.round(kb)}KB`;
-      return [{ name: `${repo.name}.json`, sizeKB, tmuxAlive: false }];
-    } catch {
-      return [{ name: `${repo.name}.json`, sizeKB: "0KB", tmuxAlive: false }];
-    }
-  }, [configPath, repo.name]);
-
   const emptyScripts: ScriptEntry[] = [];
-  const emptyPanes: PaneEntry[] = [];
 
   // Open config in nvim
   const openConfig = () => {
@@ -128,9 +114,7 @@ export function RepoDetail({
           width={detailWidth}
           height={panelHeight}
           mode="browse"
-          artifacts={configArtifact}
           scripts={emptyScripts}
-          panes={emptyPanes}
           selectedIndex={0}
           maxVisible={Math.max(5, panelHeight - 2)}
         />
