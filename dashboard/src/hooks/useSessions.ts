@@ -121,6 +121,13 @@ function loadSessions(): SessionData[] {
     });
   }
 
+  // Sort by repo name (primary) then branch name (secondary), ascending, case-insensitive
+  sessions.sort((a, b) => {
+    const repoCompare = a.meta.repo.localeCompare(b.meta.repo, undefined, { sensitivity: "base" });
+    if (repoCompare !== 0) return repoCompare;
+    return a.meta.branch.localeCompare(b.meta.branch, undefined, { sensitivity: "base" });
+  });
+
   return sessions;
 }
 
