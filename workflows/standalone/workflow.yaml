@@ -7,7 +7,7 @@ windows:
       - id: claude
         name: Claude
         pane: 1
-        command: yoloclaude
+        command: fed claude --dangerously-skip-permissions
       - id: editor
         name: Editor
         pane: 2

@@ -339,7 +339,7 @@ function printReadyAndAttach(
 
 // --- Apply environment variables to tmux session ---
 // Merges repo config env and CLI --env, with CLI taking precedence.
-function applyEnvironmentVars(
+export function applyEnvironmentVars(
   session: string,
   repoEnv?: Record<string, string>,
   cliEnv?: Record<string, string>
@@ -354,7 +354,7 @@ function applyEnvironmentVars(
 }
 
 // --- Create window layout from WorkflowWindow definition ---
-function createWindowLayout(
+export function createWindowLayout(
   session: string,
   win: WorkflowWindow,
   cwd: string
@@ -495,7 +495,7 @@ function expandAndSaveWorkflowStandalone(
 }
 
 // --- Start TypeScript notification watcher as child process ---
-function startNotificationWatcher(
+export function startNotificationWatcher(
   sessionPath: string,
   session: string
 ): void {
@@ -524,7 +524,7 @@ function startNotificationWatcher(
 }
 
 // --- Sync commands/skills ---
-function syncCommands(): void {
+export function syncCommands(): void {
   const fedRepo = path.resolve(import.meta.dirname, "..", "..", "..");
   const commandsDir = path.join(fedRepo, "commands");
   const claudeCommandsDir = path.join(os.homedir(), ".claude", "commands");
@@ -543,7 +543,7 @@ function syncCommands(): void {
 }
 
 // --- Sync agent prompts to ~/.claude/agents/ ---
-function syncAgents(workflowName: string): void {
+export function syncAgents(workflowName: string): void {
   fs.mkdirSync(CLAUDE_AGENTS_DIR, { recursive: true });
 
   let count = 0;

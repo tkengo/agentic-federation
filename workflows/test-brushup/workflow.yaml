@@ -28,7 +28,7 @@ windows:
       - id: analyzer
         name: Analyzer
         pane: 1
-        command: 'yoloclaude --agent test-brushup-analyzer'
+        command: 'fed claude --dangerously-skip-permissions --agent test-brushup-analyzer'
       - id: human
         name: Human
         pane: 2
@@ -47,7 +47,7 @@ windows:
       - id: refactorer
         name: Refactorer
         pane: 1
-        command: 'yoloclaude --agent test-brushup-refactorer'
+        command: 'fed claude --dangerously-skip-permissions --agent test-brushup-refactorer'
       - id: profiler
         name: Profiler
         pane: 2
@@ -55,7 +55,7 @@ windows:
       - id: learnings
         name: Learnings
         pane: 3
-        command: 'yoloclaude --agent test-brushup-learnings'
+        command: 'fed claude --dangerously-skip-permissions --agent test-brushup-learnings'
       - id: static_checker
         name: Static Checker
         pane: 4

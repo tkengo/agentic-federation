@@ -48,6 +48,8 @@ import {
   repoScriptShowCommand,
   repoScriptRunCommand,
 } from "./commands/repo-script.js";
+import { claudeCommand } from "./commands/claude.js";
+import { restoreCommand, restoreListCommand } from "./commands/restore.js";
 
 const program = new Command();
 
@@ -411,6 +413,36 @@ repoScript
   .description("Run a script")
   .action((name: string) => {
     repoScriptRunCommand(name);
+  });
+
+// --- claude ---
+program
+  .command("claude")
+  .description("Launch Claude Code with automatic session ID tracking")
+  .allowUnknownOption()
+  .allowExcessArguments()
+  .action((_options: Record<string, unknown>, cmd: Command) => {
+    claudeCommand(cmd.args);
+  });
+
+// --- restore ---
+const restore = program
+  .command("restore")
+  .description("Restore sessions after tmux loss (e.g., PC reboot)");
+
+restore
+  .command("list")
+  .description("List restorable sessions")
+  .action(() => {
+    restoreListCommand();
+  });
+
+restore
+  .command("session <session-name>")
+  .description("Restore a specific session")
+  .option("--no-attach", "Skip tmux attach after restore")
+  .action((sessionName: string, options: { attach?: boolean }) => {
+    restoreCommand(sessionName, options.attach === false);
   });
 
 program.parse();

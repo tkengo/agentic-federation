@@ -28,7 +28,7 @@ windows:
       - id: analyst
         name: Analyst
         pane: 1
-        command: 'yoloclaude --agent req-spec-analyst'
+        command: 'fed claude --dangerously-skip-permissions --agent req-spec-analyst'
       - id: human
         name: Human
         pane: 2
@@ -47,7 +47,7 @@ windows:
       - id: spec_revisor
         name: "Spec Revisor"
         pane: 1
-        command: 'yoloclaude --agent req-spec-spec-revisor'
+        command: 'fed claude --dangerously-skip-permissions --agent req-spec-spec-revisor'
       - id: tech_reviewer
         name: "Tech Reviewer"
         pane: 2
