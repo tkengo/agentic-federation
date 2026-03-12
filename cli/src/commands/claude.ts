@@ -47,7 +47,7 @@ export function claudeCommand(args: string[]): void {
   let paneKey = "unknown";
   try {
     paneKey = execSync(
-      "tmux display-message -p '#{window_name}.#{pane_index}'",
+      'tmux display-message -t "$TMUX_PANE" -p \'#{window_name}.#{pane_index}\'',
       { encoding: "utf-8" }
     ).trim();
   } catch {
