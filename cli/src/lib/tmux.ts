@@ -75,7 +75,7 @@ export function setEnvironment(session: string, name: string, value: string): vo
 
 // Set a tmux option for a specific session
 export function setOption(session: string, option: string, value: string): void {
-  tmux(`set-option -t ${quote(`=${session}`)} ${quote(option)} ${quote(value)}`);
+  tmux(`set-option -t ${quote(session)} ${quote(option)} ${quote(value)}`);
 }
 
 // Quote a tmux argument for shell safety
