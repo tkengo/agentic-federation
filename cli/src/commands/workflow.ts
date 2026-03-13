@@ -21,29 +21,37 @@ export function workflowListCommand(): void {
 }
 
 /** Show the YAML content of a workflow.
- *  If inside a session, prefer the session-local expanded workflow.yaml. */
-export function workflowShowCommand(name: string): void {
-  // Try session-local expanded copy first
-  const tmuxSession = getCurrentTmuxSession();
-  if (tmuxSession) {
-    const sessionDir = resolveSession(tmuxSession);
-    if (sessionDir) {
-      const sessionWf = path.join(sessionDir, "workflow.yaml");
-      if (fs.existsSync(sessionWf)) {
-        process.stdout.write(fs.readFileSync(sessionWf, "utf-8"));
-        return;
-      }
+ *  If name is given, read from source workflows directory.
+ *  If name is omitted, show the current session's expanded workflow.yaml. */
+export function workflowShowCommand(name?: string): void {
+  if (name) {
+    // Name specified: always read from source workflows directory
+    const filePath = path.join(WORKFLOWS_DIR, name, "workflow.yaml");
+    if (!fs.existsSync(filePath)) {
+      console.error(`Workflow not found: ${name}`);
+      process.exit(1);
     }
+    process.stdout.write(fs.readFileSync(filePath, "utf-8"));
+    return;
   }
 
-  // Fall back to source workflows directory
-  const filePath = path.join(WORKFLOWS_DIR, name, "workflow.yaml");
-  if (!fs.existsSync(filePath)) {
-    console.error(`Workflow not found: ${name}`);
+  // Name omitted: show current session's expanded workflow
+  const tmuxSession = getCurrentTmuxSession();
+  if (!tmuxSession) {
+    console.error("Error: Not inside a session. Specify a workflow name.");
     process.exit(1);
   }
-  const content = fs.readFileSync(filePath, "utf-8");
-  process.stdout.write(content);
+  const sessionDir = resolveSession(tmuxSession);
+  if (!sessionDir) {
+    console.error(`Error: No active session found for '${tmuxSession}'.`);
+    process.exit(1);
+  }
+  const sessionWf = path.join(sessionDir, "workflow.yaml");
+  if (!fs.existsSync(sessionWf)) {
+    console.error("Error: No workflow.yaml found in current session.");
+    process.exit(1);
+  }
+  process.stdout.write(fs.readFileSync(sessionWf, "utf-8"));
 }
 
 /** Validate a workflow definition and report errors. */

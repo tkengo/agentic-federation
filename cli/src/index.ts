@@ -376,9 +376,9 @@ workflow
   });
 
 workflow
-  .command("show <name>")
-  .description("Show workflow YAML content")
-  .action((name: string) => {
+  .command("show [name]")
+  .description("Show workflow YAML content (omit name for current session)")
+  .action((name?: string) => {
     workflowShowCommand(name);
   });
 
