@@ -27,7 +27,7 @@ export function createOrAttachRepoSession(repoName: string, cwd: string): boolea
     // Check if session already exists
     let exists = false;
     try {
-      execSync(`tmux has-session -t '${sessionName}'`, { stdio: "ignore" });
+      execSync(`tmux has-session -t '=${sessionName}'`, { stdio: "ignore" });
       exists = true;
     } catch {
       // Session does not exist
@@ -73,7 +73,7 @@ export function createOrAttachArtifactSession(
   try {
     let exists = false;
     try {
-      execSync(`tmux has-session -t ${q(sessionName)}`, { stdio: "ignore" });
+      execSync(`tmux has-session -t ${q(`=${sessionName}`)}`, { stdio: "ignore" });
       exists = true;
     } catch {
       // Session does not exist
@@ -88,24 +88,24 @@ export function createOrAttachArtifactSession(
       );
       // Open nvim with the artifact in the first pane
       execSync(
-        `tmux send-keys -t ${q(sessionName)} ${q(`nvim ${q(artifactPath)}`)} Enter`,
+        `tmux send-keys -t ${q(`=${sessionName}`)} ${q(`nvim ${q(artifactPath)}`)} Enter`,
         { stdio: "ignore" },
       );
       // Split horizontally (side-by-side), right pane in worktree dir
       execSync(
-        `tmux split-window -h -t ${q(sessionName)} -c ${q(worktreePath)} -p 50`,
+        `tmux split-window -h -t ${q(`=${sessionName}`)} -c ${q(worktreePath)} -p 50`,
         { stdio: "ignore" },
       );
       // Open nvim in the right pane
       execSync(
-        `tmux send-keys -t ${q(sessionName)} nvim Enter`,
+        `tmux send-keys -t ${q(`=${sessionName}`)} nvim Enter`,
         { stdio: "ignore" },
       );
       // Select left pane so user starts on the artifact
       // Use -L (left of active pane) instead of hardcoded pane index
       // to work regardless of pane-base-index setting
       execSync(
-        `tmux select-pane -t ${q(sessionName)} -L`,
+        `tmux select-pane -t ${q(`=${sessionName}`)} -L`,
         { stdio: "ignore" },
       );
     }
@@ -127,11 +127,11 @@ export function switchToTmuxSession(target: string): boolean {
   try {
     if (insideTmux) {
       execSync(
-        `tmux display-popup -E -w 100% -h 100% "TMUX= exec tmux attach-session -t '${target}'"`,
+        `tmux display-popup -E -w 100% -h 100% "TMUX= exec tmux attach-session -t '=${target}'"`,
         { stdio: "ignore" },
       );
     } else {
-      execSync(`tmux attach-session -t '${target}'`, { stdio: "inherit" });
+      execSync(`tmux attach-session -t '=${target}'`, { stdio: "inherit" });
       if (process.stdin.isTTY && process.stdin.setRawMode) {
         process.stdin.setRawMode(true);
       }

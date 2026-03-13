@@ -36,7 +36,7 @@ function log(msg: string): void {
 
 function tmuxSessionAlive(): boolean {
   try {
-    execSync(`tmux has-session -t '${tmuxSession}' 2>/dev/null`, {
+    execSync(`tmux has-session -t '=${tmuxSession}' 2>/dev/null`, {
       stdio: "ignore",
     });
     return true;
@@ -68,11 +68,11 @@ function processNotification(filePath: string): void {
       log(`Sending to ${target}: ${message.slice(0, 50)}...`);
       try {
         const q = (s: string) => `'${s.replace(/'/g, "'\\''")}'`;
-        execSync(`tmux send-keys -t ${q(target)} ${q(message)}`, {
+        execSync(`tmux send-keys -t ${q(`=${target}`)} ${q(message)}`, {
           stdio: "ignore",
         });
         execSync("sleep 1");
-        execSync(`tmux send-keys -t ${q(target)} Enter`, {
+        execSync(`tmux send-keys -t ${q(`=${target}`)} Enter`, {
           stdio: "ignore",
         });
         log("Sent successfully");

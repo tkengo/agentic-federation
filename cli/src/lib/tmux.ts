@@ -8,7 +8,7 @@ export function tmux(args: string): string {
 // Check if a tmux session exists
 export function hasSession(name: string): boolean {
   try {
-    execSync(`tmux has-session -t ${quote(name)} 2>/dev/null`, {
+    execSync(`tmux has-session -t ${quote(`=${name}`)} 2>/dev/null`, {
       stdio: "ignore",
     });
     return true;
@@ -36,7 +36,7 @@ export function newWindow(
   cwd: string
 ): void {
   tmux(
-    `new-window -t ${quote(session)} -n ${quote(windowName)} -c ${quote(cwd)}`
+    `new-window -t ${quote(`=${session}`)} -n ${quote(windowName)} -c ${quote(cwd)}`
   );
 }
 
@@ -48,34 +48,34 @@ export function splitWindow(
   cwd: string
 ): void {
   tmux(
-    `split-window -${direction} -t ${quote(target)} -p ${percentage} -c ${quote(cwd)}`
+    `split-window -${direction} -t ${quote(`=${target}`)} -p ${percentage} -c ${quote(cwd)}`
   );
 }
 
 // Send keys to a pane
 export function sendKeys(target: string, keys: string): void {
-  tmux(`send-keys -t ${quote(target)} ${quote(keys)} Enter`);
+  tmux(`send-keys -t ${quote(`=${target}`)} ${quote(keys)} Enter`);
 }
 
 // Select a pane
 export function selectPane(target: string): void {
-  tmux(`select-pane -t ${quote(target)}`);
+  tmux(`select-pane -t ${quote(`=${target}`)}`);
 }
 
 // Select a window
 export function selectWindow(target: string): void {
-  tmux(`select-window -t ${quote(target)}`);
+  tmux(`select-window -t ${quote(`=${target}`)}`);
 }
 
 // Set an environment variable in a tmux session.
 // New panes/windows created after this call inherit the variable.
 export function setEnvironment(session: string, name: string, value: string): void {
-  tmux(`set-environment -t ${quote(session)} ${quote(name)} ${quote(value)}`);
+  tmux(`set-environment -t ${quote(`=${session}`)} ${quote(name)} ${quote(value)}`);
 }
 
 // Set a tmux option for a specific session
 export function setOption(session: string, option: string, value: string): void {
-  tmux(`set-option -t ${quote(session)} ${quote(option)} ${quote(value)}`);
+  tmux(`set-option -t ${quote(`=${session}`)} ${quote(option)} ${quote(value)}`);
 }
 
 // Quote a tmux argument for shell safety
