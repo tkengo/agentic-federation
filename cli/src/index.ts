@@ -50,6 +50,7 @@ import {
 } from "./commands/repo-script.js";
 import { claudeCommand } from "./commands/claude.js";
 import { restoreCommand, restoreListCommand } from "./commands/restore.js";
+import { convListCommand, convShowCommand } from "./commands/conv.js";
 
 const program = new Command();
 
@@ -413,6 +414,26 @@ repoScript
   .description("Run a script")
   .action((name: string) => {
     repoScriptRunCommand(name);
+  });
+
+// --- conv ---
+const conv = program
+  .command("conv")
+  .description("View collected conversations from AI tools");
+
+conv
+  .command("list")
+  .description("List collected conversation files")
+  .action(() => {
+    convListCommand();
+  });
+
+conv
+  .command("show <name>")
+  .description("Show a conversation in human-readable format")
+  .option("--raw", "Output raw JSONL instead of formatted text")
+  .action((name: string, options: { raw?: boolean }) => {
+    convShowCommand(name, options.raw);
   });
 
 // --- claude ---

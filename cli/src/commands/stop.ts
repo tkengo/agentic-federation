@@ -8,6 +8,7 @@ import {
   readMeta,
 } from "../lib/session.js";
 import * as tmux from "../lib/tmux.js";
+import { collectConversations } from "../lib/conv-store.js";
 
 export function stopCommand(sessionName?: string): void {
   // Resolve session name
@@ -52,6 +53,14 @@ export function stopCommand(sessionName?: string): void {
 
   // 1. Stop watcher processes via PID files
   stopWatcherProcesses(sessionDir);
+
+  // 1.5. Collect conversations from AI tools (best-effort)
+  console.log("  Collecting conversations...");
+  try {
+    collectConversations(sessionDir);
+  } catch (err) {
+    console.error(`  Warning: Conversation collection failed: ${err}`);
+  }
 
   // 2. Kill artifact viewer tmux sessions (pattern: <session>__art__*)
   killArtifactSessions(targetSession);
