@@ -27,6 +27,7 @@ interface HeaderProps {
   cleanableCount: number;
   repoCount: number;
   workflowCount: number;
+  restorableCount: number;
   compact?: boolean;
 }
 
@@ -34,7 +35,7 @@ interface HeaderProps {
 export const HEADER_HEIGHT_FULL = LOGO.length + 2; // logo lines + border(1) + stats(1)
 export const HEADER_HEIGHT_COMPACT = 2; // border(1) + stats(1)
 
-export function Header({ sessionCount, cleanableCount, repoCount, workflowCount, compact }: HeaderProps) {
+export function Header({ sessionCount, cleanableCount, repoCount, workflowCount, restorableCount, compact }: HeaderProps) {
   return (
     <Box flexDirection="column">
       {!compact && (
@@ -52,7 +53,8 @@ export function Header({ sessionCount, cleanableCount, repoCount, workflowCount,
       >
         <Text dimColor>
           {sessionCount} {sessionCount === 1 ? "session" : "sessions"} · {repoCount} {repoCount === 1 ? "repo" : "repos"} · {workflowCount} {workflowCount === 1 ? "workflow" : "workflows"}
-          {cleanableCount > 0 ? ` · ${cleanableCount} cleanable worktrees` : ""}
+          {restorableCount > 0 ? ` · ${restorableCount} restorable` : ""}
+          {cleanableCount > 0 ? ` · ${cleanableCount} cleanable` : ""}
         </Text>
       </Box>
     </Box>

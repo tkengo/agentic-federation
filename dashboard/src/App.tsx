@@ -13,6 +13,7 @@ import { CommandPalette } from "./components/CommandPalette.js";
 import { Footer } from "./components/Footer.js";
 import { Splash } from "./components/Splash.js";
 import { AddRepo } from "./components/AddRepo.js";
+import { BottomPanel } from "./components/BottomPanel.js";
 import { FooterProvider, useFooter } from "./contexts/FooterContext.js";
 import { useSessions } from "./hooks/useSessions.js";
 import { useRestorableSessions } from "./hooks/useRestorableSessions.js";
@@ -267,6 +268,7 @@ function AppInner() {
         cleanableCount={cleanableCount}
         repoCount={repos.length}
         workflowCount={workflows.length}
+        restorableCount={restorableSessions.length}
         compact={isDetail}
       />
 
@@ -341,51 +343,48 @@ function AppInner() {
           />
         )}
 
-        {/* Spacer pushes panels to bottom */}
-        {(screen === "create" || screen === "palette" || screen === "add-repo") && <Box flexGrow={1} />}
-
-        {/* Command palette - bottom-aligned */}
-        {screen === "palette" && (
-          <CommandPalette
-            sessionName={activeSession?.name}
-            hasSession={!!activeSession}
-            onClose={() => setScreen("list")}
-            onAction={(cmdId) => {
-              setScreen("list");
-              setPendingHomeAction(cmdId);
-            }}
-            onScreenTransition={(cmdId) => {
-              switch (cmdId) {
-                case "new":
-                  setCreateStep("workflow");
-                  setScreen("create");
-                  break;
-                default:
+        {/* Bottom panel - fixed height, always present on home screen */}
+        {!isDetail && (
+          <BottomPanel>
+            {screen === "palette" && (
+              <CommandPalette
+                sessionName={activeSession?.name}
+                hasSession={!!activeSession}
+                onClose={() => setScreen("list")}
+                onAction={(cmdId) => {
                   setScreen("list");
-              }
-            }}
-          />
-        )}
-
-        {/* Add repo panel - bottom-aligned */}
-        {screen === "add-repo" && (
-          <AddRepo
-            onSubmitClone={addRepoClone}
-            onSubmitLocal={addRepoLocal}
-            onCancel={() => setScreen("list")}
-          />
-        )}
-
-        {/* Create panel - bottom-aligned */}
-        {screen === "create" && (
-          <CreateSession
-            repos={repos.map((r) => r.name)}
-            workflows={workflows}
-            sessions={sessions}
-            onSubmit={createSession}
-            onCancel={() => setScreen("list")}
-            onStepChange={setCreateStep}
-          />
+                  setPendingHomeAction(cmdId);
+                }}
+                onScreenTransition={(cmdId) => {
+                  switch (cmdId) {
+                    case "new":
+                      setCreateStep("workflow");
+                      setScreen("create");
+                      break;
+                    default:
+                      setScreen("list");
+                  }
+                }}
+              />
+            )}
+            {screen === "add-repo" && (
+              <AddRepo
+                onSubmitClone={addRepoClone}
+                onSubmitLocal={addRepoLocal}
+                onCancel={() => setScreen("list")}
+              />
+            )}
+            {screen === "create" && (
+              <CreateSession
+                repos={repos.map((r) => r.name)}
+                workflows={workflows}
+                sessions={sessions}
+                onSubmit={createSession}
+                onCancel={() => setScreen("list")}
+                onStepChange={setCreateStep}
+              />
+            )}
+          </BottomPanel>
         )}
       </Box>
 

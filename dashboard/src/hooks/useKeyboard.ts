@@ -5,20 +5,27 @@ export interface KeyboardActions {
   onUp?: () => void;
   onDown?: () => void;
 
+  onTabNext?: () => void;
+  onTabPrev?: () => void;
   onStop?: () => void;
+  onClean?: () => void;
   onQuit?: () => void;
   onBack?: () => void;
-  onCreate?: () => void;
+  onAdd?: () => void;
   onPalette?: () => void;
   onSpace?: () => void;
-  onAddRepo?: () => void;
 }
 
 export function useKeyboard(actions: KeyboardActions, active = true) {
   useInput(
     (input, key) => {
+      // Tab / Shift+Tab for tab switching (must be checked first)
+      if (key.tab && key.shift) {
+        actions.onTabPrev?.();
+      } else if (key.tab) {
+        actions.onTabNext?.();
       // Ctrl+N/P for up/down navigation (takes priority)
-      if (key.ctrl && input === "p") {
+      } else if (key.ctrl && input === "p") {
         actions.onUp?.();
       } else if (key.ctrl && input === "n") {
         actions.onDown?.();
@@ -31,11 +38,11 @@ export function useKeyboard(actions: KeyboardActions, active = true) {
       } else if (key.downArrow || input === "j") {
         actions.onDown?.();
       } else if (input === "a") {
-        actions.onAddRepo?.();
+        actions.onAdd?.();
+      } else if (input === "c") {
+        actions.onClean?.();
       } else if (input === "d") {
         actions.onStop?.();
-      } else if (input === "n") {
-        actions.onCreate?.();
       } else if (input === ":") {
         actions.onPalette?.();
       } else if (input === " ") {

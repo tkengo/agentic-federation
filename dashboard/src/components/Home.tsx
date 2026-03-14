@@ -1,15 +1,23 @@
 import React, { useState, useCallback, useEffect } from "react";
-import { Box, Text, useInput } from "ink";
+import { Box, useInput } from "ink";
 import fs from "node:fs";
 import { execSync, spawn } from "node:child_process";
 import { SessionList } from "./SessionList.js";
-import { RestorableSessionList } from "./RestorableSessionList.js";
+import { RestorableList } from "./RestorableList.js";
 import { RepoList } from "./RepoList.js";
 import { WorkflowList } from "./WorkflowList.js";
+import { TabBar, type TabId } from "./TabBar.js";
+import { BOTTOM_PANEL_HEIGHT } from "./BottomPanel.js";
+import { HEADER_HEIGHT_FULL } from "./Header.js";
+import { computeScrollOffset } from "../utils/scroll.js";
 import { useKeyboard } from "../hooks/useKeyboard.js";
 import { useFooter } from "../contexts/FooterContext.js";
 import { switchToTmuxSession, createOrAttachRepoSession } from "../utils/tmux.js";
 import type { SessionData, RestorableSessionData, RepoInfo, WorkflowInfo } from "../utils/types.js";
+
+const TAB_ORDER: TabId[] = ["sessions", "repos", "workflows", "restorable"];
+const TAB_BAR_HEIGHT = 1;
+const FOOTER_HEIGHT = 2;
 
 interface HomeProps {
   sessions: SessionData[];
@@ -52,42 +60,78 @@ export function Home({
 }: HomeProps) {
   const { showMessage, showError, setOverride, clearOverride } = useFooter();
 
-  const [selectedIndex, setSelectedIndex] = useState(0);
+  // --- Tab state ---
+  const [activeTab, setActiveTab] = useState<TabId>("sessions");
+
+  // Per-tab selection indices
+  const [sessionSelectedIndex, setSessionSelectedIndex] = useState(0);
+  const [repoSelectedIndex, setRepoSelectedIndex] = useState(0);
+  const [restorableSelectedIndex, setRestorableSelectedIndex] = useState(0);
+
+  // Confirmation / async states
   const [confirmingKill, setConfirmingKill] = useState(false);
   const [confirmingClean, setConfirmingClean] = useState(false);
   const [confirmingRestore, setConfirmingRestore] = useState(false);
+  const [confirmingDeleteSession, setConfirmingDeleteSession] = useState(false);
   const [cleaning, setCleaning] = useState(false);
   const [restoring, setRestoring] = useState(false);
 
-  // Navigation: sessions -> restorable -> clean row -> repos
-  const hasCleanRow = cleanableCount > 0;
-  const cleanOffset = hasCleanRow ? 1 : 0;
-  const restorableStartIndex = sessions.length;
-  const cleanStartIndex = restorableStartIndex + restorableSessions.length;
-  const repoStartIndex = cleanStartIndex + cleanOffset;
-  const totalItems = repoStartIndex + repos.length;
-  const maxIndex = Math.max(0, totalItems - 1);
-  const cleanRowSelected = hasCleanRow && selectedIndex === cleanStartIndex;
-  const isRestorableSelected = selectedIndex >= restorableStartIndex && selectedIndex < cleanStartIndex;
-  const selectedRestorableIndex = isRestorableSelected ? selectedIndex - restorableStartIndex : -1;
-  const selectedRestorable: RestorableSessionData | undefined = isRestorableSelected
-    ? restorableSessions[selectedRestorableIndex]
-    : undefined;
-  const isRepoSelected = selectedIndex >= repoStartIndex && selectedIndex < repoStartIndex + repos.length;
-  const selectedRepoIndex = isRepoSelected ? selectedIndex - repoStartIndex : -1;
-  const selectedSession: SessionData | undefined = sessions[selectedIndex];
+  // --- Tab switching ---
+  const goNextTab = useCallback(() => {
+    setActiveTab((cur) => {
+      const idx = TAB_ORDER.indexOf(cur);
+      return TAB_ORDER[(idx + 1) % TAB_ORDER.length]!;
+    });
+  }, []);
 
-  // Clamp selectedIndex if list changed
-  if (selectedIndex > maxIndex && maxIndex >= 0) {
-    setSelectedIndex(maxIndex);
+  const goPrevTab = useCallback(() => {
+    setActiveTab((cur) => {
+      const idx = TAB_ORDER.indexOf(cur);
+      return TAB_ORDER[(idx - 1 + TAB_ORDER.length) % TAB_ORDER.length]!;
+    });
+  }, []);
+
+  // --- maxVisible ---
+  const maxVisible = rows - HEADER_HEIGHT_FULL - TAB_BAR_HEIGHT - BOTTOM_PANEL_HEIGHT - FOOTER_HEIGHT;
+
+  // --- Per-tab max indices ---
+  const sessionMaxIndex = Math.max(0, sessions.length - 1);
+  const repoMaxIndex = Math.max(0, repos.length - 1);
+  const restorableMaxIndex = Math.max(0, restorableSessions.length - 1);
+
+  // Clamp indices
+  if (sessionSelectedIndex > sessionMaxIndex && sessionMaxIndex >= 0) {
+    setSessionSelectedIndex(sessionMaxIndex);
+  }
+  if (repoSelectedIndex > repoMaxIndex && repoMaxIndex >= 0) {
+    setRepoSelectedIndex(repoMaxIndex);
+  }
+  if (restorableSelectedIndex > restorableMaxIndex && restorableMaxIndex >= 0) {
+    setRestorableSelectedIndex(restorableMaxIndex);
   }
 
-  // Report selected session to parent
+  // --- Derived state ---
+  const selectedSession: SessionData | undefined =
+    activeTab === "sessions" && sessionSelectedIndex < sessions.length
+      ? sessions[sessionSelectedIndex]
+      : undefined;
+
+  const selectedRestorable: RestorableSessionData | undefined =
+    activeTab === "restorable" && restorableSelectedIndex < restorableSessions.length
+      ? restorableSessions[restorableSelectedIndex]
+      : undefined;
+
+  // --- Scroll offsets ---
+  const sessionScrollOffset = computeScrollOffset(sessionSelectedIndex, sessions.length, maxVisible - 1);
+  const repoScrollOffset = computeScrollOffset(repoSelectedIndex, repos.length, maxVisible);
+  const restorableScrollOffset = computeScrollOffset(restorableSelectedIndex, restorableSessions.length, maxVisible - 1);
+
+  // --- Report selected session to parent ---
   useEffect(() => {
     onSelectedSessionChange(selectedSession);
   }, [selectedSession, onSelectedSessionChange]);
 
-  // Report footer override to parent
+  // --- Footer overrides ---
   useEffect(() => {
     if (restoring) {
       setOverride({ type: "restoring" });
@@ -104,14 +148,11 @@ export function Home({
     }
   }, [restoring, cleaning, confirmingRestore, confirmingClean, confirmingKill, cleanableCount, selectedSession, selectedRestorable, setOverride, clearOverride]);
 
-  // Clear footer override on unmount
   useEffect(() => {
-    return () => {
-      clearOverride();
-    };
+    return () => { clearOverride(); };
   }, [clearOverride]);
 
-  // Switch to tmux session
+  // --- Actions ---
   const switchToSession = useCallback(() => {
     if (!selectedSession) return;
     const target = selectedSession.meta.tmux_session;
@@ -123,7 +164,6 @@ export function Home({
     }
   }, [selectedSession, showMessage]);
 
-  // Kill session
   const killSession = useCallback(() => {
     if (!selectedSession) return;
     try {
@@ -135,7 +175,6 @@ export function Home({
     }
   }, [selectedSession, showMessage, refresh]);
 
-  // Archive session
   const archiveSession = useCallback(() => {
     if (!selectedSession) return;
     try {
@@ -147,19 +186,15 @@ export function Home({
     }
   }, [selectedSession, showMessage, refresh]);
 
-  // Restore session (async via spawn)
   const restoreSession = useCallback(() => {
     if (!selectedRestorable) return;
     const name = selectedRestorable.name;
     setRestoring(true);
-
     const proc = spawn("fed", ["session", "restore", name, "--no-attach"], {
       stdio: ["ignore", "pipe", "pipe"],
     });
-
     let stderr = "";
     proc.stderr?.on("data", (data: Buffer) => { stderr += data.toString(); });
-
     proc.on("close", (code) => {
       setRestoring(false);
       clearOverride();
@@ -171,7 +206,6 @@ export function Home({
         showError(stderr.trim() || `Failed to restore ${name}`);
       }
     });
-
     proc.on("error", () => {
       setRestoring(false);
       clearOverride();
@@ -179,19 +213,15 @@ export function Home({
     });
   }, [selectedRestorable, refresh, refreshRestorable, showMessage, showError, clearOverride]);
 
-  // Run fed clean (async via spawn)
   const runClean = useCallback((force?: boolean) => {
     setCleaning(true);
     setOverride({ type: "cleaning" });
-
     const args = force ? ["clean", "--force"] : ["clean"];
     const proc = spawn("fed", args, { stdio: ["ignore", "pipe", "pipe"] });
-
     let stdout = "";
     let stderr = "";
     proc.stdout?.on("data", (data: Buffer) => { stdout += data.toString(); });
     proc.stderr?.on("data", (data: Buffer) => { stderr += data.toString(); });
-
     proc.on("close", (code) => {
       setCleaning(false);
       clearOverride();
@@ -207,7 +237,6 @@ export function Home({
       }
       refresh();
     });
-
     proc.on("error", () => {
       setCleaning(false);
       clearOverride();
@@ -216,7 +245,6 @@ export function Home({
     });
   }, [refresh, setOverride, clearOverride, showMessage, showError]);
 
-  // Open (or create) a dedicated tmux session for the repo
   const openRepoTmuxSession = useCallback((repoIndex: number) => {
     const repo = repos[repoIndex];
     if (!repo) return;
@@ -253,44 +281,58 @@ export function Home({
   }, [pendingAction, onActionHandled, switchToSession, killSession, runClean, archiveSession]);
 
   // --- Keyboard handlers ---
-
-  // List screen keyboard bindings
   useKeyboard(
     {
+      onTabNext: goNextTab,
+      onTabPrev: goPrevTab,
       onUp: () => {
-        setSelectedIndex((i) => (i <= 0 ? maxIndex : i - 1));
+        if (activeTab === "sessions") {
+          setSessionSelectedIndex((i) => (i <= 0 ? sessionMaxIndex : i - 1));
+        } else if (activeTab === "repos") {
+          setRepoSelectedIndex((i) => (i <= 0 ? repoMaxIndex : i - 1));
+        } else if (activeTab === "restorable") {
+          setRestorableSelectedIndex((i) => (i <= 0 ? restorableMaxIndex : i - 1));
+        }
       },
       onDown: () => {
-        setSelectedIndex((i) => (i >= maxIndex ? 0 : i + 1));
+        if (activeTab === "sessions") {
+          setSessionSelectedIndex((i) => (i >= sessionMaxIndex ? 0 : i + 1));
+        } else if (activeTab === "repos") {
+          setRepoSelectedIndex((i) => (i >= repoMaxIndex ? 0 : i + 1));
+        } else if (activeTab === "restorable") {
+          setRestorableSelectedIndex((i) => (i >= restorableMaxIndex ? 0 : i + 1));
+        }
       },
       onEnter: () => {
-        if (cleanRowSelected) {
-          setConfirmingClean(true);
-        } else if (isRestorableSelected && selectedRestorable) {
-          setConfirmingRestore(true);
-        } else if (isRepoSelected) {
-          openRepoTmuxSession(selectedRepoIndex);
-        } else if (selectedSession) {
+        if (activeTab === "sessions" && selectedSession) {
           switchToSession();
+        } else if (activeTab === "repos") {
+          openRepoTmuxSession(repoSelectedIndex);
+        } else if (activeTab === "restorable" && selectedRestorable) {
+          setConfirmingRestore(true);
         }
       },
       onStop: () => {
-        if (selectedSession) setConfirmingKill(true);
+        if (activeTab === "sessions" && selectedSession) setConfirmingKill(true);
       },
-      onCreate: () => {
-        onNavigate("create");
+      onClean: () => {
+        if (cleanableCount > 0) setConfirmingClean(true);
+      },
+      onAdd: () => {
+        if (activeTab === "sessions") {
+          onNavigate("create");
+        } else if (activeTab === "repos") {
+          onNavigate("add-repo");
+        }
       },
       onPalette: () => {
         onNavigate("palette");
       },
-      onAddRepo: () => {
-        onNavigate("add-repo");
-      },
       onSpace: () => {
-        if (selectedSession) {
+        if (activeTab === "sessions" && selectedSession) {
           onDetailSession(selectedSession.name);
-        } else if (isRepoSelected) {
-          onDetailRepo(repos[selectedRepoIndex]!.name);
+        } else if (activeTab === "repos" && repos[repoSelectedIndex]) {
+          onDetailRepo(repos[repoSelectedIndex]!.name);
         }
       },
     },
@@ -341,43 +383,54 @@ export function Home({
 
   return (
     <Box flexDirection="column" flexGrow={1}>
-      <SessionList
-        sessions={sessions}
-        selectedIndex={selectedIndex}
-        dimmed={!active}
+      <TabBar
+        activeTab={activeTab}
+        tabs={[
+          { id: "sessions", label: "Sessions", count: sessions.length },
+          { id: "repos", label: "Repositories", count: repos.length },
+          { id: "workflows", label: "Workflows", count: workflows.length },
+          { id: "restorable", label: "Restorable", count: restorableSessions.length },
+        ]}
       />
-      <RestorableSessionList
-        sessions={restorableSessions}
-        selectedIndex={isRestorableSelected ? selectedRestorableIndex : undefined}
-        dimmed={!active}
-      />
-      {hasCleanRow && (
-        <Box paddingX={1} paddingTop={1}>
-          <Text color={cleanRowSelected ? "cyan" : undefined} dimColor={!cleanRowSelected}>
-            {cleanRowSelected ? " > " : "   "}
-            {cleanableCount} worktrees to clean (Press Enter to clean up)
-          </Text>
-        </Box>
+
+      {activeTab === "sessions" && (
+        <SessionList
+          sessions={sessions}
+          dimmed={!active}
+          selectedIndex={!active ? undefined : sessionSelectedIndex}
+          maxVisible={maxVisible}
+          scrollOffset={sessionScrollOffset}
+        />
       )}
 
-      {/* Section margin */}
-      <Text>{" "}</Text>
-      <Text>{" "}</Text>
+      {activeTab === "repos" && (
+        <RepoList
+          repos={repos}
+          dimmed={!active}
+          selectedIndex={!active ? undefined : repoSelectedIndex}
+          maxVisible={maxVisible}
+          scrollOffset={repoScrollOffset}
+        />
+      )}
 
-      <RepoList
-        repos={repos}
-        dimmed={!active}
-        selectedIndex={isRepoSelected ? selectedRepoIndex : undefined}
-      />
+      {activeTab === "workflows" && (
+        <WorkflowList
+          workflows={workflows}
+          dimmed={!active}
+          maxVisible={maxVisible}
+          scrollOffset={0}
+        />
+      )}
 
-      {/* Section margin */}
-      <Text>{" "}</Text>
-      <Text>{" "}</Text>
-
-      <WorkflowList
-        workflows={workflows}
-        dimmed={!active}
-      />
+      {activeTab === "restorable" && (
+        <RestorableList
+          sessions={restorableSessions}
+          dimmed={!active}
+          selectedIndex={!active ? undefined : restorableSelectedIndex}
+          maxVisible={maxVisible}
+          scrollOffset={restorableScrollOffset}
+        />
+      )}
     </Box>
   );
 }
