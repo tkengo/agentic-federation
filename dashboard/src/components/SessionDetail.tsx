@@ -325,7 +325,7 @@ export function SessionDetail({
       if (_input === "y" || _input === "Y") {
         setConfirmingDelete(false);
         try {
-          execSync(`fed stop '${session.name}'`, { stdio: "ignore" });
+          execSync(`fed session stop '${session.name}'`, { stdio: "ignore" });
           showMessage(`Stopped: ${session.name}`);
           refresh();
         } catch {

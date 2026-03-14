@@ -141,17 +141,17 @@ function AppInner() {
   }, [refreshSessions, refreshRestorable]);
   useSessionWatcher(refreshAllSessions);
 
-  // Create new session via fed start --no-attach
+  // Create new session via fed session start --no-attach
   const createSession = useCallback(
     (repo: string, branch: string, workflow: string) => {
       try {
         let args: string[];
         if (repo) {
           // Repo mode
-          args = ["fed", "start", workflow, repo, branch, "--no-attach"];
+          args = ["fed", "session", "start", workflow, repo, branch, "--no-attach"];
         } else {
           // Standalone mode: branch param is actually the session name
-          args = ["fed", "start", workflow, "--session-name", branch, "--no-attach"];
+          args = ["fed", "session", "start", workflow, "--session-name", branch, "--no-attach"];
         }
         execSync(args.join(" "), { stdio: "inherit" });
         if (process.stdin.isTTY && process.stdin.setRawMode) {

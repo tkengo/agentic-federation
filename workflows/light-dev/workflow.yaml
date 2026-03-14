@@ -1,0 +1,85 @@
+name: light-dev
+description: "軽量タスク実装: 計画 → 承認 → 実装 → レビュー → 承認"
+
+focus: plan
+
+windows:
+  - name: dev
+    panes:
+      - id: terminal
+        name: Terminal
+        pane: 1
+        command: null
+      - id: editor
+        name: Editor
+        pane: 2
+        command: nvim
+    # +---------------------+---------------------+
+    # |      terminal       |       editor        |
+    # |      (pane 1)       |      (pane 2)       |
+    # +---------------------+---------------------+
+    layout:
+      splits:
+        - { source: 1, direction: h, percent: 50 }
+      focus: 1
+
+  - name: plan
+    panes:
+      - id: planner
+        name: Planner
+        pane: 1
+        command: 'fed claude --dangerously-skip-permissions --agent light-dev-planner'
+      - id: human
+        name: Human
+        pane: 2
+        command: "cd {{meta.session_dir}} && nvim"
+    # +---------------------+---------------------+
+    # |      planner        |       human         |
+    # |      (pane 1)       |      (pane 2)       |
+    # +---------------------+---------------------+
+    layout:
+      splits:
+        - { source: 1, direction: h, percent: 50 }
+      focus: 1
+
+  - name: work
+    panes:
+      - id: implementer
+        name: Implementer
+        pane: 1
+        command: 'fed claude --dangerously-skip-permissions --agent light-dev-implementer'
+      - id: reviewer
+        name: Reviewer
+        pane: 2
+        command: 'fed claude --dangerously-skip-permissions --agent light-dev-reviewer'
+    # +---------------------+---------------------+
+    # |    implementer      |      reviewer       |
+    # |      (pane 1)       |      (pane 2)       |
+    # +---------------------+---------------------+
+    layout:
+      splits:
+        - { source: 1, direction: h, percent: 50 }
+      focus: 1
+
+states:
+  planning:
+    description: "タスクファイルを読み込んで実装計画を立てる"
+    color: blue
+    entry_point: true
+  human_plan_review:
+    description: "人間に計画を確認してもらう"
+    color: yellow
+  implement:
+    description: "計画に基づいて実装する"
+    color: blue
+  review:
+    description: "レビュアーによるコードレビュー"
+    color: yellow
+  human_code_review:
+    description: "人間に最終確認してもらう"
+    color: yellow
+  completed:
+    description: "タスク完了"
+    mark: "✓"
+    color: green
+    terminal: true
