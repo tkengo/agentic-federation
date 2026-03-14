@@ -10,7 +10,7 @@ Runtime data lives in `~/.fed/`, code lives in this repo.
 - **cli/** - Main CLI (TypeScript + Commander.js, ES module)
 - **dashboard/** - Terminal UI (TypeScript + Ink/React)
 - **workflows/** - Workflow definitions (YAML state machines)
-- **commands/** - Claude Code skill definitions (.md), synced to `~/.claude/commands/` by `fed start`
+- **commands/** - Claude Code skill definitions (.md), synced to `~/.claude/commands/` by `fed session start`
 - **prompts/** - Agent role prompts (orchestrator, planner, implementer, reviewers)
 
 ## Build
@@ -106,7 +106,7 @@ Script logs are saved to `<sessionDir>/script-logs/<timestamp>_<id>_<name>.log`.
 
 ### Template Variables (Workflow YAML only)
 
-Template variables (`{{meta.*}}`, `{{repo.*}}`) are used in workflow YAML for pane commands and other workflow-level config. They are expanded at `fed start` time when the workflow is saved to the session directory. They are NOT used in repo script definitions.
+Template variables (`{{meta.*}}`, `{{repo.*}}`) are used in workflow YAML for pane commands and other workflow-level config. They are expanded at `fed session start` time when the workflow is saved to the session directory. They are NOT used in repo script definitions.
 
 ## Dashboard Structure (dashboard/src/)
 
@@ -119,9 +119,9 @@ Dashboard duplicates minimal type definitions from cli/src/lib/ (MetaJson, State
 - Agents detect their session automatically via `tmux display-message -p '#S'`
 - `~/.fed/active/<tmux-session>` symlinks point to real session directories
 - Watcher processes (notification, stale) write PID files to session dir for cleanup
-- `fed stop` kills watchers via PID files, then kills tmux session, then archives
+- `fed session stop` kills watchers via PID files, then kills tmux session, then archives
 - Agent prompts are role-only; operational instructions come from workflow YAML via orchestrator
-- `workflow` is a required positional argument to `fed start`
+- `workflow` is a required positional argument to `fed session start`
 - Scripts defined in repo config JSON can be run via `fed repo-script run` or from the dashboard
 
 ## Testing

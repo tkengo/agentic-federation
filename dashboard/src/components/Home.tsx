@@ -127,7 +127,7 @@ export function Home({
   const killSession = useCallback(() => {
     if (!selectedSession) return;
     try {
-      execSync(`fed stop '${selectedSession.name}'`, { stdio: "ignore" });
+      execSync(`fed session stop '${selectedSession.name}'`, { stdio: "ignore" });
       showMessage(`Stopped: ${selectedSession.name}`);
       refresh();
     } catch {
@@ -139,7 +139,7 @@ export function Home({
   const archiveSession = useCallback(() => {
     if (!selectedSession) return;
     try {
-      execSync(`fed archive '${selectedSession.name}'`, { stdio: "ignore" });
+      execSync(`fed session archive '${selectedSession.name}'`, { stdio: "ignore" });
       showMessage(`Archived: ${selectedSession.name}`);
       refresh();
     } catch {
@@ -153,7 +153,7 @@ export function Home({
     const name = selectedRestorable.name;
     setRestoring(true);
 
-    const proc = spawn("fed", ["restore", "session", name, "--no-attach"], {
+    const proc = spawn("fed", ["session", "restore", name, "--no-attach"], {
       stdio: ["ignore", "pipe", "pipe"],
     });
 
@@ -178,18 +178,6 @@ export function Home({
       showError(`Failed to restore ${name}`);
     });
   }, [selectedRestorable, refresh, refreshRestorable, showMessage, showError, clearOverride]);
-
-  // Archive all completed sessions
-  const archiveAllCompleted = useCallback(() => {
-    try {
-      const output = execSync("fed archive --completed", { encoding: "utf-8" });
-      const count = (output.match(/Archived/g) ?? []).length;
-      showMessage(count > 0 ? `Archived ${count} sessions` : "No completed sessions to archive");
-      refresh();
-    } catch {
-      showMessage("Failed to archive completed sessions");
-    }
-  }, [showMessage, refresh]);
 
   // Run fed clean (async via spawn)
   const runClean = useCallback((force?: boolean) => {
@@ -260,12 +248,9 @@ export function Home({
       case "archive":
         archiveSession();
         break;
-      case "archive-completed":
-        archiveAllCompleted();
-        break;
     }
     onActionHandled();
-  }, [pendingAction, onActionHandled, switchToSession, killSession, runClean, archiveSession, archiveAllCompleted]);
+  }, [pendingAction, onActionHandled, switchToSession, killSession, runClean, archiveSession]);
 
   // --- Keyboard handlers ---
 

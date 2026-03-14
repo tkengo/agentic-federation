@@ -34,7 +34,7 @@ function formatAge(createdAt: string): string {
   return `${days}d`;
 }
 
-interface RestorableSession {
+export interface RestorableSession {
   name: string;
   sessionDir: string;
   repo: string;
@@ -45,7 +45,7 @@ interface RestorableSession {
 }
 
 // Find sessions that have active symlinks but no running tmux session
-function findRestorableSessions(): RestorableSession[] {
+export function findRestorableSessions(): RestorableSession[] {
   if (!fs.existsSync(ACTIVE_DIR)) return [];
 
   const entries = fs.readdirSync(ACTIVE_DIR);
@@ -209,7 +209,7 @@ export function restoreCommand(
 ): void {
   // 1. Preflight checks
   if (process.env.TMUX && !noAttach) {
-    console.error("Error: fed restore must be run outside of tmux.");
+    console.error("Error: fed session restore must be run outside of tmux.");
     console.error("  Use --no-attach to restore from within tmux.");
     process.exit(1);
   }
@@ -219,7 +219,7 @@ export function restoreCommand(
     console.error(
       `Error: No active session found for '${sessionName}'.`
     );
-    console.error("  Run 'fed restore list' to see restorable sessions.");
+    console.error("  Run 'fed session list --restorable' to see restorable sessions.");
     process.exit(1);
   }
 
@@ -247,7 +247,7 @@ export function restoreCommand(
     fs.readFileSync(workflowPath, "utf-8")
   ) as WorkflowDefinition;
 
-  console.log(`=== fed restore ===`);
+  console.log(`=== fed session restore ===`);
   console.log(`Session:  ${sessionName}`);
   console.log(`Workflow: ${meta.workflow}`);
   if (meta.repo) {

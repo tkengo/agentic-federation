@@ -32,7 +32,7 @@ export async function startCommand(
 
   // 1. Must run outside tmux
   if (process.env.TMUX) {
-    console.error("Error: fed start must be run outside of tmux.");
+    console.error("Error: fed session start must be run outside of tmux.");
     process.exit(1);
   }
 
@@ -121,7 +121,7 @@ export async function startCommand(
   const existingSession = resolveSession(tmuxSession);
   if (existingSession) {
     console.error(`Error: active session '${tmuxSession}' already exists.`);
-    console.error(`  Stop it first: fed stop '${tmuxSession}'`);
+    console.error(`  Stop it first: fed session stop '${tmuxSession}'`);
     process.exit(1);
   }
 
@@ -146,7 +146,7 @@ function startStandalone(
   noAttach?: boolean,
   cliEnvVars?: Record<string, string>
 ): void {
-  console.log(`=== fed start (standalone) ===`);
+  console.log(`=== fed session start (standalone) ===`);
   console.log(`Workflow: ${workflowName}`);
   console.log(`Session:  ${tmuxSession}`);
 
@@ -224,7 +224,7 @@ function startWithRepo(
   noAttach?: boolean,
   cliEnvVars?: Record<string, string>
 ): void {
-  console.log(`=== fed start ===`);
+  console.log(`=== fed session start ===`);
   console.log(`Workflow: ${workflowName}`);
   console.log(`Repo:     ${repoName}`);
   console.log(`Branch:   ${branch}`);

@@ -28,7 +28,7 @@ export const PALETTE_COMMANDS: PaletteCommand[] = [
   {
     id: "stop",
     name: "stop",
-    description: "Stop session (fed stop)",
+    description: "Stop session (fed session stop)",
     requiresSession: true,
     needsConfirmation: true,
     resultType: "action",
@@ -36,7 +36,7 @@ export const PALETTE_COMMANDS: PaletteCommand[] = [
   {
     id: "info",
     name: "info",
-    description: "Show session info (fed info)",
+    description: "Show session info (fed session show)",
     requiresSession: true,
     needsConfirmation: false,
     resultType: "output",
@@ -60,7 +60,7 @@ export const PALETTE_COMMANDS: PaletteCommand[] = [
   {
     id: "archive",
     name: "archive",
-    description: "Archive session (fed archive)",
+    description: "Archive session (fed session archive)",
     requiresSession: true,
     needsConfirmation: true,
     resultType: "action",
@@ -78,14 +78,6 @@ export const PALETTE_COMMANDS: PaletteCommand[] = [
     id: "clean",
     name: "clean",
     description: "Clean stale worktrees (fed clean)",
-    requiresSession: false,
-    needsConfirmation: true,
-    resultType: "action",
-  },
-  {
-    id: "archive-completed",
-    name: "archive-completed",
-    description: "Archive all completed sessions",
     requiresSession: false,
     needsConfirmation: true,
     resultType: "action",

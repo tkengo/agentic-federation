@@ -26,7 +26,7 @@ export function stopCommand(sessionName?: string): void {
     console.error(
       `Error: Cannot stop session '${targetSession}' from within itself.\n` +
       `  Run this command from outside the tmux session, e.g.:\n` +
-      `    fed stop ${targetSession}`
+      `    fed session stop ${targetSession}`
     );
     process.exit(1);
   }

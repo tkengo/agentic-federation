@@ -223,7 +223,7 @@ export function CommandPalette({
 function buildFedCommand(commandId: string, sessionName: string | undefined): string {
   switch (commandId) {
     case "info":
-      return `fed info '${sessionName}'`;
+      return `fed session show '${sessionName}'`;
     case "artifacts":
       return `fed artifact list '${sessionName}'`;
     case "state":

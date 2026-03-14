@@ -41,10 +41,10 @@ fed init
 fed repo add my-project
 
 # 3. ソロモードで開発セッションを起動 (terminal + nvim)
-fed start solo my-project feature-branch
+fed session start solo my-project feature-branch
 
 # 4. チームモードで起動 (agent-team ウィンドウ付き)
-fed start dev-team my-project feature-branch
+fed session start dev-team my-project feature-branch
 
 # ダッシュボードを起動
 fed dashboard
@@ -56,10 +56,14 @@ fed dashboard
 
 | Command | Description |
 |---|---|
-| `fed start <workflow> <repo> <branch>` | 開発セッションを起動 |
-| `fed stop [session-name]` | セッションを停止してアーカイブ |
-| `fed list` (`fed ls`) | アクティブセッション一覧 |
-| `fed info [session-name]` | セッション詳細表示 |
+| `fed session start <workflow> <repo> <branch>` | 開発セッションを起動 |
+| `fed session stop [session-name]` | セッションを停止してアーカイブ |
+| `fed session list` (`fed session ls`) | セッション一覧（デフォルトはアクティブのみ） |
+| `fed session list --archive` | アクティブ＋アーカイブ一覧 |
+| `fed session list --restorable` | 復旧可能セッション一覧 |
+| `fed session show [session-name]` | セッション詳細表示 |
+| `fed session archive <name>` | 指定セッションをアーカイブ |
+| `fed session restore <name>` | tmux が死んだセッションを復元 |
 | `fed dashboard` (`fed dash`) | インタラクティブダッシュボード (Ink UI) |
 
 ### ワークフロー
@@ -70,12 +74,10 @@ fed dashboard
 | `fed workflow show <name>` | ワークフロー YAML を表示 |
 | `fed workflow validate <name>` | ワークフロー定義のバリデーション |
 
-### アーカイブ / クリーンアップ
+### クリーンアップ
 
 | Command | Description |
 |---|---|
-| `fed archive session <name>` | 指定セッションをアーカイブ |
-| `fed archive completed` | COMPLETED/APPROVED な全セッションを一括アーカイブ |
 | `fed clean [--dry-run] [--force]` | アーカイブ済みセッションの worktree を削除 |
 
 ### リポジトリ定義
@@ -163,7 +165,7 @@ fed workflow validate dev-team
 
 ## Session Modes
 
-`fed start <workflow> <repo> <branch>` でワークフローを指定して起動する。
+`fed session start <workflow> <repo> <branch>` でワークフローを指定して起動する。
 
 **solo**: terminal + nvim (+ dev server)
 
@@ -240,7 +242,7 @@ fed workflow validate dev-team
 ビルドせずに直接実行:
 
 ```bash
-cd cli && npx tsx src/index.ts start my-project feature-test
+cd cli && npx tsx src/index.ts session start my-project feature-test
 cd dashboard && npx tsx src/index.tsx
 ```
 
@@ -261,11 +263,11 @@ agentic-federation/
 │   │   ├── commands/             # サブコマンド実装
 │   │   │   ├── init.ts           # fed init
 │   │   │   ├── repo.ts           # fed repo
-│   │   │   ├── start.ts          # fed start
-│   │   │   ├── stop.ts           # fed stop
-│   │   │   ├── list.ts           # fed list
-│   │   │   ├── info.ts           # fed info
-│   │   │   ├── archive.ts        # fed archive
+│   │   │   ├── start.ts          # fed session start
+│   │   │   ├── stop.ts           # fed session stop
+│   │   │   ├── list.ts           # fed session list
+│   │   │   ├── info.ts           # fed session show
+│   │   │   ├── archive.ts        # fed session archive
 │   │   │   ├── clean.ts          # fed clean
 │   │   │   ├── dash.ts           # fed dashboard
 │   │   │   ├── state.ts          # fed state

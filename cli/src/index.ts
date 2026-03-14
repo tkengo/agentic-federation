@@ -33,7 +33,7 @@ import {
 } from "./commands/waiting-human.js";
 import { listCommand } from "./commands/list.js";
 import { stopCommand } from "./commands/stop.js";
-import { archiveCommand, archiveAllCompletedCommand } from "./commands/archive.js";
+import { archiveCommand } from "./commands/archive.js";
 import { cleanCommand } from "./commands/clean.js";
 import { infoCommand } from "./commands/info.js";
 import { dashCommand } from "./commands/dash.js";
@@ -49,7 +49,7 @@ import {
   repoScriptRunCommand,
 } from "./commands/repo-script.js";
 import { claudeCommand } from "./commands/claude.js";
-import { restoreCommand, restoreListCommand } from "./commands/restore.js";
+import { restoreCommand } from "./commands/restore.js";
 import { convListCommand, convShowCommand } from "./commands/conv.js";
 
 const program = new Command();
@@ -116,8 +116,12 @@ repo
     repoEditCommand(name);
   });
 
-// --- start ---
-program
+// --- session ---
+const session = program
+  .command("session")
+  .description("Manage development sessions");
+
+session
   .command("start <workflow> [repo] [branch]")
   .description("Start a development session with a workflow")
   .option("--no-attach", "Skip tmux attach after creation")
@@ -126,8 +130,8 @@ program
   .action(async (workflow: string, repo: string | undefined, branch: string | undefined, options: { attach?: boolean; sessionName?: string; env?: string[] }) => {
     if (repo && !branch) {
       console.error("Error: branch is required when repo is specified.");
-      console.error("  Usage: fed start <workflow> <repo> <branch>");
-      console.error("  For standalone (no repo): fed start <workflow> [--session-name <name>]");
+      console.error("  Usage: fed session start <workflow> <repo> <branch>");
+      console.error("  For standalone (no repo): fed session start <workflow> [--session-name <name>]");
       process.exit(1);
     }
     // Parse --env KEY=VALUE pairs into a record
@@ -141,6 +145,49 @@ program
       envVars[pair.slice(0, eq)] = pair.slice(eq + 1);
     }
     await startCommand(workflow, repo, branch, options.attach === false, options.sessionName, envVars);
+  });
+
+session
+  .command("stop [session-name]")
+  .description("Stop a session (current tmux session if not specified)")
+  .action((sessionName?: string) => {
+    stopCommand(sessionName);
+  });
+
+session
+  .command("list")
+  .alias("ls")
+  .description("List sessions")
+  .option("--active", "Show active sessions (default: true)")
+  .option("--no-active", "Hide active sessions")
+  .option("--archive", "Show archived sessions")
+  .option("--no-archive", "Hide archived sessions (default)")
+  .option("--restorable", "Show only restorable sessions (tmux dead)")
+  .option("--limit <n>", "Max sessions to show (default: 20)", parseInt)
+  .action((options: { active?: boolean; archive?: boolean; restorable?: boolean; limit?: number }) => {
+    listCommand(options);
+  });
+
+session
+  .command("show [session-name]")
+  .description("Show detailed session information")
+  .action((sessionName?: string) => {
+    infoCommand(sessionName);
+  });
+
+session
+  .command("archive <session-name>")
+  .description("Archive a specific session")
+  .action((sessionName: string) => {
+    archiveCommand(sessionName);
+  });
+
+session
+  .command("restore <session-name>")
+  .description("Restore a session after tmux loss")
+  .option("--no-attach", "Skip tmux attach after restore")
+  .action((sessionName: string, options: { attach?: boolean }) => {
+    restoreCommand(sessionName, options.attach === false);
   });
 
 // --- state ---
@@ -282,42 +329,6 @@ waitingHuman
     waitingHumanShowCommand();
   });
 
-// --- list ---
-program
-  .command("list")
-  .alias("ls")
-  .description("List active sessions")
-  .action(() => {
-    listCommand();
-  });
-
-// --- stop ---
-program
-  .command("stop [session-name]")
-  .description("Stop a session (current tmux session if not specified)")
-  .action((sessionName?: string) => {
-    stopCommand(sessionName);
-  });
-
-// --- archive ---
-const archive = program
-  .command("archive")
-  .description("Archive sessions");
-
-archive
-  .command("session <session-name>")
-  .description("Archive a specific session")
-  .action((sessionName: string) => {
-    archiveCommand(sessionName);
-  });
-
-archive
-  .command("completed")
-  .description("Archive all completed/approved sessions")
-  .action(() => {
-    archiveAllCompletedCommand();
-  });
-
 // --- clean ---
 program
   .command("clean")
@@ -326,14 +337,6 @@ program
   .option("--force", "Force removal even with uncommitted changes")
   .action((options: { dryRun?: boolean; force?: boolean }) => {
     cleanCommand(options.dryRun ?? false, options.force ?? false);
-  });
-
-// --- info ---
-program
-  .command("info [session-name]")
-  .description("Show detailed session information")
-  .action((sessionName?: string) => {
-    infoCommand(sessionName);
   });
 
 // --- describe ---
@@ -444,26 +447,6 @@ program
   .allowExcessArguments()
   .action((_options: Record<string, unknown>, cmd: Command) => {
     claudeCommand(cmd.args);
-  });
-
-// --- restore ---
-const restore = program
-  .command("restore")
-  .description("Restore sessions after tmux loss (e.g., PC reboot)");
-
-restore
-  .command("list")
-  .description("List restorable sessions")
-  .action(() => {
-    restoreListCommand();
-  });
-
-restore
-  .command("session <session-name>")
-  .description("Restore a specific session")
-  .option("--no-attach", "Skip tmux attach after restore")
-  .action((sessionName: string, options: { attach?: boolean }) => {
-    restoreCommand(sessionName, options.attach === false);
   });
 
 program.parse();
