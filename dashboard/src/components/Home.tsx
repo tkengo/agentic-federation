@@ -16,7 +16,7 @@ import { switchToTmuxSession, createOrAttachRepoSession } from "../utils/tmux.js
 import type { SessionData, RestorableSessionData, RepoInfo, WorkflowInfo } from "../utils/types.js";
 
 const TAB_ORDER: TabId[] = ["sessions", "repos", "workflows", "restorable"];
-const TAB_BAR_HEIGHT = 1;
+const TAB_BAR_HEIGHT = 2;
 const FOOTER_HEIGHT = 2;
 
 interface HomeProps {
@@ -392,6 +392,7 @@ export function Home({
           { id: "restorable", label: "Restorable", count: restorableSessions.length },
         ]}
       />
+      <Box height={1} />
 
       {activeTab === "sessions" && (
         <SessionList

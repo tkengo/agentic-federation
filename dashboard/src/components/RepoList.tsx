@@ -23,9 +23,16 @@ export function RepoList({ repos, dimmed, selectedIndex, maxVisible, scrollOffse
           <Text dimColor>{"   No repositories. Press [a] to add one."}</Text>
         </Box>
       ) : (
-        <ScrollableRows
+        <>
+          {/* Column header */}
+          <Box>
+            <Text dimColor>
+              {`     ${"NAME".padEnd(nameWidth)}  PATH`}
+            </Text>
+          </Box>
+          <ScrollableRows
           items={repos}
-          maxVisible={maxVisible}
+          maxVisible={maxVisible - 1}
           scrollOffset={scrollOffset}
           keyExtractor={(repo) => repo.name}
           renderRow={(repo, i) => {
@@ -47,7 +54,8 @@ export function RepoList({ repos, dimmed, selectedIndex, maxVisible, scrollOffse
               </Box>
             );
           }}
-        />
+          />
+        </>
       )}
     </Box>
   );

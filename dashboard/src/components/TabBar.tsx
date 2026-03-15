@@ -33,8 +33,6 @@ export function TabBar({ activeTab, tabs }: TabBarProps) {
           </React.Fragment>
         );
       })}
-      <Box flexGrow={1} />
-      <Text dimColor>{"Tab/Shift+Tab"}</Text>
     </Box>
   );
 }

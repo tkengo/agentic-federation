@@ -26,9 +26,16 @@ export function WorkflowList({ workflows, dimmed, maxVisible, scrollOffset }: Wo
           <Text dimColor>No workflows found.</Text>
         </Box>
       ) : (
-        <ScrollableRows
+        <>
+          {/* Column header */}
+          <Box>
+            <Text dimColor>
+              {`    ${"NAME".padEnd(nameWidth)}  DESCRIPTION`}
+            </Text>
+          </Box>
+          <ScrollableRows
           items={workflows}
-          maxVisible={maxVisible}
+          maxVisible={maxVisible - 1}
           scrollOffset={scrollOffset}
           keyExtractor={(wf) => wf.name}
           renderRow={(wf) => (
@@ -41,7 +48,8 @@ export function WorkflowList({ workflows, dimmed, maxVisible, scrollOffset }: Wo
               </Text>
             </Box>
           )}
-        />
+          />
+        </>
       )}
     </Box>
   );
