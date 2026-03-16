@@ -23,7 +23,6 @@ import {
   artifactDeleteCommand,
 } from "./commands/artifact.js";
 import { notifyCommand } from "./commands/notify.js";
-import { feedbackReadCommand, feedbackWriteCommand } from "./commands/feedback.js";
 import { promptReadCommand, promptListCommand } from "./commands/prompt.js";
 import { notifyHumanCommand } from "./commands/notify-human.js";
 import {
@@ -252,25 +251,6 @@ program
   .description("Send a notification to a tmux pane")
   .action((pane: string, message: string) => {
     notifyCommand(pane, message);
-  });
-
-// --- feedback ---
-const feedback = program
-  .command("feedback")
-  .description("Manage human feedback");
-
-feedback
-  .command("read")
-  .description("Read human feedback")
-  .action(() => {
-    feedbackReadCommand();
-  });
-
-feedback
-  .command("write")
-  .description("Append human feedback from stdin")
-  .action(() => {
-    feedbackWriteCommand();
   });
 
 // --- prompt ---

@@ -45,7 +45,7 @@ function AppInner() {
 
   const { showMessage, setCtrlCPending, state: footerState } = useFooter();
 
-  // Active session reported by Home (used by FeedbackInput, CommandPalette)
+  // Active session reported by Home (used by CommandPalette)
   const [activeSession, setActiveSession] = useState<SessionData | undefined>();
 
   // Pending action from CommandPalette to Home

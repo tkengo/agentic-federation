@@ -133,8 +133,6 @@ scripts:
 | `fed artifact list` | 成果物一覧 |
 | `fed artifact delete <name>` | 成果物を削除 |
 | `fed notify <window.pane> <message>` | tmux ペインに通知を送信 |
-| `fed feedback read` | 人間のフィードバックを読み取り |
-| `fed feedback write` | stdin からフィードバックを追記 |
 | `fed prompt read <name>` | エージェントプロンプトを読み取り |
 | `fed prompt list` | プロンプト一覧 |
 | `fed notify-human <title> <message>` | macOS 通知を送信 |
@@ -229,7 +227,6 @@ fed workflow validate dev-team
 | `Space` | セッション詳細展開 (Artifacts / Scripts) |
 | `p` | 成果物プレビュー |
 | `a` | 承認 |
-| `f` | フィードバック入力 |
 | `s` | セッション終了 |
 | `n` | 新規セッション作成 |
 | `:` | コマンドパレット |
@@ -273,7 +270,6 @@ agentic-federation/
 │   │   │   ├── state.ts          # fed state
 │   │   │   ├── artifact.ts       # fed artifact
 │   │   │   ├── notify.ts         # fed notify
-│   │   │   ├── feedback.ts       # fed feedback
 │   │   │   ├── prompt.ts         # fed prompt
 │   │   │   ├── stale.ts          # fed stale
 │   │   │   ├── workflow.ts       # fed workflow
