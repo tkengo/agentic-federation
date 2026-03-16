@@ -32,7 +32,7 @@ export function StatusBadge({ status, stale, statusConfigMap, stateMtimeMs }: St
       }
     }
     return (
-      <Text color="red" bold>
+      <Text color={config.color}>
         {config.mark} {status}{elapsed}
       </Text>
     );

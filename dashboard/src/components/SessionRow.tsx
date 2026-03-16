@@ -68,9 +68,11 @@ export function SessionRow({ session, selected, dimmed, blinkOn, colWidths }: Se
         <Text>{`    `}</Text>
       )}
       <Text dimColor={dimmed}>{`  `}</Text>
-      <Text dimColor>{age.padStart(4)}</Text>
+      <Text color={highlight ? "cyan" : undefined} bold={highlight} dimColor={dimmed || !highlight}>{age.padStart(4)}</Text>
       {inlineDesc && (
-        <Text dimColor>{`  ${inlineDesc}`}</Text>
+        <Text color={highlight ? "cyan" : undefined} bold={highlight} dimColor={dimmed || !highlight}>
+          {`  ${inlineDesc}`}
+        </Text>
       )}
     </Box>
   );
