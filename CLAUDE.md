@@ -34,6 +34,10 @@ Dashboard tsconfig additionally has `"jsx": "react-jsx"`.
 - All comments in English
 - No trailing whitespace
 
+## Documentation
+
+- When adding, modifying, or removing CLI commands/subcommands/options, update `docs/fed-cli-reference.md` accordingly
+
 ## CLI Command Pattern
 
 Each command is a file in `cli/src/commands/<name>.ts`:
