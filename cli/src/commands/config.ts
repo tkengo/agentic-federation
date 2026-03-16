@@ -86,17 +86,21 @@ export function configShowCommand(): void {
   const config = readConfig();
   const flat = flattenObject(config as unknown as Record<string, unknown>);
   const defaultFlat = flattenObject(DEFAULT_CONFIG as unknown as Record<string, unknown>);
+  const rawFlat = flattenObject(readRawConfig());
 
-  const rows = Object.keys(defaultFlat).map((key) => ({
-    key,
-    value: flat[key] !== undefined ? String(flat[key]) : String(defaultFlat[key]),
-    default: String(defaultFlat[key]),
-  }));
+  const rows = Object.keys(defaultFlat).map((key) => {
+    const isDefault = rawFlat[key] === undefined;
+    return {
+      key,
+      value: flat[key] !== undefined ? String(flat[key]) : String(defaultFlat[key]),
+      isDefault,
+    };
+  });
 
   const headers = { key: "Key", value: "Value", default: "Default" };
   const keyW = Math.max(headers.key.length, ...rows.map((r) => r.key.length));
   const valW = Math.max(headers.value.length, ...rows.map((r) => r.value.length));
-  const defW = Math.max(headers.default.length, ...rows.map((r) => r.default.length));
+  const defW = headers.default.length;
 
   console.log(
     `${headers.key.padEnd(keyW)}  ${headers.value.padEnd(valW)}  ${headers.default}`,
@@ -106,8 +110,9 @@ export function configShowCommand(): void {
   );
 
   for (const row of rows) {
+    const defMark = row.isDefault ? "  ✓" : "";
     console.log(
-      `${row.key.padEnd(keyW)}  ${row.value.padEnd(valW)}  ${row.default}`,
+      `${row.key.padEnd(keyW)}  ${row.value.padEnd(valW)}${defMark}`,
     );
   }
 }
