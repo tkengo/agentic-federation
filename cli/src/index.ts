@@ -50,6 +50,13 @@ import {
 import { claudeCommand } from "./commands/claude.js";
 import { restoreCommand } from "./commands/restore.js";
 import { convListCommand, convShowCommand } from "./commands/conv.js";
+import { configGetCommand, configSetCommand } from "./commands/config.js";
+import {
+  filesSaveCommand,
+  filesReadCommand,
+  filesListCommand,
+  filesDirCommand,
+} from "./commands/files.js";
 
 const program = new Command();
 
@@ -417,6 +424,62 @@ conv
   .option("--raw", "Output raw JSONL instead of formatted text")
   .action((name: string, options: { raw?: boolean }) => {
     convShowCommand(name, options.raw);
+  });
+
+// --- config ---
+const config = program
+  .command("config")
+  .description("Manage fed configuration (~/.fed/config.json)");
+
+config
+  .command("get [key]")
+  .description("Get a config value (or all config if no key)")
+  .action((key?: string) => {
+    configGetCommand(key);
+  });
+
+config
+  .command("set <key> <value>")
+  .description("Set a config value (dot notation supported, e.g. 'files.dir')")
+  .action((key: string, value: string) => {
+    configSetCommand(key, value);
+  });
+
+// --- files ---
+const files = program
+  .command("files")
+  .description("Manage knowledge base files");
+
+files
+  .command("save <name>")
+  .description("Save a file to the knowledge base")
+  .option("--file <path>", "Read content from file instead of stdin (file is deleted after write)")
+  .option("--keep", "Keep the source file when using --file")
+  .action((name: string, options: { file?: string; keep?: boolean }) => {
+    filesSaveCommand(name, options);
+  });
+
+files
+  .command("read <name>")
+  .description("Read a file from the knowledge base")
+  .action((name: string) => {
+    filesReadCommand(name);
+  });
+
+files
+  .command("list")
+  .description("List knowledge base files")
+  .option("--limit <n>", "Max files to show (default: 50)", parseInt)
+  .option("--offset <n>", "Start from this index (default: 0)", parseInt)
+  .action((options: { limit?: number; offset?: number }) => {
+    filesListCommand(options);
+  });
+
+files
+  .command("dir")
+  .description("Print the knowledge base directory path")
+  .action(() => {
+    filesDirCommand();
   });
 
 // --- claude ---
