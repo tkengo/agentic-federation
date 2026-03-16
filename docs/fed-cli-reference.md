@@ -117,6 +117,7 @@ For detailed options and usage of each command, see [fed-cli-detailed-reference.
 |---|---|
 | `fed config get [key]` | Get a config value (or all config if no key) |
 | `fed config set <key> <value>` | Set a config value (dot notation supported) |
+| `fed config show` | Show all config keys with current values and defaults |
 
 ### `fed files`
 

@@ -1,17 +1,14 @@
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
-import { KNOWLEDGE_DIR } from "../lib/paths.js";
 import { readConfig } from "./config.js";
 
 const DEFAULT_LIMIT = 50;
 
-/** Resolve the files storage directory from config or default. */
+/** Resolve the files storage directory from config. */
 function filesDir(): string {
   const config = readConfig();
-  const files = config["files"] as Record<string, unknown> | undefined;
-  const dir = files?.["dir"] as string | undefined;
-  return dir || KNOWLEDGE_DIR;
+  return config.files.dir;
 }
 
 /** Generate filename: YYYYMMDD_<6hexID>_<name>.md */

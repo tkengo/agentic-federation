@@ -50,7 +50,7 @@ import {
 import { claudeCommand } from "./commands/claude.js";
 import { restoreCommand } from "./commands/restore.js";
 import { convListCommand, convShowCommand } from "./commands/conv.js";
-import { configGetCommand, configSetCommand } from "./commands/config.js";
+import { configGetCommand, configSetCommand, configShowCommand } from "./commands/config.js";
 import {
   filesSaveCommand,
   filesReadCommand,
@@ -443,6 +443,13 @@ config
   .description("Set a config value (dot notation supported, e.g. 'files.dir')")
   .action((key: string, value: string) => {
     configSetCommand(key, value);
+  });
+
+config
+  .command("show")
+  .description("Show all config keys with current values and defaults")
+  .action(() => {
+    configShowCommand();
   });
 
 // --- files ---
