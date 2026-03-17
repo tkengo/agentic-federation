@@ -7,6 +7,7 @@ import { log } from "../lib/logger.js";
 import { resolveSession, readMeta } from "../lib/session.js";
 import type { RepoConfig } from "../lib/types.js";
 import { loadRepoConfig, listRepoConfigs } from "../lib/repo.js";
+import { readProtectedWorktrees, parseWorktreeList } from "../lib/worktree-protect.js";
 
 interface CleanTarget {
   worktreePath: string;
@@ -29,48 +30,17 @@ function getActiveWorktreePaths(): Set<string> {
   return active;
 }
 
-// Parse `git worktree list --porcelain` output into worktree entries
-function parseWorktreeList(
-  repoRoot: string
-): Array<{ path: string; branch: string }> {
-  const entries: Array<{ path: string; branch: string }> = [];
-  let output: string;
-  try {
-    output = execSync(`git -C '${repoRoot}' worktree list --porcelain`, {
-      encoding: "utf-8",
-    });
-  } catch {
-    return entries;
-  }
-
-  // Each worktree block is separated by a blank line
-  const blocks = output.trim().split("\n\n");
-  for (const block of blocks) {
-    const lines = block.split("\n");
-    let wtPath = "";
-    let branch = "";
-    let bare = false;
-    for (const line of lines) {
-      if (line.startsWith("worktree ")) {
-        wtPath = line.slice("worktree ".length);
-      } else if (line.startsWith("branch ")) {
-        // e.g. "branch refs/heads/feat-x" -> "feat-x"
-        branch = line.slice("branch ".length).replace(/^refs\/heads\//, "");
-      } else if (line === "bare") {
-        bare = true;
-      }
-    }
-    if (wtPath && !bare) {
-      entries.push({ path: wtPath, branch });
-    }
-  }
-  return entries;
+interface CleanResult {
+  targets: CleanTarget[];
+  protectedCount: number;
 }
 
-export function findCleanTargets(): CleanTarget[] {
+export function findCleanTargets(): CleanResult {
   const targets: CleanTarget[] = [];
   const activeWorktrees = getActiveWorktreePaths();
+  const protectedWorktrees = readProtectedWorktrees();
   const repoNames = listRepoConfigs();
+  let protectedCount = 0;
 
   for (const repoName of repoNames) {
     let config: RepoConfig;
@@ -86,6 +56,11 @@ export function findCleanTargets(): CleanTarget[] {
       if (wt.path === config.repo_root) continue;
       // Skip worktrees that belong to active sessions
       if (activeWorktrees.has(wt.path)) continue;
+      // Skip protected worktrees
+      if (protectedWorktrees.has(wt.path)) {
+        protectedCount++;
+        continue;
+      }
 
       targets.push({
         worktreePath: wt.path,
@@ -96,18 +71,23 @@ export function findCleanTargets(): CleanTarget[] {
     }
   }
 
-  return targets;
+  return { targets, protectedCount };
 }
 
 export function cleanCommand(dryRun: boolean, force: boolean): void {
-  const targets = findCleanTargets();
+  const { targets, protectedCount } = findCleanTargets();
 
   if (targets.length === 0) {
-    console.log("No worktrees to clean up.");
+    if (protectedCount > 0) {
+      console.log(`No worktrees to clean up (${protectedCount} protected, skipped).`);
+    } else {
+      console.log("No worktrees to clean up.");
+    }
     return;
   }
 
-  console.log(`Found ${targets.length} worktree(s) to clean:`);
+  const protectedNote = protectedCount > 0 ? ` (${protectedCount} protected, skipped)` : "";
+  console.log(`Found ${targets.length} worktree(s) to clean${protectedNote}:`);
 
   let cleaned = 0;
   let skipped = 0;

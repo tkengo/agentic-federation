@@ -36,6 +36,8 @@ export const ACTIVE_DIR = path.join(FED_HOME, "active");
 export const ARCHIVE_DIR = path.join(FED_HOME, "archive");
 export const REPOS_DIR = path.join(FED_HOME, "repos");
 
+export const PROTECTED_WORKTREES_FILE = path.join(FED_HOME, "protected-worktrees.json");
+
 export const STALE_THRESHOLD_SEC = 3600;
 
 // Status display config (mark + color) per state
@@ -67,6 +69,13 @@ export interface RestorableSessionData {
   age: string;
 }
 
+// Protected worktree data for dashboard display
+export interface ProtectedWorktreeData {
+  repo: string;
+  branch: string;
+  path: string;
+}
+
 // Footer override state from Home component
 export type FooterOverride =
   | null
@@ -76,6 +85,7 @@ export type FooterOverride =
   | { type: "confirmScript"; name: string }
   | { type: "confirmDeleteSession"; name: string }
   | { type: "confirmRestore"; name: string }
+  | { type: "confirmUnprotect"; name: string }
   | { type: "restoring" };
 
 // Workflow info for dashboard display

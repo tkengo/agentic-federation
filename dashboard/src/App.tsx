@@ -17,6 +17,7 @@ import { BottomPanel } from "./components/BottomPanel.js";
 import { FooterProvider, useFooter } from "./contexts/FooterContext.js";
 import { useSessions } from "./hooks/useSessions.js";
 import { useRestorableSessions } from "./hooks/useRestorableSessions.js";
+import { useProtectedWorktrees } from "./hooks/useProtectedWorktrees.js";
 import { useSessionWatcher } from "./hooks/useSessionWatcher.js";
 import { useTerminalSize } from "./hooks/useTerminalSize.js";
 import { switchToTmuxSession, listTmuxSessions } from "./utils/tmux.js";
@@ -37,8 +38,9 @@ export function App() {
 function AppInner() {
   const { exit } = useApp();
   const { columns, rows } = useTerminalSize();
-  const { sessions, refresh, refreshSessions, cleanableCount } = useSessions();
+  const { sessions, refresh, refreshSessions, cleanableCount, protectedCount } = useSessions();
   const { restorableSessions, refreshRestorable } = useRestorableSessions();
+  const { protectedWorktrees, refreshProtected } = useProtectedWorktrees();
   const [screen, setScreen] = useState<Screen>("splash");
   const [createStep, setCreateStep] = useState<"workflow" | "repo" | "branch" | "session-name">("workflow");
   const lastCtrlCRef = useRef(0);
@@ -266,6 +268,7 @@ function AppInner() {
       <Header
         sessionCount={sessions.length}
         cleanableCount={cleanableCount}
+        protectedCount={protectedCount}
         repoCount={repos.length}
         workflowCount={workflows.length}
         restorableCount={restorableSessions.length}
@@ -286,6 +289,7 @@ function AppInner() {
           <Home
             sessions={sessions}
             restorableSessions={restorableSessions}
+            protectedWorktrees={protectedWorktrees}
             repos={repos}
             workflows={workflows}
             cleanableCount={cleanableCount}
@@ -294,6 +298,7 @@ function AppInner() {
             rows={rows}
             refresh={refresh}
             refreshRestorable={refreshRestorable}
+            refreshProtected={refreshProtected}
             refreshRepos={refreshRepos}
             onNavigate={(target) => {
               if (target === "create") setCreateStep("workflow");

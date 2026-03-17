@@ -12,6 +12,7 @@ export interface KeyboardActions {
   onQuit?: () => void;
   onBack?: () => void;
   onAdd?: () => void;
+  onProtect?: () => void;
   onPalette?: () => void;
   onSpace?: () => void;
 }
@@ -41,6 +42,8 @@ export function useKeyboard(actions: KeyboardActions, active = true) {
         actions.onAdd?.();
       } else if (input === "c") {
         actions.onClean?.();
+      } else if (input === "p") {
+        actions.onProtect?.();
       } else if (input === "d") {
         actions.onStop?.();
       } else if (input === ":") {

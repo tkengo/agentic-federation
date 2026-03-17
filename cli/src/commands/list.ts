@@ -48,10 +48,13 @@ function readStatus(sessionDir: string): string {
 }
 
 function printCleanableSummary(): void {
-  const cleanTargets = findCleanTargets();
-  if (cleanTargets.length > 0) {
+  const { targets, protectedCount } = findCleanTargets();
+  if (targets.length > 0 || protectedCount > 0) {
     console.log();
-    console.log(`  ${cleanTargets.length} worktree(s) to clean (fed clean --dry-run to preview)`);
+    const parts: string[] = [];
+    if (targets.length > 0) parts.push(`${targets.length} cleanable`);
+    if (protectedCount > 0) parts.push(`${protectedCount} protected`);
+    console.log(`  ${parts.join(", ")} worktree(s) (fed clean --dry-run to preview)`);
   }
 }
 

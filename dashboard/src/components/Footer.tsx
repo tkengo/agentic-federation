@@ -45,6 +45,12 @@ export function Footer() {
         Restore session &quot;{override.name}&quot;? [y]Yes  [any key]Cancel
       </Text>
     );
+  } else if (override?.type === "confirmUnprotect") {
+    content = (
+      <Text color="yellow">
+        Unprotect &quot;{override.name}&quot;? [y]Yes  [any key]Cancel
+      </Text>
+    );
   } else if (override?.type === "restoring") {
     content = (
       <Text color="yellow">

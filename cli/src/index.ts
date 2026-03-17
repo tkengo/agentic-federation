@@ -57,6 +57,11 @@ import {
   filesListCommand,
   filesDirCommand,
 } from "./commands/files.js";
+import {
+  worktreeListCommand,
+  worktreeProtectCommand,
+  worktreeUnprotectCommand,
+} from "./commands/worktree.js";
 
 const program = new Command();
 
@@ -487,6 +492,34 @@ files
   .description("Print the knowledge base directory path")
   .action(() => {
     filesDirCommand();
+  });
+
+// --- worktree ---
+const worktree = program
+  .command("worktree")
+  .description("Manage worktrees and their protection");
+
+worktree
+  .command("list")
+  .description("List all worktrees with protection status")
+  .option("--protected", "Show only protected worktrees")
+  .option("--no-protected", "Show only unprotected worktrees")
+  .action((options: { protected?: boolean }) => {
+    worktreeListCommand(options.protected);
+  });
+
+worktree
+  .command("protect <repo> <branch>")
+  .description("Protect a worktree from cleanup")
+  .action((repo: string, branch: string) => {
+    worktreeProtectCommand(repo, branch);
+  });
+
+worktree
+  .command("unprotect <repo> <branch>")
+  .description("Remove worktree cleanup protection")
+  .action((repo: string, branch: string) => {
+    worktreeUnprotectCommand(repo, branch);
   });
 
 // --- claude ---

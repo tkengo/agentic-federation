@@ -1,7 +1,7 @@
 import React from "react";
 import { Box, Text } from "ink";
 
-export type TabId = "sessions" | "repos" | "workflows" | "restorable";
+export type TabId = "sessions" | "repos" | "workflows" | "restorable" | "protected";
 
 interface TabDef {
   id: TabId;

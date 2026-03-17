@@ -18,6 +18,7 @@ For detailed options and usage of each command, see [fed-cli-detailed-reference.
 | `fed notify-human` | Send macOS notification to human |
 | `fed waiting-human` | Manage waiting-for-human state |
 | `fed clean` | Clean up worktrees of archived sessions |
+| `fed worktree` | Manage worktrees and their protection |
 | `fed describe` | Get or set session description |
 | `fed dashboard` | Launch interactive dashboard (Ink terminal UI) |
 | `fed workflow` | Manage workflow definitions |
@@ -127,3 +128,15 @@ For detailed options and usage of each command, see [fed-cli-detailed-reference.
 | `fed files read <name>` | Read a file from the knowledge base |
 | `fed files list` | List knowledge base files |
 | `fed files dir` | Print the knowledge base directory path |
+
+### `fed worktree`
+
+| Subcommand | Description |
+|---|---|
+| `fed worktree list` | List all worktrees with protection status |
+| `fed worktree protect <repo> <branch>` | Protect a worktree from cleanup |
+| `fed worktree unprotect <repo> <branch>` | Remove worktree cleanup protection |
+
+Options for `fed worktree list`:
+- `--protected` - Show only protected worktrees
+- `--no-protected` - Show only unprotected worktrees

@@ -4,6 +4,7 @@ import fs from "node:fs";
 import { execSync, spawn } from "node:child_process";
 import { SessionList } from "./SessionList.js";
 import { RestorableList } from "./RestorableList.js";
+import { ProtectedList } from "./ProtectedList.js";
 import { RepoList } from "./RepoList.js";
 import { WorkflowList } from "./WorkflowList.js";
 import { TabBar, type TabId } from "./TabBar.js";
@@ -13,15 +14,15 @@ import { computeScrollOffset } from "../utils/scroll.js";
 import { useKeyboard } from "../hooks/useKeyboard.js";
 import { useFooter } from "../contexts/FooterContext.js";
 import { switchToTmuxSession, createOrAttachRepoSession } from "../utils/tmux.js";
-import type { SessionData, RestorableSessionData, RepoInfo, WorkflowInfo } from "../utils/types.js";
+import type { SessionData, RestorableSessionData, ProtectedWorktreeData, RepoInfo, WorkflowInfo } from "../utils/types.js";
 
-const TAB_ORDER: TabId[] = ["sessions", "repos", "workflows", "restorable"];
 const TAB_BAR_HEIGHT = 2;
 const FOOTER_HEIGHT = 2;
 
 interface HomeProps {
   sessions: SessionData[];
   restorableSessions: RestorableSessionData[];
+  protectedWorktrees: ProtectedWorktreeData[];
   repos: RepoInfo[];
   workflows: WorkflowInfo[];
   cleanableCount: number;
@@ -30,6 +31,7 @@ interface HomeProps {
   rows: number;
   refresh: () => void;
   refreshRestorable: () => void;
+  refreshProtected: () => void;
   refreshRepos: () => void;
   onNavigate: (target: "create" | "palette" | "add-repo") => void;
   onDetailSession: (sessionName: string) => void;
@@ -42,6 +44,7 @@ interface HomeProps {
 export function Home({
   sessions,
   restorableSessions,
+  protectedWorktrees,
   repos,
   workflows,
   cleanableCount,
@@ -50,6 +53,7 @@ export function Home({
   rows,
   refresh,
   refreshRestorable,
+  refreshProtected,
   refreshRepos,
   onNavigate,
   onDetailSession,
@@ -60,19 +64,36 @@ export function Home({
 }: HomeProps) {
   const { showMessage, showError, setOverride, clearOverride } = useFooter();
 
+  // --- Dynamic tab order (hide empty optional tabs) ---
+  const TAB_ORDER: TabId[] = React.useMemo(() => {
+    const tabs: TabId[] = ["sessions", "repos", "workflows"];
+    if (restorableSessions.length > 0) tabs.push("restorable");
+    if (protectedWorktrees.length > 0) tabs.push("protected");
+    return tabs;
+  }, [restorableSessions.length, protectedWorktrees.length]);
+
   // --- Tab state ---
   const [activeTab, setActiveTab] = useState<TabId>("sessions");
+
+  // If active tab is no longer in TAB_ORDER (e.g. protected became 0), reset to sessions
+  useEffect(() => {
+    if (!TAB_ORDER.includes(activeTab)) {
+      setActiveTab("sessions");
+    }
+  }, [TAB_ORDER, activeTab]);
 
   // Per-tab selection indices
   const [sessionSelectedIndex, setSessionSelectedIndex] = useState(0);
   const [repoSelectedIndex, setRepoSelectedIndex] = useState(0);
   const [restorableSelectedIndex, setRestorableSelectedIndex] = useState(0);
+  const [protectedSelectedIndex, setProtectedSelectedIndex] = useState(0);
 
   // Confirmation / async states
   const [confirmingKill, setConfirmingKill] = useState(false);
   const [confirmingClean, setConfirmingClean] = useState(false);
   const [confirmingRestore, setConfirmingRestore] = useState(false);
   const [confirmingDeleteSession, setConfirmingDeleteSession] = useState(false);
+  const [confirmingUnprotect, setConfirmingUnprotect] = useState(false);
   const [cleaning, setCleaning] = useState(false);
   const [restoring, setRestoring] = useState(false);
 
@@ -82,14 +103,14 @@ export function Home({
       const idx = TAB_ORDER.indexOf(cur);
       return TAB_ORDER[(idx + 1) % TAB_ORDER.length]!;
     });
-  }, []);
+  }, [TAB_ORDER]);
 
   const goPrevTab = useCallback(() => {
     setActiveTab((cur) => {
       const idx = TAB_ORDER.indexOf(cur);
       return TAB_ORDER[(idx - 1 + TAB_ORDER.length) % TAB_ORDER.length]!;
     });
-  }, []);
+  }, [TAB_ORDER]);
 
   // --- maxVisible ---
   const maxVisible = rows - HEADER_HEIGHT_FULL - TAB_BAR_HEIGHT - BOTTOM_PANEL_HEIGHT - FOOTER_HEIGHT;
@@ -98,6 +119,7 @@ export function Home({
   const sessionMaxIndex = Math.max(0, sessions.length - 1);
   const repoMaxIndex = Math.max(0, repos.length - 1);
   const restorableMaxIndex = Math.max(0, restorableSessions.length - 1);
+  const protectedMaxIndex = Math.max(0, protectedWorktrees.length - 1);
 
   // Clamp indices
   if (sessionSelectedIndex > sessionMaxIndex && sessionMaxIndex >= 0) {
@@ -108,6 +130,9 @@ export function Home({
   }
   if (restorableSelectedIndex > restorableMaxIndex && restorableMaxIndex >= 0) {
     setRestorableSelectedIndex(restorableMaxIndex);
+  }
+  if (protectedSelectedIndex > protectedMaxIndex && protectedMaxIndex >= 0) {
+    setProtectedSelectedIndex(protectedMaxIndex);
   }
 
   // --- Derived state ---
@@ -121,10 +146,16 @@ export function Home({
       ? restorableSessions[restorableSelectedIndex]
       : undefined;
 
+  const selectedProtected: ProtectedWorktreeData | undefined =
+    activeTab === "protected" && protectedSelectedIndex < protectedWorktrees.length
+      ? protectedWorktrees[protectedSelectedIndex]
+      : undefined;
+
   // --- Scroll offsets ---
   const sessionScrollOffset = computeScrollOffset(sessionSelectedIndex, sessions.length, maxVisible - 1);
   const repoScrollOffset = computeScrollOffset(repoSelectedIndex, repos.length, maxVisible);
   const restorableScrollOffset = computeScrollOffset(restorableSelectedIndex, restorableSessions.length, maxVisible - 1);
+  const protectedScrollOffset = computeScrollOffset(protectedSelectedIndex, protectedWorktrees.length, maxVisible - 1);
 
   // --- Report selected session to parent ---
   useEffect(() => {
@@ -137,6 +168,8 @@ export function Home({
       setOverride({ type: "restoring" });
     } else if (cleaning) {
       setOverride({ type: "cleaning" });
+    } else if (confirmingUnprotect && selectedProtected) {
+      setOverride({ type: "confirmUnprotect", name: `${selectedProtected.repo}/${selectedProtected.branch}` });
     } else if (confirmingRestore && selectedRestorable) {
       setOverride({ type: "confirmRestore", name: selectedRestorable.name });
     } else if (confirmingClean) {
@@ -146,7 +179,7 @@ export function Home({
     } else {
       clearOverride();
     }
-  }, [restoring, cleaning, confirmingRestore, confirmingClean, confirmingKill, cleanableCount, selectedSession, selectedRestorable, setOverride, clearOverride]);
+  }, [restoring, cleaning, confirmingUnprotect, confirmingRestore, confirmingClean, confirmingKill, cleanableCount, selectedSession, selectedRestorable, selectedProtected, setOverride, clearOverride]);
 
   useEffect(() => {
     return () => { clearOverride(); };
@@ -292,6 +325,8 @@ export function Home({
           setRepoSelectedIndex((i) => (i <= 0 ? repoMaxIndex : i - 1));
         } else if (activeTab === "restorable") {
           setRestorableSelectedIndex((i) => (i <= 0 ? restorableMaxIndex : i - 1));
+        } else if (activeTab === "protected") {
+          setProtectedSelectedIndex((i) => (i <= 0 ? protectedMaxIndex : i - 1));
         }
       },
       onDown: () => {
@@ -301,6 +336,8 @@ export function Home({
           setRepoSelectedIndex((i) => (i >= repoMaxIndex ? 0 : i + 1));
         } else if (activeTab === "restorable") {
           setRestorableSelectedIndex((i) => (i >= restorableMaxIndex ? 0 : i + 1));
+        } else if (activeTab === "protected") {
+          setProtectedSelectedIndex((i) => (i >= protectedMaxIndex ? 0 : i + 1));
         }
       },
       onEnter: () => {
@@ -317,6 +354,11 @@ export function Home({
       },
       onClean: () => {
         if (cleanableCount > 0) setConfirmingClean(true);
+      },
+      onProtect: () => {
+        if (activeTab === "protected" && selectedProtected) {
+          setConfirmingUnprotect(true);
+        }
       },
       onAdd: () => {
         if (activeTab === "sessions") {
@@ -336,7 +378,7 @@ export function Home({
         }
       },
     },
-    active && !confirmingKill && !confirmingClean && !confirmingRestore
+    active && !confirmingKill && !confirmingClean && !confirmingRestore && !confirmingUnprotect
   );
 
   // Kill confirmation handler
@@ -381,6 +423,26 @@ export function Home({
     { isActive: active && confirmingClean }
   );
 
+  // Unprotect confirmation handler
+  useInput(
+    (_input) => {
+      if ((_input === "y" || _input === "Y") && selectedProtected) {
+        setConfirmingUnprotect(false);
+        try {
+          execSync(`fed worktree unprotect '${selectedProtected.repo}' '${selectedProtected.branch}'`, { stdio: "ignore" });
+          showMessage(`Unprotected: ${selectedProtected.repo}/${selectedProtected.branch}`);
+          refreshProtected();
+          refresh();
+        } catch {
+          showMessage(`Failed to unprotect ${selectedProtected.repo}/${selectedProtected.branch}`);
+        }
+      } else {
+        setConfirmingUnprotect(false);
+      }
+    },
+    { isActive: active && confirmingUnprotect }
+  );
+
   return (
     <Box flexDirection="column" flexGrow={1}>
       <TabBar
@@ -389,7 +451,12 @@ export function Home({
           { id: "sessions", label: "Sessions", count: sessions.length },
           { id: "repos", label: "Repositories", count: repos.length },
           { id: "workflows", label: "Workflows", count: workflows.length },
-          { id: "restorable", label: "Restorable", count: restorableSessions.length },
+          ...(restorableSessions.length > 0
+            ? [{ id: "restorable" as TabId, label: "Restorable", count: restorableSessions.length }]
+            : []),
+          ...(protectedWorktrees.length > 0
+            ? [{ id: "protected" as TabId, label: "Protected", count: protectedWorktrees.length }]
+            : []),
         ]}
       />
       <Box height={1} />
@@ -430,6 +497,16 @@ export function Home({
           selectedIndex={!active ? undefined : restorableSelectedIndex}
           maxVisible={maxVisible}
           scrollOffset={restorableScrollOffset}
+        />
+      )}
+
+      {activeTab === "protected" && (
+        <ProtectedList
+          worktrees={protectedWorktrees}
+          dimmed={!active}
+          selectedIndex={!active ? undefined : protectedSelectedIndex}
+          maxVisible={maxVisible}
+          scrollOffset={protectedScrollOffset}
         />
       )}
     </Box>

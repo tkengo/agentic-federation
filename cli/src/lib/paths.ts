@@ -8,6 +8,7 @@ export const ACTIVE_DIR = path.join(FED_HOME, "active");
 export const ARCHIVE_DIR = path.join(FED_HOME, "archive");
 export const KNOWLEDGE_DIR = path.join(FED_HOME, "knowledge");
 export const LOGS_DIR = path.join(FED_HOME, "logs");
+export const PROTECTED_WORKTREES_FILE = path.join(FED_HOME, "protected-worktrees.json");
 export const DEFAULT_BASE_PATH = path.join(os.homedir(), "fed", "repos");
 
 // Claude Code agents directory (~/.claude/agents/)

@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { exec } from "node:child_process";
 import { parse as parseYaml } from "yaml";
-import { ACTIVE_DIR } from "../utils/types.js";
+import { ACTIVE_DIR, PROTECTED_WORKTREES_FILE } from "../utils/types.js";
 import type { MetaJson, StateJson, SessionData, StatusConfig, WaitingHumanData } from "../utils/types.js";
 
 function readMeta(sessionDir: string): MetaJson | null {
@@ -131,6 +131,15 @@ function loadSessions(): SessionData[] {
   return sessions;
 }
 
+function countProtectedWorktrees(): number {
+  try {
+    const data = JSON.parse(fs.readFileSync(PROTECTED_WORKTREES_FILE, "utf-8"));
+    return Array.isArray(data?.paths) ? data.paths.length : 0;
+  } catch {
+    return 0;
+  }
+}
+
 // Async version - runs in background without blocking the event loop
 function countCleanableWorktreesAsync(callback: (count: number) => void): void {
   exec("fed clean --dry-run", { encoding: "utf-8" }, (err, stdout) => {
@@ -146,6 +155,7 @@ function countCleanableWorktreesAsync(callback: (count: number) => void): void {
 export function useSessions() {
   const [sessions, setSessions] = useState<SessionData[]>(() => loadSessions());
   const [cleanableCount, setCleanableCount] = useState<number>(0);
+  const [protectedCount, setProtectedCount] = useState<number>(() => countProtectedWorktrees());
 
   // Fetch cleanable count asynchronously on mount
   useEffect(() => {
@@ -162,11 +172,12 @@ export function useSessions() {
     countCleanableWorktreesAsync(setCleanableCount);
   }, []);
 
-  // Full refresh: fast session reload + background cleanable count
+  // Full refresh: fast session reload + background cleanable count + protected count
   const refresh = useCallback(() => {
     setSessions(loadSessions());
+    setProtectedCount(countProtectedWorktrees());
     countCleanableWorktreesAsync(setCleanableCount);
   }, []);
 
-  return { sessions, refresh, refreshSessions, refreshCleanableCount, cleanableCount };
+  return { sessions, refresh, refreshSessions, refreshCleanableCount, cleanableCount, protectedCount };
 }

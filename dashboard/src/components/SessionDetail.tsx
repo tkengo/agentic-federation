@@ -16,6 +16,7 @@ import { useFooter } from "../contexts/FooterContext.js";
 import { switchToTmuxSession } from "../utils/tmux.js";
 import { shortenHome, formatAge } from "../utils/format.js";
 import { STALE_THRESHOLD_SEC } from "../utils/types.js";
+import { PROTECTED_WORKTREES_FILE } from "../utils/types.js";
 import type { SessionData } from "../utils/types.js";
 
 interface SessionDetailProps {
@@ -27,10 +28,16 @@ interface SessionDetailProps {
   onBack: () => void;
 }
 
-const SESSION_ACTIONS: ActionEntry[] = [
-  { id: "attach", label: "Attach session", icon: "\u{1F4E5}" },  // inbox tray
-  { id: "delete", label: "Delete session", icon: "\u{1F6D1}" },  // stop sign
-];
+function checkWorktreeProtected(worktreePath: string): boolean {
+  try {
+    const data = JSON.parse(
+      fs.readFileSync(PROTECTED_WORKTREES_FILE, "utf-8")
+    );
+    return Array.isArray(data?.paths) && data.paths.includes(worktreePath);
+  } catch {
+    return false;
+  }
+}
 
 function isStale(session: SessionData): boolean {
   if (session.stateMtimeMs == null) return false;
@@ -46,6 +53,26 @@ export function SessionDetail({
   onBack,
 }: SessionDetailProps) {
   const { showMessage, setOverride, clearOverride } = useFooter();
+
+  // Worktree protection state
+  const [worktreeProtected, setWorktreeProtected] = useState(() =>
+    session.meta.worktree ? checkWorktreeProtected(session.meta.worktree) : false
+  );
+
+  const sessionActions: ActionEntry[] = React.useMemo(() => {
+    const actions: ActionEntry[] = [
+      { id: "attach", label: "Attach session", icon: "\u{1F4E5}" },
+    ];
+    if (session.meta.worktree) {
+      actions.push(
+        worktreeProtected
+          ? { id: "unprotect", label: "Unprotect worktree", icon: "\u{1F513}" }
+          : { id: "protect", label: "Protect worktree", icon: "\u{1F512}" }
+      );
+    }
+    actions.push({ id: "delete", label: "Delete session", icon: "\u{1F6D1}" });
+    return actions;
+  }, [worktreeProtected, session.meta.worktree]);
 
   // Detail state
   const [detailIndex, setDetailIndex] = useState(0);
@@ -70,7 +97,7 @@ export function SessionDetail({
 
   // Data for session
   const scripts = useScripts(session.sessionDir);
-  const totalDetailItems = scripts.length + SESSION_ACTIONS.length;
+  const totalDetailItems = scripts.length + sessionActions.length;
 
   // Preview content for selected detail item
   const previewData = usePreviewContent(
@@ -269,13 +296,29 @@ export function SessionDetail({
         } else {
           // Action selected
           const actionIdx = detailIndex - scripts.length;
-          const action = SESSION_ACTIONS[actionIdx];
+          const action = sessionActions[actionIdx];
           if (action?.id === "attach") {
             const ok = switchToTmuxSession(session.meta.tmux_session);
             if (ok) {
               showMessage(`Detached from ${session.name}`);
             } else {
               showMessage(`Failed to switch to ${session.name}`);
+            }
+          } else if (action?.id === "protect") {
+            try {
+              execSync(`fed worktree protect '${session.meta.repo}' '${session.meta.branch}'`, { stdio: "ignore" });
+              showMessage("Worktree protected");
+              setWorktreeProtected(true);
+            } catch {
+              showMessage("Failed to protect worktree");
+            }
+          } else if (action?.id === "unprotect") {
+            try {
+              execSync(`fed worktree unprotect '${session.meta.repo}' '${session.meta.branch}'`, { stdio: "ignore" });
+              showMessage("Worktree unprotected");
+              setWorktreeProtected(false);
+            } catch {
+              showMessage("Failed to unprotect worktree");
             }
           } else if (action?.id === "delete") {
             setConfirmingDelete(true);
@@ -452,7 +495,7 @@ export function SessionDetail({
           height={panelHeight}
           mode={detailMode}
           scripts={scripts}
-          actions={SESSION_ACTIONS}
+          actions={sessionActions}
           selectedIndex={detailIndex}
           maxVisible={dynamicMaxVisible}
           scriptName={runningScriptName ?? undefined}
