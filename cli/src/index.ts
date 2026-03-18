@@ -467,7 +467,8 @@ files
   .description("Save a file to the knowledge base")
   .option("--file <path>", "Read content from file instead of stdin (file is deleted after write)")
   .option("--keep", "Keep the source file when using --file")
-  .action((name: string, options: { file?: string; keep?: boolean }) => {
+  .option("--overwrite", "Overwrite existing file with the same name")
+  .action((name: string, options: { file?: string; keep?: boolean; overwrite?: boolean }) => {
     filesSaveCommand(name, options);
   });
 

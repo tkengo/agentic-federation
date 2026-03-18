@@ -1,5 +1,5 @@
 ---
-name: fed-files-viewer
+name: fed-files
 description: |
   調査結果やナレッジをfedナレッジベースに保存・読み出しする。セッション横断で永続化される。
   TRIGGER when: 「調査結果を保存して」「前に調べたやつ見て」「ナレッジに残して」など、調査結果の保存や過去の知見の参照が必要なとき。
@@ -27,6 +27,9 @@ fed files save my-investigation --file ./tmp-result.md
 
 # 元ファイルを削除せずに保存
 fed files save my-investigation --file ./tmp-result.md --keep
+
+# 既存のナレッジを上書き更新
+fed files save my-investigation --file ./tmp-result.md --overwrite
 ```
 
 **オプション:**
@@ -35,6 +38,7 @@ fed files save my-investigation --file ./tmp-result.md --keep
 |---|---|
 | `--file <path>` | 保存するファイルのパス（省略時はstdinから読み取り） |
 | `--keep` | 保存後に元ファイルを削除しない（**デフォルトでは元ファイルは削除される**） |
+| `--overwrite` | 同じ名前の既存ファイルを削除してから保存する |
 
 **保存ファイル名形式:** `YYYYMMDD_<6hexID>_<name>.md`
 

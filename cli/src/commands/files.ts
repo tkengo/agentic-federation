@@ -26,10 +26,19 @@ function generateFileName(name: string): string {
 
 export function filesSaveCommand(
   name: string,
-  options: { file?: string; keep?: boolean },
+  options: { file?: string; keep?: boolean; overwrite?: boolean },
 ): void {
   const dir = filesDir();
   fs.mkdirSync(dir, { recursive: true });
+
+  // Remove existing files with the same name if --overwrite
+  if (options.overwrite) {
+    const existing = findFilesByName(dir, name);
+    for (const f of existing) {
+      fs.unlinkSync(f);
+      console.error(`Removed: ${path.basename(f)}`);
+    }
+  }
 
   const fileName = generateFileName(name);
   const destPath = path.join(dir, fileName);
@@ -139,6 +148,19 @@ function resolveFile(dir: string, name: string): string | null {
   if (match) return path.join(dir, match);
 
   return null;
+}
+
+/** Find all files matching the given name suffix. */
+function findFilesByName(dir: string, name: string): string[] {
+  if (!fs.existsSync(dir)) return [];
+
+  const files = fs.readdirSync(dir);
+  const suffixPattern = `_${name}`;
+  const suffixPatternMd = `_${name}.md`;
+
+  return files
+    .filter((f) => f.endsWith(suffixPattern) || f.endsWith(suffixPatternMd))
+    .map((f) => path.join(dir, f));
 }
 
 function formatFileSize(bytes: number): string {
