@@ -1,6 +1,9 @@
 ---
-name: fed-repo
-description: "fedに登録されたリポジトリのローカルパスを取得する。fed repo listで一覧、fed repo showでrepo_rootパスを確認してコードを読む。\nTRIGGER when: 「このリポジトリ調べて」「XXXのコード見て」「リポジトリのパス教えて」など、別リポジトリのコードを参照する必要があるとき。\nDO NOT TRIGGER when: 現在のリポジトリ内だけで作業しているとき、またはGitHub上のリモートリポジトリの話題のみのとき。"
+name: fed-repo-viewer
+description: |
+  fedに登録されたリポジトリのローカルパスを取得する。fed repo listで一覧、fed repo showでrepo_rootパスを確認してコードを読む。
+  TRIGGER when: 「このリポジトリ調べて」「XXXのコード見て」「リポジトリのパス教えて」など、別リポジトリのコードを参照する必要があるとき。
+  DO NOT TRIGGER when: 現在のリポジトリ内だけで作業しているとき、またはGitHub上のリモートリポジトリの話題のみのとき。
 user_invocable: false
 ---
 
