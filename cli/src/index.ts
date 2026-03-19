@@ -527,10 +527,11 @@ worktree
 program
   .command("claude")
   .description("Launch Claude Code with automatic session ID tracking")
+  .option("--new", "Force create a new session instead of resuming existing one")
   .allowUnknownOption()
   .allowExcessArguments()
-  .action((_options: Record<string, unknown>, cmd: Command) => {
-    claudeCommand(cmd.args);
+  .action((options: { new?: boolean }, cmd: Command) => {
+    claudeCommand(cmd.args, options.new);
   });
 
 program.parse();

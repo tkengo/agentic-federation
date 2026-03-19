@@ -39,9 +39,8 @@ function shellQuote(s: string): string {
   return `'${s.replace(/'/g, "'\\''")}'`;
 }
 
-export function claudeCommand(args: string[]): void {
+export function claudeCommand(args: string[], newSession?: boolean): void {
   const sessionDir = requireSessionDir();
-  const uuid = crypto.randomUUID();
 
   // Get tmux pane identifier: "window_name.pane_index"
   let paneKey = "unknown";
@@ -54,8 +53,30 @@ export function claudeCommand(args: string[]): void {
     // Not in tmux or tmux query failed
   }
 
-  // Write per-pane session file (no shared file = no race condition)
   const claudeSessionsDir = path.join(sessionDir, "claude-sessions");
+  const sessionFile = path.join(claudeSessionsDir, `${paneKey}.json`);
+
+  // Resume existing session if available (unless --new is specified)
+  if (!newSession && fs.existsSync(sessionFile)) {
+    try {
+      const existing = JSON.parse(
+        fs.readFileSync(sessionFile, "utf-8")
+      ) as ClaudeSessionEntry;
+      console.log(`[fed] Resuming Claude session: ${existing.session_id} (pane: ${paneKey})`);
+      const cmd = `claude --resume ${shellQuote(existing.session_id)}`;
+      try {
+        execSync(cmd, { stdio: "inherit", env: process.env });
+      } catch {
+        // claude exited with non-zero (user ctrl-c, etc.)
+      }
+      return;
+    } catch {
+      // Corrupted session file, fall through to create new session
+    }
+  }
+
+  // Create new session
+  const uuid = crypto.randomUUID();
   fs.mkdirSync(claudeSessionsDir, { recursive: true });
   const entry: ClaudeSessionEntry = {
     tool: "claude",
@@ -63,14 +84,11 @@ export function claudeCommand(args: string[]): void {
     args,
     started_at: new Date().toISOString(),
   };
-  fs.writeFileSync(
-    path.join(claudeSessionsDir, `${paneKey}.json`),
-    JSON.stringify(entry, null, 2) + "\n"
-  );
+  fs.writeFileSync(sessionFile, JSON.stringify(entry, null, 2) + "\n");
 
   console.log(`[fed] Claude session: ${uuid} (pane: ${paneKey})`);
 
-  // Execute claude with --session-id, replacing this process effectively
+  // Execute claude with --session-id
   const claudeArgs = ["--session-id", uuid, ...args];
   const cmd = `claude ${claudeArgs.map(shellQuote).join(" ")}`;
   try {
