@@ -148,6 +148,9 @@ states:
   test_implementing:
     description: "計画の擬似コードに基づくテスト実装フェーズ"
     color: cyan
+  test_revision:
+    description: "実装者からのフィードバックに基づくテスト修正"
+    color: cyan
   implementing:
     description: "テストを満たす本実装フェーズ"
     color: blue
