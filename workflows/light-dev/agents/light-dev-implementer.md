@@ -75,12 +75,9 @@ model: opus
 
 ---
 
-## エスカレーション
-
-実装中に判断できない問題があれば人間に報告：
-
-### エスカレーションすべきケース
+@include(workflow-components/escalation/how-to-escalate.md)
+@slot(cases)
 - 計画通りに実装できない技術的制約がある
 - 計画に曖昧な部分があり解釈が必要
-
-@include(workflow-components/escalation/how-to-escalate.md)
+@endslot
+@endinclude

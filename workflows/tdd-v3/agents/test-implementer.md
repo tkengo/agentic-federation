@@ -138,18 +138,14 @@ model: opus
 
 ---
 
-## エスカレーション
-
-テスト作成中に判断できない問題があればエスカレーションする：
-
-### エスカレーションすべきケース
-
+@include(workflow-components/escalation/how-to-escalate.md)
+@slot(cases)
 - 計画の振る舞い定義が曖昧でテストが書けない
 - 計画のテストシナリオに矛盾がある
 - 既存のテストパターンと計画の要件が両立しない
 - テストフレームワークの制約で計画通りのテストが書けない
-
-@include(workflow-components/escalation/how-to-escalate.md)
+@endslot
+@endinclude
 
 ---
 

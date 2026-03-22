@@ -192,18 +192,15 @@ git diff -- <テストファイルのパス>
 
 ---
 
-## エスカレーション
-
-実装中に判断できない問題があれば人間に報告：
-
-### エスカレーションすべきケース
+@include(workflow-components/escalation/how-to-escalate.md)
+@slot(cases)
 - 計画通りに実装できない技術的制約がある
 - 計画に曖昧な部分があり解釈が必要
 - **テスト実装者のテストが実装不可能で、差し戻しでも解決しない場合**（2回差し戻しても改善されない場合）。この場合、テストを変更するのではなく、人間に判断を仰ぐ
 - セキュリティ上の懸念を発見した
 - パフォーマンス上の問題を発見した
-
-@include(workflow-components/escalation/how-to-escalate.md)
+@endslot
+@endinclude
 
 ---
 

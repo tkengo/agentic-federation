@@ -161,14 +161,10 @@ do_something(input1, input2):
 
 ---
 
-## エスカレーション
-
-計画修正中に判断できない問題があれば人間に報告：
-
-### エスカレーションすべきケース
-
+@include(workflow-components/escalation/how-to-escalate.md)
+@slot(cases)
 - レビューフィードバックが「人間による確定事項」と矛盾し、かつ技術的に致命的な問題を指摘している
 - レビューフィードバックの解釈に複数の可能性がある
 - 計画の修正範囲が大きすぎて根本的な再設計が必要
-
-@include(workflow-components/escalation/how-to-escalate.md)
+@endslot
+@endinclude

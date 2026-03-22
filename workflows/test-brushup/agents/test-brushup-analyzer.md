@@ -163,16 +163,14 @@ AIによるコードレビューではこれらの項目を変更要求の対象
 
 ---
 
-## エスカレーション
-
-### エスカレーションすべきケース
-
+@include(workflow-components/escalation/how-to-escalate.md)
+@slot(cases)
 - 改善方針に複数のアプローチがあり、トレードオフの判断が必要
 - テストの意図が不明で、リファクタリングの安全性が判断できない
 - テストコードにバグが疑われるが、リファクタリングの範囲を超える
 - 大規模な構造変更が必要だが、影響範囲が広すぎる
-
-@include(workflow-components/escalation/how-to-escalate.md)
+@endslot
+@endinclude
 
 ## 通知の送信方法
 

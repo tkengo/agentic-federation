@@ -143,14 +143,10 @@ AIによる計画レビューではこれらの項目を変更要求の対象に
 
 ---
 
-## エスカレーション
-
-計画修正中に判断できない問題があればオーケストレータに報告：
-
-### エスカレーションすべきケース
-
+@include(workflow-components/escalation/how-to-escalate.md)
+@slot(cases)
 - レビューフィードバックが「人間による確定事項」と矛盾し、かつ技術的に致命的な問題を指摘している
 - レビューフィードバックの解釈に複数の可能性がある
 - 計画の修正範囲が大きすぎて根本的な再設計が必要
-
-@include(escalation/how-to-escalate.md)
+@endslot
+@endinclude

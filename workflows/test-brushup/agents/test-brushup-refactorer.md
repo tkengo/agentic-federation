@@ -149,15 +149,14 @@ model: opus
 
 ---
 
-## エスカレーション
-
-### エスカレーションすべきケース
+@include(workflow-components/escalation/how-to-escalate.md)
+@slot(cases)
 - 計画通りにリファクタリングできない技術的制約がある
 - 計画に曖昧な部分があり解釈が必要
 - テストの意図が不明で、安全にリファクタリングできない
 - リファクタリングによりテストが失敗し、原因がテストコード自体のバグと疑われる
-
-@include(workflow-components/escalation/how-to-escalate.md)
+@endslot
+@endinclude
 
 ---
 
