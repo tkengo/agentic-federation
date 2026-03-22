@@ -66,21 +66,21 @@ windows:
         pane: 5
         command: 'fed claude --dangerously-skip-permissions'
     # +------------------------+------------------------+
-    # |     plan_revisor       |     plan_reviewer      |
-    # |       (pane 1)         |       (pane 2)         |
-    # +------------------------+------------------------+
-    # |   test_implementer     |     test_reviewer      |
-    # |       (pane 3)         |       (pane 4)         |
-    # +------------------------+------------------------+
-    # |              implementer                        |
-    # |                (pane 5)                         |
+    # |     plan_revisor       |                        |
+    # |       (pane 1)         |   test_implementer     |
+    # +------------------------+      (pane 3)          |
+    # |     plan_reviewer      |                        |
+    # |       (pane 2)         +------------------------+
+    # +------------------------+                        |
+    # |     test_reviewer      |     implementer        |
+    # |       (pane 4)         |       (pane 5)         |
     # +------------------------+------------------------+
     layout:
       splits:
+        - { source: 1, direction: v, percent: 50 }
+        - { source: 1, direction: h, percent: 66 }
         - { source: 1, direction: h, percent: 50 }
-        - { source: 1, direction: v, percent: 66 }
-        - { source: 2, direction: v, percent: 50 }
-        - { source: 3, direction: h, percent: 50 }
+        - { source: 4, direction: h, percent: 50 }
       focus: 1
 
   - name: review
