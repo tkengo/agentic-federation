@@ -43,6 +43,7 @@ function AppInner() {
   const { protectedWorktrees, refreshProtected } = useProtectedWorktrees();
   const [screen, setScreen] = useState<Screen>("splash");
   const [createStep, setCreateStep] = useState<"workflow" | "repo" | "branch" | "session-name">("workflow");
+  const [isCreatingSession, setIsCreatingSession] = useState(false);
   const lastCtrlCRef = useRef(0);
 
   const { showMessage, showError, setOverride, clearOverride, setCtrlCPending, state: footerState } = useFooter();
@@ -165,8 +166,7 @@ function AppInner() {
         }
       }
 
-      setScreen("list");
-      setOverride({ type: "creating" });
+      setIsCreatingSession(true);
 
       // Strip TMUX env so `fed session start` passes its outside-tmux check
       const { TMUX: _tmux, ...cleanEnv } = process.env;
@@ -177,7 +177,8 @@ function AppInner() {
       let stdout = "";
       proc.stdout?.on("data", (data: Buffer) => { stdout += data.toString(); });
       proc.on("close", (code) => {
-        clearOverride();
+        setIsCreatingSession(false);
+        setScreen("list");
         refresh();
         if (code === 0) {
           // Extract auto-generated branch name from CLI output if branch was empty
@@ -196,11 +197,12 @@ function AppInner() {
         }
       });
       proc.on("error", () => {
-        clearOverride();
+        setIsCreatingSession(false);
+        setScreen("list");
         showError(`Failed to create session: ${branch || "auto"}`);
       });
     },
-    [refresh, showMessage, showError, setOverride, clearOverride]
+    [refresh, showMessage, showError]
   );
 
   // Add a new repo via fed repo add (clone)
@@ -407,6 +409,7 @@ function AppInner() {
                 repos={repos.map((r) => r.name)}
                 workflows={workflows}
                 sessions={sessions}
+                isCreating={isCreatingSession}
                 onSubmit={createSession}
                 onCancel={() => setScreen("list")}
                 onStepChange={setCreateStep}

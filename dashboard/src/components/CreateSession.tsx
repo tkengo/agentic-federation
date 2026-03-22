@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Box, Text, useInput } from "ink";
 import { EmacsTextInput } from "./EmacsTextInput.js";
+import { Spinner } from "./Spinner.js";
 import { ScrollableRows } from "./ScrollableRows.js";
 import { computeScrollOffset } from "../utils/scroll.js";
 import type { SessionData } from "../utils/types.js";
@@ -19,6 +20,7 @@ interface CreatePanelProps {
   repos: string[];
   workflows: WorkflowInfo[];
   sessions: SessionData[];
+  isCreating: boolean;
   onSubmit: (repo: string, branch: string, workflow: string) => void;
   onCancel: () => void;
   onStepChange: (step: Step) => void;
@@ -28,6 +30,7 @@ export function CreateSession({
   repos,
   workflows,
   sessions,
+  isCreating,
   onSubmit,
   onCancel,
   onStepChange,
@@ -145,7 +148,7 @@ export function CreateSession({
         }
       }
     },
-    { isActive: true }
+    { isActive: !isCreating }
   );
 
   // Build breadcrumb string
@@ -255,8 +258,17 @@ export function CreateSession({
           </>
         )}
 
+        {/* Creating spinner: shown while session is being created */}
+        {isCreating && (
+          <Box marginLeft={2} paddingY={0}>
+            <Text color="yellow">
+              <Spinner />{" "}Creating session...
+            </Text>
+          </Box>
+        )}
+
         {/* Branch / Session Name step: inline label + input, compact */}
-        {isInputStep && (
+        {isInputStep && !isCreating && (
           <Box flexDirection="column">
             <Box marginLeft={2}>
               <Text bold>{inputLabel}</Text>
@@ -292,7 +304,7 @@ export function CreateSession({
       </Box>
 
       {/* Spacing between panel box and footer */}
-      {isInputStep && (
+      {(isInputStep || isCreating) && (
         <>
           {branchError && (
             <Box marginLeft={2}>
