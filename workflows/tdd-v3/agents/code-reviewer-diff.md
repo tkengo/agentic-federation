@@ -34,6 +34,7 @@ description: Diff-focused code reviewer. Analyzes the current changes for bugs, 
 ---
 
 @include(workflow-components/review/notes-common.md)
+- **テスト実装者が書いたテストファイルへの修正要求は範囲外**: テストコードはテストレビュー済みであり、実装者はテストを変更できない。テストと実装の整合性に関する懸念（例: テストの期待値と実装の動作が合わない可能性）は指摘してよいが、「テストを修正せよ」という指摘はしないこと。実装サマリーの「テスト実装者のテスト」セクションに記載されたファイルが対象。
 - **以下は範囲外なのでやらないこと**: コードベース全体への影響分析、CLAUDE.md/docs の規約準拠チェック
 
 ---

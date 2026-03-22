@@ -57,22 +57,30 @@ windows:
         name: "Test Implementer"
         pane: 3
         command: 'fed claude --dangerously-skip-permissions'
+      - id: test_reviewer
+        name: "Test Reviewer"
+        pane: 4
+        command: 'fed claude --dangerously-skip-permissions'
       - id: implementer
         name: Implementer
-        pane: 4
+        pane: 5
         command: 'fed claude --dangerously-skip-permissions'
     # +------------------------+------------------------+
     # |     plan_revisor       |     plan_reviewer      |
     # |       (pane 1)         |       (pane 2)         |
     # +------------------------+------------------------+
-    # |    test_implementer    |      implementer       |
+    # |   test_implementer     |     test_reviewer      |
     # |       (pane 3)         |       (pane 4)         |
+    # +------------------------+------------------------+
+    # |              implementer                        |
+    # |                (pane 5)                         |
     # +------------------------+------------------------+
     layout:
       splits:
         - { source: 1, direction: h, percent: 50 }
-        - { source: 1, direction: v, percent: 50 }
+        - { source: 1, direction: v, percent: 66 }
         - { source: 2, direction: v, percent: 50 }
+        - { source: 3, direction: h, percent: 50 }
       focus: 1
 
   - name: review
@@ -186,10 +194,21 @@ states:
       - pane: test_implementer
         agent: test-implementer
     transitions:
-      done: test_acceptance
+      done: test_review
+
+  test_review:
+    description: "テストコードの品質レビュー"
+    color: cyan
+    tasks:
+      - pane: test_reviewer
+        agent: test-reviewer
+    transitions:
+      approved: test_acceptance
+      request_changes: test_revision
+      escalate: waiting_human
 
   test_acceptance:
-    description: "実装者によるテスト受入判断"
+    description: "実装者によるテスト受入判断と本実装"
     color: cyan
     tasks:
       - pane: implementer
@@ -200,20 +219,18 @@ states:
       escalate: waiting_human
 
   test_revision:
-    description: "実装者からのフィードバックに基づくテスト修正"
+    description: "フィードバックに基づくテスト修正"
     color: cyan
     tasks:
       - pane: test_implementer
         agent: test-implementer
     transitions:
-      done: test_acceptance
+      done: test_review
 
   implementing:
     description: "テストを満たす本実装フェーズ"
     color: blue
-    tasks:
-      - pane: implementer
-        agent: implementer
+    # tasks なし: implementerがtest_acceptanceから継続して実装を行い、完了時にdone遷移する
     transitions:
       done: code_review
 

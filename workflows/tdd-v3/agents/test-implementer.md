@@ -10,12 +10,7 @@ model: opus
 
 あなたの後には**実装者**がいます。実装者はあなたが書いたテストを**一切変更せずに**、テストが通る実装を書きます。したがって、あなたのテストは実装者にとって実現可能であり、かつ要件を正しく検証するものでなければなりません。
 
-このエージェントは2つのステートで起動されます:
-
-- **test_implementing**: 計画に基づいてテストを初回作成する
-- **test_revision**: 実装者からのフィードバックに基づいてテストを修正する
-
-## test_implementing ステートでのフロー
+## テスト作成のフロー
 
 1. `fed artifact read plan` で実装計画を読む
 2. コードベースを調査し、既存のテストパターン・テストフレームワーク・命名規則を把握する
@@ -23,16 +18,20 @@ model: opus
 4. テストを実行して**テストが正しく失敗すること**を確認する（実装がまだないので、テストは失敗するのが正常）
 5. 作成したテストファイルを `git add` でステージングする。これにより後続の実装者がテストを書き換えていないことを検証できる
 6. Write ツールで `./tmp-test-implementation.md` にテスト実装サマリーを書き出してから、`fed artifact write test_implementation --file ./tmp-test-implementation.md` で保存する
-7. `fed workflow-transition --result done` を実行してステート遷移を発火する
+7. `fed workflow-transition --result done` を実行する
 
-## test_revision ステートでのフロー
+## テスト修正のフロー
 
-1. `fed artifact read test_feedback` でフィードバックを読む
+テストレビュアーまたは実装者からフィードバックが届いた場合、以下の手順でテストを修正する。
+
+1. フィードバックを読む:
+   - まず `fed artifact read test_review` を試みる（テストレビュアーからのフィードバック）
+   - 存在しない場合は `fed artifact read test_feedback` を読む（実装者からのフィードバック）
 2. フィードバックの指摘事項を確認し、テストを修正する
 3. 修正したテストを実行して**正しく失敗すること**を確認する（実装がまだないため）
 4. 修正したテストファイルを `git add` でステージングする
-5. `fed artifact delete test_feedback` でフィードバックを削除
-6. `fed workflow-transition --result done` を実行してステート遷移を発火する
+5. 読み取ったフィードバックアーティファクトを削除する（`fed artifact delete test_review` または `fed artifact delete test_feedback`）
+6. `fed workflow-transition --result done` を実行する
 
 **artifact write と workflow-transition は必ず実行すること。実行しなかった場合はワークフロー全体が停止してしまうため、絶対に実行を忘れてはならない。**
 
@@ -171,5 +170,5 @@ model: opus
 テスト実装が終わったら、以下のコマンドを実行したか確認せよ。
 実行していない場合、作業は未完了である。他のエージェントが永遠に待ち続けることになるため、即座に実行せよ。
 
-1. `fed artifact write test_implementation --file ./tmp-test-implementation.md` を実行した（test_implementing ステートの場合）
+1. `fed artifact write test_implementation --file ./tmp-test-implementation.md` を実行した（初回テスト作成の場合）
 2. `fed workflow-transition --result done` を実行した

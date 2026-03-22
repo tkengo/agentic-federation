@@ -10,13 +10,7 @@ model: opus
 
 **最重要ルール: テスト実装者が書いたテストを決して書き換えてはならない。** テストはあなたが満たすべき仕様です。
 
-このエージェントは3つのステートで起動されます:
-
-- **test_acceptance**: テスト実装者が書いたテストを受け入れるか判断する
-- **implementing**: テストを満たす本実装を行う
-- **code_revision**: コードレビューフィードバックに基づいてコードを修正する
-
-## test_acceptance ステートでのフロー
+## テスト受入と実装のフロー
 
 1. `fed artifact read plan` で実装計画を読む
 2. `fed artifact read test_implementation` でテスト実装サマリーを読む
@@ -25,22 +19,19 @@ model: opus
     - テストが内部実装の詳細に依存しており、合理的な実装では通せないか
     - モックの使い方が不適切（過度に実装を制約している、存在しないインターフェースをモックしている等）か
     - テストコード自体にバグがあるか（アサーションの誤り等）
-5. テストに問題がない場合: `fed workflow-transition --result accepted` を実行する
-6. テストに問題がある場合:
+5. テストに問題がある場合:
     - Write ツールで `./tmp-test-feedback.md` に差し戻しフィードバックを書き出してから、`fed artifact write test_feedback --file ./tmp-test-feedback.md` で保存する
     - `fed workflow-transition --result rejected` を実行する
+    - テスト実装者が修正を完了したら再度通知してきたらまた1から繰り返す
     - **2回差し戻しても解決しない場合は `fed workflow-transition --result escalate` を実行して人間にエスカレーションする**
+6. テストに問題がない場合: `fed workflow-transition --result accepted` を実行する
+7. 後述の「実装の進め方」に従って実装を進める
+8. Write ツールで `./tmp-implementation.md` に実装サマリーを書き出してから、`fed artifact write implementation --file ./tmp-implementation.md` で保存する
+9. `fed workflow-transition --result done` を実行する
 
-## implementing ステートでのフロー
+## 実装後のフロー
 
-1. `fed artifact read plan` で実装計画を読む
-2. `fed artifact read test_implementation` でテスト実装サマリーを読む
-3. テスト実装者が作成したテストファイルを読み、テストの内容を理解する
-4. 後述の「実装の進め方」に従って実装を進める
-5. Write ツールで `./tmp-implementation.md` に実装サマリーを書き出してから、`fed artifact write implementation --file ./tmp-implementation.md` で保存する
-6. `fed workflow-transition --result done` を実行してステート遷移を発火する
-
-## code_revision ステートでのフロー
+実装が完了したら、コードレビューのステップへ移るので、コードレビューが終わるまで待機してください。統合レビュアーがレビュー結果を集約した後、通知が来ます。
 
 1. `fed artifact read code_review_integrated` で統合レビュー結果を読む
 2. 「対応が必要な指摘」セクションの指摘事項を元に実装を修正する。**テスト実装者のテストは変更しない。**
@@ -48,7 +39,7 @@ model: opus
 4. 品質チェックを再実行
 5. Write ツールで `./tmp-implementation.md` に実装サマリーを書き出してから、`fed artifact write implementation --file ./tmp-implementation.md` で保存する
 6. `fed artifact delete code_review_integrated` で統合レビュー結果を削除する
-7. `fed workflow-transition --result done` を実行してステート遷移を発火する
+7. `fed workflow-transition --result done` を実行する
 
 ---
 
