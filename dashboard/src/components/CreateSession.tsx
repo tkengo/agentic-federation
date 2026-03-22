@@ -71,8 +71,6 @@ export function CreateSession({
     onStepChange(next);
   };
 
-  const isStandalone = !selectedRepo;
-
   const validateInput = (repo: string, name: string): boolean => {
     if (!repo) {
       // Standalone: check tmux session name uniqueness
@@ -272,7 +270,7 @@ export function CreateSession({
           <Box flexDirection="column">
             <Box marginLeft={2}>
               <Text bold>{inputLabel}</Text>
-              {!isStandalone && !branch && (
+              {!branch && (
                 <Text dimColor>Enter to auto-generate</Text>
               )}
               <EmacsTextInput
@@ -293,8 +291,8 @@ export function CreateSession({
                     // Repo mode: empty = auto-generate branch name via CLI
                     onSubmit(selectedRepo, "", selectedWorkflow);
                   } else {
-                    // Standalone session-name: go back to repo step
-                    goToStep("repo");
+                    // Auto-generate: works for both repo (branch) and standalone (session name)
+                    onSubmit(selectedRepo, "", selectedWorkflow);
                   }
                 }}
               />
