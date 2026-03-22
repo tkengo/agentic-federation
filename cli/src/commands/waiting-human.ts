@@ -11,7 +11,18 @@ interface WaitingHumanJson {
 }
 
 export function waitingHumanSetCommand(reason: string, notify: boolean): void {
-  const sessionDir = requireSessionDir();
+  // Silently exit 0 if not in a fed session (for hook safety)
+  const tmuxSession = getCurrentTmuxSession();
+  if (!tmuxSession) {
+    log("[waiting-human set] skipped: no tmux session detected (FED_SESSION and TMUX both unset)");
+    return;
+  }
+  const sessionDir = resolveSession(tmuxSession);
+  if (!sessionDir) {
+    log(`[waiting-human set] skipped: no active session for tmux="${tmuxSession}"`);
+    return;
+  }
+
   const filePath = path.join(sessionDir, "waiting_human.json");
   const data: WaitingHumanJson = {
     waiting: true,
