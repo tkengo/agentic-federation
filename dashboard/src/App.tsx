@@ -295,12 +295,7 @@ function AppInner() {
   return (
     <Box flexDirection="column" width={columns} height={rows}>
       <Header
-        sessionCount={sessions.length}
         cleanableCount={cleanableCount}
-        protectedCount={protectedCount}
-        repoCount={repos.length}
-        workflowCount={workflows.length}
-        restorableCount={restorableSessions.length}
         compact={isDetail}
       />
 
