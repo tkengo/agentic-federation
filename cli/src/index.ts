@@ -48,6 +48,7 @@ import {
   repoScriptRunCommand,
 } from "./commands/repo-script.js";
 import { claudeCommand } from "./commands/claude.js";
+import { workflowTransitionCommand } from "./commands/workflow-transition.js";
 import { restoreCommand } from "./commands/restore.js";
 import { convListCommand, convShowCommand } from "./commands/conv.js";
 import { configGetCommand, configSetCommand, configShowCommand } from "./commands/config.js";
@@ -377,6 +378,15 @@ workflow
   .description("Validate a workflow definition")
   .action((name: string) => {
     workflowValidateCommand(name);
+  });
+
+// --- workflow-transition ---
+program
+  .command("workflow-transition")
+  .description("Report task completion and trigger workflow state transition")
+  .requiredOption("--result <code>", "Result code (e.g. done, approved, request_changes, escalate)")
+  .action(async (options: { result: string }) => {
+    await workflowTransitionCommand(options.result);
   });
 
 // --- repo-script ---

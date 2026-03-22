@@ -1,0 +1,246 @@
+name: dev-team-v4
+description: "開発チームパイプライン v4 (宣言的状態遷移): 計画策定 → 計画レビュー → 実装 → コードレビュー → 後処理"
+
+focus: planner
+
+windows:
+  - name: dev
+    panes:
+      - id: terminal
+        name: Terminal
+        pane: 1
+        command: null
+      - id: editor
+        name: Editor
+        pane: 2
+        command: nvim
+      - id: dev_server
+        name: Dev Server
+        pane: 3
+        command: "{{repo.extra.dev_server}}"
+    layout:
+      splits:
+        - { source: 1, direction: v, percent: 10 }
+        - { source: 1, direction: h, percent: 50 }
+      focus: 1
+
+  - name: planner
+    panes:
+      - id: planner
+        name: Planner
+        pane: 1
+        command: 'fed claude --dangerously-skip-permissions --agent dev-team-v4-planner'
+      - id: human
+        name: Human
+        pane: 2
+        command: "cd {{meta.session_dir}} && nvim"
+    # +---------------------+---------------------+
+    # |      planner        |       human         |
+    # |      (pane 1)       |      (pane 2)       |
+    # +---------------------+---------------------+
+    layout:
+      splits:
+        - { source: 1, direction: h, percent: 50 }
+      focus: 1
+
+  - name: implement
+    panes:
+      - id: plan_revisor
+        name: "Plan Revisor"
+        pane: 1
+        command: 'fed claude --dangerously-skip-permissions --agent dev-team-v4-plan-revisor'
+      - id: plan_reviewer
+        name: "Plan Reviewer"
+        pane: 2
+        command: yolocodex
+      - id: implementer
+        name: Implementer
+        pane: 3
+        command: 'fed claude --dangerously-skip-permissions --agent dev-team-v4-implementer'
+    # +-------------+-------------+-------------+
+    # | plan_revisor| plan_reviewer| implementer |
+    # |   (pane 1)  |   (pane 2)  |   (pane 3)  |
+    # +-------------+-------------+-------------+
+    layout:
+      splits:
+        - { source: 1, direction: h, percent: 66 }
+        - { source: 2, direction: h, percent: 50 }
+      focus: 1
+
+  - name: review
+    panes:
+      - id: code_reviewer_diff
+        name: "Code Reviewer (Diff)"
+        pane: 1
+        command: yolocodex
+      - id: code_reviewer_history
+        name: "Code Reviewer (History)"
+        pane: 2
+        command: yologemini
+      - id: code_reviewer_impact
+        name: "Code Reviewer (Impact)"
+        pane: 3
+        command: 'fed claude --dangerously-skip-permissions --agent dev-team-v4-code-reviewer-impact'
+      - id: code_reviewer_conventions
+        name: "Code Reviewer (Conventions)"
+        pane: 4
+        command: yolocodex
+      - id: code_review_integrator
+        name: "Code Review Integrator"
+        pane: 5
+        command: 'fed claude --dangerously-skip-permissions --agent dev-team-v4-code-review-integrator'
+    # +------+------+------+------+
+    # |  A   |  B   |  C   |  D   |
+    # | (1)  | (2)  | (3)  | (4)  |
+    # +------+------+------+------+
+    # |             E              |
+    # |            (5)             |
+    # +------+------+------+------+
+    layout:
+      splits:
+        - { source: 1, direction: v, percent: 50 }
+        - { source: 1, direction: h, percent: 75 }
+        - { source: 2, direction: h, percent: 66 }
+        - { source: 3, direction: h, percent: 50 }
+      focus: 1
+
+  - name: postprocess
+    panes:
+      - id: learnings
+        name: "Learnings"
+        pane: 1
+        command: 'fed claude --dangerously-skip-permissions --agent dev-team-v4-learnings'
+      - id: evidence
+        name: "Evidence"
+        pane: 2
+        command: 'fed claude --dangerously-skip-permissions --agent dev-team-v4-frontend-evidence'
+    # +---------------------+---------------------+
+    # |     learnings       |      evidence       |
+    # |      (pane 1)       |      (pane 2)       |
+    # +---------------------+---------------------+
+    layout:
+      splits:
+        - { source: 1, direction: h, percent: 50 }
+      focus: 1
+
+states:
+  planning:
+    description: "人間と対話しながら計画を策定する"
+    color: blue
+    entry_point: true
+    tasks:
+      - pane: planner
+        agent: planner
+    transitions:
+      done: human_plan_review
+
+  human_plan_review:
+    description: "人間に計画レビューをお願いする"
+    color: blue
+    wait_human: true
+    transitions:
+      approved: plan_review
+      feedback: planning
+
+  plan_review:
+    description: "AIによる計画レビュー"
+    color: yellow
+    tasks:
+      - pane: plan_reviewer
+        agent: plan-reviewer
+    transitions:
+      done: plan_review_decision
+
+  plan_review_decision:
+    description: "レビュー結果に基づく計画修正判断"
+    color: yellow
+    tasks:
+      - pane: plan_revisor
+        agent: plan-revisor
+    transitions:
+      approved: implementing
+      request_changes: plan_revision
+      escalate: waiting_human
+
+  plan_revision:
+    description: "レビューFBに基づく計画修正"
+    color: yellow
+    tasks:
+      - pane: plan_revisor
+        agent: plan-revisor
+    transitions:
+      done: plan_review
+
+  implementing:
+    description: "計画に基づく実装フェーズ"
+    color: blue
+    tasks:
+      - pane: implementer
+        agent: implementer
+    transitions:
+      done: code_review
+
+  code_review:
+    description: "複数レビュアーによる並列コードレビュー"
+    color: yellow
+    tasks:
+      - pane: code_reviewer_diff
+        agent: code-reviewer-diff
+      - pane: code_reviewer_history
+        agent: code-reviewer-history
+      - pane: code_reviewer_impact
+        agent: code-reviewer-impact
+      - pane: code_reviewer_conventions
+        agent: code-reviewer-conventions
+    transitions:
+      done: code_review_aggregation
+
+  code_review_aggregation:
+    description: "レビュー結果の統合・判定"
+    color: yellow
+    tasks:
+      - pane: code_review_integrator
+        agent: code-review-integrator
+    transitions:
+      approved: post_processing
+      request_changes: code_revision
+      escalate: waiting_human
+
+  code_revision:
+    description: "レビューFBに基づくコード修正"
+    color: yellow
+    tasks:
+      - pane: implementer
+        agent: implementer
+    transitions:
+      done: code_review
+
+  post_processing:
+    description: "知見抽出・エビデンス収集の後処理フェーズ"
+    color: cyan
+    tasks:
+      - pane: learnings
+        agent: learnings
+      - pane: evidence
+        agent: frontend-evidence
+    transitions:
+      done: completed
+
+  completed:
+    description: "全レビュー通過、人間の最終承認待ち"
+    mark: "✓"
+    color: green
+    wait_human: true
+    transitions:
+      approved: approved
+
+  approved:
+    description: "ワークフロー完了"
+    mark: "+"
+    color: green
+    terminal: true
+
+  waiting_human:
+    description: "エスカレーション - 人間の判断待ち"
+    color: magenta
+    terminal: true

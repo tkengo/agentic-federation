@@ -15,6 +15,7 @@ import {
   expandTemplateVariables,
   composeAgentInstruction,
   applyWorkflowOverrides,
+  resolveAgentName,
   type WorkflowDefinition,
   type WorkflowWindow,
 } from "../lib/workflow.js";
@@ -241,6 +242,9 @@ function startStandalone(
   // Start notification watcher
   startNotificationWatcher(sessionPath, tmuxSession);
 
+  // Dispatch entry point tasks (for declarative workflows)
+  dispatchEntryPointTasks(sessionPath, workflow);
+
   // Attach
   printReadyAndAttach(workflow, tmuxSession, noAttach);
 }
@@ -341,6 +345,9 @@ function startWithRepo(
 
   // Start notification watcher
   startNotificationWatcher(sessionPath, tmuxSession);
+
+  // Dispatch entry point tasks (for declarative workflows)
+  dispatchEntryPointTasks(sessionPath, workflow);
 
   // Attach
   printReadyAndAttach(workflow, tmuxSession, noAttach);
@@ -473,12 +480,19 @@ function initSession(
   fs.mkdirSync(path.join(sessionPath, "notifications"), { recursive: true });
 
   const entryPoint = getEntryPointState(workflow);
+
+  // Pre-populate pending_tasks if the entry point state has tasks defined
+  const entryStateDef = entryPoint ? workflow.states[entryPoint] : undefined;
+  const initialPendingTasks = entryStateDef?.tasks
+    ? entryStateDef.tasks.map((t) => t.pane)
+    : [];
+
   const state: StateJson = {
     session_name: session,
     status: entryPoint,
     workflow: workflow.name,
     retry_count: {},
-    pending_tasks: [],
+    pending_tasks: initialPendingTasks,
     escalation: { required: false, reason: null },
     history: [],
   };
@@ -486,6 +500,51 @@ function initSession(
     path.join(sessionPath, "state.json"),
     JSON.stringify(state, null, 2) + "\n"
   );
+}
+
+// --- Dispatch entry point tasks for declarative workflows ---
+// Sends notifications to panes assigned in the entry point state's tasks.
+// Called after tmux session creation and notification watcher startup.
+function dispatchEntryPointTasks(
+  sessionPath: string,
+  workflow: WorkflowDefinition
+): void {
+  const entryPoint = getEntryPointState(workflow);
+  if (!entryPoint) return;
+
+  const entryStateDef = workflow.states[entryPoint];
+  if (!entryStateDef?.tasks || entryStateDef.tasks.length === 0) return;
+
+  const meta = JSON.parse(
+    fs.readFileSync(path.join(sessionPath, "meta.json"), "utf-8")
+  ) as MetaJson;
+
+  for (const task of entryStateDef.tasks) {
+    // Resolve agent name with workflow prefix
+    const agentFullName = resolveAgentName(workflow.name, task.agent);
+    const message = task.message
+      ?? `'fed prompt read ${agentFullName}' を実行して作業を開始してください。`;
+
+    // Find tmux target for this pane ID
+    let target = "";
+    for (const win of workflow.windows) {
+      const pane = win.panes.find((p) => p.id === task.pane);
+      if (pane) {
+        target = `${meta.tmux_session}:${win.name}.${pane.pane}`;
+        break;
+      }
+    }
+    if (!target) continue;
+
+    // Write notification file
+    const notifyDir = path.join(sessionPath, "notifications");
+    fs.mkdirSync(notifyDir, { recursive: true });
+    const ts = Date.now();
+    const notifyFile = path.join(notifyDir, `${ts}_${task.pane}.notify`);
+    fs.writeFileSync(notifyFile, `${target}\n${message}\n`);
+  }
+
+  console.log(`Dispatched ${entryStateDef.tasks.length} entry point task(s)`);
 }
 
 // --- Template-expand workflow YAML, save to session dir, return expanded object ---

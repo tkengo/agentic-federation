@@ -66,9 +66,9 @@ npm run build
 echo "  Dashboard built."
 echo ""
 
-# Cleanup broken symlinks in agents and skills directories (normal mode only)
+# Cleanup broken symlinks in skills directory (normal mode only)
 if [ "$DEV_MODE" = false ]; then
-  for target_dir in "$HOME/.claude/agents" "$HOME/.claude/skills"; do
+  for target_dir in "$HOME/.claude/skills"; do
     [ -d "$target_dir" ] || continue
     broken_count=0
     for link in "$target_dir"/*; do
@@ -103,27 +103,9 @@ if [ "$DEV_MODE" = false ]; then
   fi
 fi
 
-# Agents symlinks (normal mode only)
-if [ "$DEV_MODE" = false ]; then
-  AGENTS_DST="$HOME/.claude/agents"
-  mkdir -p "$AGENTS_DST"
-  agent_count=0
-
-  echo "Linking agents..."
-  for wf_agents_dir in "$REPO_DIR/workflows"/*/agents; do
-    [ -d "$wf_agents_dir" ] || continue
-    for agent_file in "$wf_agents_dir"/*.md; do
-      [ -f "$agent_file" ] || continue
-      agent_name="$(basename "$agent_file")"
-      ln -sf "$agent_file" "$AGENTS_DST/$agent_name"
-      echo "  $agent_name -> $agent_file"
-      agent_count=$((agent_count + 1))
-    done
-  done
-
-  echo "Linked $agent_count agents to ~/.claude/agents/"
-  echo ""
-fi
+# NOTE: Agent symlinks to ~/.claude/agents/ are no longer created.
+# Agents are composed at session start via syncAgents() and dispatched
+# via `fed prompt read` notifications from the workflow engine.
 
 # PATH hint (normal mode only)
 if [ "$DEV_MODE" = false ]; then

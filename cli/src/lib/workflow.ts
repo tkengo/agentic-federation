@@ -37,10 +37,8 @@ export interface LayoutSplit {
 
 export interface TaskDef {
   pane: string;
-  tracking_key: string;
-  message: string;
-  input_artifacts?: string[];
-  output_artifact?: string;
+  agent: string;
+  message?: string;
 }
 
 export interface WorkflowState {
@@ -49,11 +47,9 @@ export interface WorkflowState {
   color?: string;
   entry_point?: boolean;
   terminal?: boolean;
-  on_enter?: string;
-  on_task_complete?: string;
+  wait_human?: boolean;
   tasks?: TaskDef[];
-  decision_logic: string;
-  cleanup_artifacts?: string[];
+  transitions?: Record<string, string>;
 }
 
 // ---- Loader functions ----
@@ -119,6 +115,18 @@ export function getEntryPointState(wf: WorkflowDefinition): string {
     }
   }
   throw new Error("No entry point state found in workflow");
+}
+
+/**
+ * Resolve agent name with workflow prefix.
+ * "plan-reviewer" in workflow "dev-team-v4" -> "dev-team-v4-plan-reviewer"
+ * If agent already contains the workflow prefix, return as-is.
+ */
+export function resolveAgentName(workflowName: string, agent: string): string {
+  if (agent.startsWith(`${workflowName}-`)) {
+    return agent;
+  }
+  return `${workflowName}-${agent}`;
 }
 
 /** Get all terminal state names (those with terminal: true). */
@@ -192,7 +200,7 @@ export function validateWorkflow(wf: WorkflowDefinition): string[] {
     for (const [stateName, state] of Object.entries(wf.states)) {
       if (state.entry_point) entryPointCount++;
 
-      // Validate tasks reference existing panes (global pane ID set)
+      // Validate tasks reference existing panes and have agent names
       if (state.tasks) {
         for (const task of state.tasks) {
           if (!paneIds.has(task.pane)) {
@@ -200,7 +208,30 @@ export function validateWorkflow(wf: WorkflowDefinition): string[] {
               `State "${stateName}": task pane "${task.pane}" not found in panes`
             );
           }
+          if (task.agent !== undefined && !task.agent) {
+            errors.push(
+              `State "${stateName}": task for pane "${task.pane}" has empty agent name`
+            );
+          }
         }
+      }
+
+      // Validate transitions reference existing state names
+      if (state.transitions) {
+        for (const [resultCode, targetState] of Object.entries(state.transitions)) {
+          if (!stateNames.has(targetState)) {
+            errors.push(
+              `State "${stateName}": transition "${resultCode}" targets unknown state "${targetState}"`
+            );
+          }
+        }
+      }
+
+      // Warn: terminal states should not have transitions
+      if (state.terminal && state.transitions && Object.keys(state.transitions).length > 0) {
+        errors.push(
+          `State "${stateName}": terminal state should not have transitions`
+        );
       }
     }
 
