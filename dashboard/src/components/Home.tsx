@@ -39,6 +39,8 @@ interface HomeProps {
   onSelectedSessionChange: (session: SessionData | undefined) => void;
   pendingAction: string | null;
   onActionHandled: () => void;
+  focusSessionName: string | null;
+  onFocusSessionHandled: () => void;
 }
 
 export function Home({
@@ -61,6 +63,8 @@ export function Home({
   onSelectedSessionChange,
   pendingAction,
   onActionHandled,
+  focusSessionName,
+  onFocusSessionHandled,
 }: HomeProps) {
   const { showMessage, showError, setOverride, clearOverride } = useFooter();
 
@@ -134,6 +138,17 @@ export function Home({
   if (protectedSelectedIndex > protectedMaxIndex && protectedMaxIndex >= 0) {
     setProtectedSelectedIndex(protectedMaxIndex);
   }
+
+  // --- Focus newly created session ---
+  useEffect(() => {
+    if (!focusSessionName) return;
+    const idx = sessions.findIndex((s) => s.name === focusSessionName);
+    if (idx >= 0) {
+      setActiveTab("sessions");
+      setSessionSelectedIndex(idx);
+      onFocusSessionHandled();
+    }
+  }, [focusSessionName, sessions, onFocusSessionHandled]);
 
   // --- Derived state ---
   const selectedSession: SessionData | undefined =

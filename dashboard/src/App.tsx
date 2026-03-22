@@ -51,6 +51,9 @@ function AppInner() {
   // Active session reported by Home (used by CommandPalette)
   const [activeSession, setActiveSession] = useState<SessionData | undefined>();
 
+  // Session name to focus after creation (passed to Home)
+  const [focusSessionName, setFocusSessionName] = useState<string | null>(null);
+
   // Pending action from CommandPalette to Home
   const [pendingHomeAction, setPendingHomeAction] = useState<string | null>(null);
 
@@ -184,6 +187,7 @@ function AppInner() {
           // Extract auto-generated branch name from CLI output if branch was empty
           const autoMatch = stdout.match(/Auto-generated (?:branch|session): (.+)/);
           const sessionLabel = branch || autoMatch?.[1] || "auto";
+          setFocusSessionName(sessionLabel);
           showMessage(`Created session: ${sessionLabel}`);
           // Defer tmux switch to let Ink flush pending renders
           setTimeout(() => {
@@ -340,6 +344,8 @@ function AppInner() {
             onSelectedSessionChange={setActiveSession}
             pendingAction={pendingHomeAction}
             onActionHandled={() => setPendingHomeAction(null)}
+            focusSessionName={focusSessionName}
+            onFocusSessionHandled={() => setFocusSessionName(null)}
           />
         </Box>
 
