@@ -76,6 +76,7 @@ export async function startCommand(
       + String(now.getMinutes()).padStart(2, "0");
     const hex = crypto.randomBytes(2).toString("hex");
     tmuxSession = `${workflowName}-${hhmm}-${hex}`;
+    console.log(`Auto-generated session: ${tmuxSession}`);
   } else if (branch) {
     tmuxSession = branch;
   } else {

@@ -168,7 +168,12 @@ function AppInner() {
       setScreen("list");
       setOverride({ type: "creating" });
 
-      const proc = spawn("fed", cliArgs, { stdio: ["ignore", "pipe", "pipe"] });
+      // Strip TMUX env so `fed session start` passes its outside-tmux check
+      const { TMUX: _tmux, ...cleanEnv } = process.env;
+      const proc = spawn("fed", cliArgs, {
+        stdio: ["ignore", "pipe", "pipe"],
+        env: cleanEnv,
+      });
       let stdout = "";
       proc.stdout?.on("data", (data: Buffer) => { stdout += data.toString(); });
       proc.on("close", (code) => {
@@ -176,14 +181,16 @@ function AppInner() {
         refresh();
         if (code === 0) {
           // Extract auto-generated branch name from CLI output if branch was empty
-          const autoMatch = stdout.match(/Auto-generated branch: (.+)/);
+          const autoMatch = stdout.match(/Auto-generated (?:branch|session): (.+)/);
           const sessionLabel = branch || autoMatch?.[1] || "auto";
           showMessage(`Created session: ${sessionLabel}`);
-          // Auto-switch to the new tmux session
-          const ok = switchToTmuxSession(sessionLabel);
-          if (ok) {
-            showMessage(`Detached from ${sessionLabel}`);
-          }
+          // Defer tmux switch to let Ink flush pending renders
+          setTimeout(() => {
+            const ok = switchToTmuxSession(sessionLabel);
+            if (ok) {
+              showMessage(`Detached from ${sessionLabel}`);
+            }
+          }, 50);
         } else {
           showError(`Failed to create session: ${branch || "auto"}`);
         }

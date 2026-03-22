@@ -260,10 +260,11 @@ export function CreateSession({
           <Box flexDirection="column">
             <Box marginLeft={2}>
               <Text bold>{inputLabel}</Text>
-              {step === "branch" && !branch && (
+              {!isStandalone && !branch && (
                 <Text dimColor>Enter to auto-generate</Text>
               )}
               <EmacsTextInput
+                key={step}
                 value={branch}
                 onChange={(text) => {
                   setBranch(text);
@@ -276,7 +277,7 @@ export function CreateSession({
                       setBranch(trimmed);
                       onSubmit(selectedRepo, trimmed, selectedWorkflow);
                     }
-                  } else if (step === "branch") {
+                  } else if (selectedRepo) {
                     // Repo mode: empty = auto-generate branch name via CLI
                     onSubmit(selectedRepo, "", selectedWorkflow);
                   } else {
