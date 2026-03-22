@@ -21,10 +21,11 @@ export function describeShowCommand(): void {
   const filePath = path.join(sessionDir, "description.txt");
 
   if (!fs.existsSync(filePath)) {
-    console.log("(no description)");
     return;
   }
 
   const content = fs.readFileSync(filePath, "utf-8").trim();
-  console.log(content);
+  if (content) {
+    console.log(content);
+  }
 }
