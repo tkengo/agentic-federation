@@ -29,7 +29,7 @@ windows:
       - id: planner
         name: Planner
         pane: 1
-        command: 'fed claude --dangerously-skip-permissions'
+        command: 'fed claude --dangerously-skip-permissions --agent planner'
       - id: human
         name: Human
         pane: 2
@@ -77,10 +77,10 @@ windows:
     # +------------------------+------------------------+
     layout:
       splits:
-        - { source: 1, direction: v, percent: 50 }
-        - { source: 1, direction: h, percent: 66 }
         - { source: 1, direction: h, percent: 50 }
-        - { source: 4, direction: h, percent: 50 }
+        - { source: 1, direction: v, percent: 66 }
+        - { source: 2, direction: v, percent: 50 }
+        - { source: 4, direction: v, percent: 50 }
       focus: 1
 
   - name: review
@@ -144,9 +144,6 @@ states:
     description: "人間と対話しながら擬似コードベースの計画を策定する"
     color: blue
     entry_point: true
-    tasks:
-      - pane: planner
-        agent: planner
     transitions:
       done: human_plan_review
 
