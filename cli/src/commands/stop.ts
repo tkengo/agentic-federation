@@ -8,7 +8,7 @@ import {
   readMeta,
 } from "../lib/session.js";
 import * as tmux from "../lib/tmux.js";
-import { collectConversations } from "../lib/conv-store.js";
+import { collectConversations, generateConversationSummary } from "../lib/conv-store.js";
 
 export function stopCommand(sessionName?: string): void {
   // Resolve session name
@@ -61,6 +61,7 @@ export function stopCommand(sessionName?: string): void {
   console.log("  Collecting conversations...");
   try {
     collectConversations(sessionDir);
+    generateConversationSummary(sessionDir);
   } catch (err) {
     console.error(`  Warning: Conversation collection failed: ${err}`);
   }

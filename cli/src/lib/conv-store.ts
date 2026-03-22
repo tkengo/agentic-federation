@@ -153,3 +153,126 @@ export function collectConversations(sessionDir: string): void {
     console.log("  No conversations found.");
   }
 }
+
+// ---------------------------------------------------------------------------
+// Conversation summary generation – called from `fed stop` after collection
+// ---------------------------------------------------------------------------
+
+const SUMMARY_MESSAGE_MAX_LENGTH = 100;
+
+/**
+ * Generate a conversation_summary.md in the session directory.
+ * This file is designed for AI grep-based search across sessions.
+ */
+export function generateConversationSummary(sessionDir: string): void {
+  const meta = readMeta(sessionDir);
+  if (!meta) return;
+
+  // Read state.json for status
+  let status = "unknown";
+  try {
+    const stateRaw = fs.readFileSync(path.join(sessionDir, "state.json"), "utf-8");
+    const state = JSON.parse(stateRaw) as { status?: string };
+    if (state.status) status = state.status;
+  } catch {
+    // No state.json
+  }
+
+  // Read description.txt
+  let description = "N/A";
+  try {
+    const desc = fs.readFileSync(path.join(sessionDir, "description.txt"), "utf-8").trim();
+    if (desc) description = desc;
+  } catch {
+    // No description.txt
+  }
+
+  // Collect pane info from conversation JSONL files
+  const convDir = conversationsDir(sessionDir);
+  const paneInfos: Array<{
+    pane: string;
+    tool: string;
+    turnCount: number;
+    firstUserMessage: string | null;
+  }> = [];
+
+  if (fs.existsSync(convDir)) {
+    const files = fs.readdirSync(convDir).filter((f) => f.endsWith(".jsonl"));
+    for (const file of files.sort()) {
+      const filePath = path.join(convDir, file);
+      const content = fs.readFileSync(filePath, "utf-8").trim();
+      if (!content) continue;
+
+      const lines = content.split("\n");
+
+      // Parse meta (first line)
+      let convMeta: ConvMeta;
+      try {
+        convMeta = JSON.parse(lines[0]) as ConvMeta;
+        if (convMeta.type !== "meta") continue;
+      } catch {
+        continue;
+      }
+
+      // Find first user message
+      let firstUserMessage: string | null = null;
+      for (let i = 1; i < lines.length; i++) {
+        if (!lines[i].trim()) continue;
+        try {
+          const turn = JSON.parse(lines[i]) as ConvTurn;
+          if (turn.role === "user" && turn.content) {
+            firstUserMessage = turn.content.slice(0, SUMMARY_MESSAGE_MAX_LENGTH);
+            if (turn.content.length > SUMMARY_MESSAGE_MAX_LENGTH) {
+              firstUserMessage += "...";
+            }
+            break;
+          }
+        } catch {
+          continue;
+        }
+      }
+
+      paneInfos.push({
+        pane: convMeta.pane,
+        tool: convMeta.tool,
+        turnCount: convMeta.turn_count,
+        firstUserMessage,
+      });
+    }
+  }
+
+  // Build markdown
+  const lines: string[] = [];
+  lines.push(`# ${meta.tmux_session}`);
+  lines.push("");
+  lines.push(`- Workflow: ${meta.workflow}`);
+  lines.push(`- Status: ${status}`);
+  lines.push(`- Started: ${meta.created_at}`);
+  lines.push(`- Stopped: ${new Date().toISOString()}`);
+  lines.push(`- Description: ${description}`);
+
+  if (paneInfos.length > 0) {
+    const panesStr = paneInfos.map((p) => `${p.pane}(${p.tool})`).join(", ");
+    lines.push(`- Panes: ${panesStr}`);
+    const turnsStr = paneInfos.map((p) => `${p.pane}=${p.turnCount}`).join(", ");
+    lines.push(`- Turns: ${turnsStr}`);
+  }
+
+  if (paneInfos.some((p) => p.firstUserMessage)) {
+    lines.push("");
+    lines.push("## User Messages");
+    for (const p of paneInfos) {
+      if (p.firstUserMessage) {
+        lines.push("");
+        lines.push(`### ${p.pane}`);
+        lines.push(`- "${p.firstUserMessage}"`);
+      }
+    }
+  }
+
+  lines.push("");
+
+  const summaryPath = path.join(sessionDir, "conversation_summary.md");
+  fs.writeFileSync(summaryPath, lines.join("\n"));
+  console.log(`    conversation_summary.md generated`);
+}
