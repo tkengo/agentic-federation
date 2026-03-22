@@ -1,5 +1,7 @@
 import { Box, Text } from "ink";
 
+const CLEANABLE_WARNING_THRESHOLD = 10;
+
 const LOGO = [
   " ⠀⠀⠀⠀⡇⠀⠀⡶⠀⠀⠐⢿⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⡟⡀⢀⡞⠁⠀⠀⠀⠀⢸⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀  ",
   " ⠀⠀⠀⠀⡇⠀⠀⢿⠀⠀⠀⠀⡿⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣾⡀⠡⡾⠀⠀⠀⠀⠀⠀⡾⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀  ",
@@ -48,7 +50,10 @@ export function Header({ cleanableCount, compact }: HeaderProps) {
         justifyContent="flex-end"
       >
         {cleanableCount > 0 && (
-          <Text dimColor>
+          <Text
+            color={cleanableCount >= CLEANABLE_WARNING_THRESHOLD ? "red" : undefined}
+            dimColor={cleanableCount < CLEANABLE_WARNING_THRESHOLD}
+          >
             {cleanableCount} cleanable
           </Text>
         )}
