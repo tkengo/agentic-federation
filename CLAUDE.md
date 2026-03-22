@@ -117,12 +117,33 @@ Template variables (`{{meta.*}}`, `{{repo.*}}`) are used in workflow YAML for pa
 
 Agent instruction files (`.md`) support `@include()` directives to eliminate duplication across workflows. Shared fragments live in `workflow-components/`.
 
+**Simple include** (single-line, replaces with file contents):
 ```markdown
 @include(workflow-components/discussion/approach.md)
 ```
 
+**Block include with slots** (override customizable sections in fragments):
+```markdown
+@include(workflow-components/escalation/to-orchestrator.md)
+@slot(cases)
+- Custom case 1
+- Custom case 2
+@endslot
+@endinclude
+```
+
+Fragment files define slots with `@slot(name)...@endslot`. If the caller provides an override, it replaces the default content. If not, the default is kept.
+
+```markdown
+### Cases
+@slot(cases)
+- Default case 1
+- Default case 2
+@endslot
+```
+
 At `fed session start`, agent instructions go through a compose pipeline:
-1. `@include()` directives are expanded (no nesting)
+1. `@include()` directives are expanded with slot overrides (no nesting)
 2. `{{repo.*}}` / `{{meta.*}}` template variables are expanded
 3. Composed files are written to `<sessionDir>/agents/<name>.md`
 
