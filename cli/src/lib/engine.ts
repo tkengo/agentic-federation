@@ -3,7 +3,6 @@ import path from "node:path";
 import type { StateJson } from "./types.js";
 import {
   loadSessionWorkflow,
-  resolveAgentName,
   type WorkflowDefinition,
   type WorkflowState,
 } from "./workflow.js";
@@ -130,9 +129,8 @@ export function dispatchTasks(
     paneIds.push(task.pane);
 
     // Build notification message
-    const agentFullName = resolveAgentName(workflow.name, task.agent);
     const message = task.message
-      ?? `'fed prompt read ${agentFullName}' を実行して作業を開始してください。`;
+      ?? `'fed prompt read ${task.agent}' を実行して作業を開始してください。`;
 
     // Send notification to the pane
     sendNotify(sessionDir, workflow, task.pane, message);

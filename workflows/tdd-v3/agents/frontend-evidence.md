@@ -1,5 +1,5 @@
 ---
-name: tdd-v3-frontend-evidence
+name: frontend-evidence
 description: Post-processing agent that captures screenshots of implemented features as visual evidence.
 model: opus
 ---

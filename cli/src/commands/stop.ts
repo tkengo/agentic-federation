@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { execSync } from "node:child_process";
-import { ACTIVE_DIR, ARCHIVE_DIR } from "../lib/paths.js";
+import { ACTIVE_DIR, ARCHIVE_DIR, CLAUDE_AGENTS_DIR } from "../lib/paths.js";
 import {
   getCurrentTmuxSession,
   resolveSession,
@@ -50,6 +50,9 @@ export function stopCommand(sessionName?: string): void {
       console.log(`  Type:     Standalone`);
     }
   }
+
+  // 0.5. Remove agent symlinks from ~/.claude/agents/ (before archive moves files)
+  unlinkAgents(sessionDir);
 
   // 1. Stop watcher processes via PID files
   stopWatcherProcesses(sessionDir);
@@ -161,5 +164,31 @@ function stopWatcherProcesses(sessionDir: string): void {
     } catch {
       // Best effort
     }
+  }
+}
+
+// Remove agent symlinks from ~/.claude/agents/ that point to this session
+function unlinkAgents(sessionDir: string): void {
+  const agentsDir = path.join(sessionDir, "agents");
+  if (!fs.existsSync(agentsDir)) return;
+
+  const files = fs.readdirSync(agentsDir).filter((f) => f.endsWith(".md"));
+  let removed = 0;
+
+  for (const file of files) {
+    const linkPath = path.join(CLAUDE_AGENTS_DIR, file);
+    try {
+      const stat = fs.lstatSync(linkPath);
+      if (stat.isSymbolicLink()) {
+        fs.unlinkSync(linkPath);
+        removed++;
+      }
+    } catch {
+      // Doesn't exist or not a symlink
+    }
+  }
+
+  if (removed > 0) {
+    console.log(`  Removed ${removed} agent symlink(s) from ~/.claude/agents/`);
   }
 }

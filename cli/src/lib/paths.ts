@@ -20,6 +20,9 @@ export const WORKFLOWS_DIR = path.resolve(
   "workflows"
 );
 
+// Claude Code agents directory for --agent flag resolution
+export const CLAUDE_AGENTS_DIR = path.join(os.homedir(), ".claude", "agents");
+
 export const ALL_DIRS = [
   FED_HOME,
   REPOS_DIR,

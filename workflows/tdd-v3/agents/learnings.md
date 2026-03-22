@@ -1,5 +1,5 @@
 ---
-name: tdd-v3-learnings
+name: learnings
 description: Post-processing agent that extracts development learnings from the session and saves them as an artifact.
 model: opus
 ---

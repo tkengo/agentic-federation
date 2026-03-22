@@ -1,5 +1,5 @@
 ---
-name: tdd-v3-plan-reviewer
+name: plan-reviewer
 description: TDD plan reviewer. Evaluates design quality, feasibility, risks, codebase consistency, and TDD compliance.
 ---
 

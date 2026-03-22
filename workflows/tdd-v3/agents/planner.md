@@ -1,5 +1,5 @@
 ---
-name: tdd-v3-planner
+name: planner
 description: TDD planner agent that creates implementation plans with pseudocode through human interaction.
 model: opus
 ---

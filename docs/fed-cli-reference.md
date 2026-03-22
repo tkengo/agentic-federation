@@ -26,7 +26,7 @@ For detailed options and usage of each command, see [fed-cli-detailed-reference.
 | `fed conv` | View collected conversations from AI tools |
 | `fed config` | Manage fed configuration (`~/.fed/config.json`) |
 | `fed files` | Manage knowledge base files |
-| `fed claude` | Launch Claude Code with automatic session ID tracking |
+| `fed claude` | Launch Claude Code with automatic session ID tracking and agent resolution |
 
 ## Subcommands
 
@@ -140,3 +140,20 @@ For detailed options and usage of each command, see [fed-cli-detailed-reference.
 Options for `fed worktree list`:
 - `--protected` - Show only protected worktrees
 - `--no-protected` - Show only unprotected worktrees
+
+### `fed claude`
+
+Launch Claude Code with automatic session ID tracking and agent name resolution.
+
+```
+fed claude [options] [-- claude-args...]
+```
+
+Options:
+- `--new` - Force create a new session instead of resuming existing one
+- `--agent <name>` - Specify agent name to use. Resolves short name (e.g., `planner`) to the full composed name (e.g., `dev-team-v4-myrepo-1234-abcd-planner`) and passes it to `claude --agent`. When `--agent` is specified, always creates a new session (no resume).
+
+Agent name resolution:
+1. Exact match against composed file names in `<sessionDir>/agents/`
+2. Suffix match: `planner` matches `*-planner.md`
+3. If multiple suffix matches, an error is shown with available options

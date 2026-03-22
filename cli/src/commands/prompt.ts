@@ -19,12 +19,19 @@ function resolvePromptPath(name: string): string | null {
   const meta = readMeta(sessionDir);
   if (!meta) return null;
 
-  // Try composed file in session directory
+  // Try composed file by full name (exact match)
   const composedPath = path.join(sessionDir, "agents", `${name}.md`);
   if (fs.existsSync(composedPath)) return composedPath;
 
-  // Fall back to source (for backward compatibility during migration)
+  // Try composed file by role name: build full name from workflow + session + role
   const workflow = meta.workflow;
+  if (workflow) {
+    const fullName = `__fed-${workflow}-${tmuxSession}-${name}`;
+    const fullPath = path.join(sessionDir, "agents", `${fullName}.md`);
+    if (fs.existsSync(fullPath)) return fullPath;
+  }
+
+  // Fall back to source (for backward compatibility during migration)
   if (workflow) {
     const wfPath = path.join(WORKFLOWS_DIR, workflow, "agents", `${name}.md`);
     if (fs.existsSync(wfPath)) return wfPath;

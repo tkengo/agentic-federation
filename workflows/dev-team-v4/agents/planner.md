@@ -1,5 +1,5 @@
 ---
-name: dev-team-v4-planner
+name: planner
 description: Planner agent that creates implementation plans through human interaction.
 model: opus
 ---

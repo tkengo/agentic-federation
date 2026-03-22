@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { execSync } from "node:child_process";
-import { requireSessionDir } from "../lib/session.js";
+import { requireSessionDir, readMeta } from "../lib/session.js";
 
 export interface ClaudeSessionEntry {
   tool: "claude";
@@ -40,8 +40,45 @@ function shellQuote(s: string): string {
 }
 
 
-export function claudeCommand(args: string[], newSession?: boolean): void {
+// Resolve agent role name to full composed agent name.
+// Builds the expected filename from workflow name, tmux session, and role,
+// then verifies it exists.
+function resolveAgentArg(sessionDir: string, agent: string): string {
+  const meta = readMeta(sessionDir);
+  if (!meta) {
+    console.error("Error: Cannot read meta.json from session directory.");
+    process.exit(1);
+  }
+
+  const expectedName = `__fed-${meta.workflow}-${meta.tmux_session}-${agent}`;
+  const expectedFile = path.join(sessionDir, "agents", `${expectedName}.md`);
+
+  if (fs.existsSync(expectedFile)) return expectedName;
+
+  // Not found - show available agents for debugging
+  const agentsDir = path.join(sessionDir, "agents");
+  console.error(`Error: Agent '${agent}' not found.`);
+  console.error(`  Expected: ${expectedName}.md`);
+  if (fs.existsSync(agentsDir)) {
+    const files = fs.readdirSync(agentsDir).filter((f) => f.endsWith(".md"));
+    if (files.length > 0) {
+      console.error("Available agents:");
+      files.forEach((f) => console.error(`  - ${f.replace(/\.md$/, "")}`));
+    }
+  }
+  process.exit(1);
+}
+
+export function claudeCommand(args: string[], newSession?: boolean, agent?: string): void {
   const sessionDir = requireSessionDir();
+
+  // Resolve agent name if specified
+  let agentArgs: string[] = [];
+  if (agent) {
+    const resolvedName = resolveAgentArg(sessionDir, agent);
+    agentArgs = ["--agent", resolvedName];
+    console.log(`[fed] Resolved agent: ${agent} → ${resolvedName}`);
+  }
 
   // Get tmux pane identifier: "window_name.pane_index"
   let paneKey = "unknown";
@@ -57,8 +94,8 @@ export function claudeCommand(args: string[], newSession?: boolean): void {
   const claudeSessionsDir = path.join(sessionDir, "claude-sessions");
   const sessionFile = path.join(claudeSessionsDir, `${paneKey}.json`);
 
-  // Resume existing session if available (unless --new is specified)
-  if (!newSession && fs.existsSync(sessionFile)) {
+  // Resume existing session if available (unless --new or --agent is specified)
+  if (!newSession && !agent && fs.existsSync(sessionFile)) {
     try {
       const existing = JSON.parse(
         fs.readFileSync(sessionFile, "utf-8")
@@ -89,8 +126,8 @@ export function claudeCommand(args: string[], newSession?: boolean): void {
 
   console.log(`[fed] Claude session: ${uuid} (pane: ${paneKey})`);
 
-  // Execute claude with --session-id
-  const claudeArgs = ["--session-id", uuid, ...args];
+  // Execute claude with --session-id and optional --agent
+  const claudeArgs = ["--session-id", uuid, ...agentArgs, ...args];
   const cmd = `claude ${claudeArgs.map(shellQuote).join(" ")}`;
   try {
     execSync(cmd, { stdio: "inherit", env: process.env });

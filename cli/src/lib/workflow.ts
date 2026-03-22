@@ -117,18 +117,6 @@ export function getEntryPointState(wf: WorkflowDefinition): string {
   throw new Error("No entry point state found in workflow");
 }
 
-/**
- * Resolve agent name with workflow prefix.
- * "plan-reviewer" in workflow "dev-team-v4" -> "dev-team-v4-plan-reviewer"
- * If agent already contains the workflow prefix, return as-is.
- */
-export function resolveAgentName(workflowName: string, agent: string): string {
-  if (agent.startsWith(`${workflowName}-`)) {
-    return agent;
-  }
-  return `${workflowName}-${agent}`;
-}
-
 /** Get all terminal state names (those with terminal: true). */
 export function getTerminalStates(wf: WorkflowDefinition): string[] {
   return Object.entries(wf.states)

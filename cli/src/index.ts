@@ -532,10 +532,11 @@ program
   .command("claude")
   .description("Launch Claude Code with automatic session ID tracking")
   .option("--new", "Force create a new session instead of resuming existing one")
+  .option("--agent <name>", "Specify agent name to use (resolves short name to full composed name)")
   .allowUnknownOption()
   .allowExcessArguments()
-  .action((options: { new?: boolean }, cmd: Command) => {
-    claudeCommand(cmd.args, options.new);
+  .action((options: { new?: boolean; agent?: string }, cmd: Command) => {
+    claudeCommand(cmd.args, options.new, options.agent);
   });
 
 program.parse();

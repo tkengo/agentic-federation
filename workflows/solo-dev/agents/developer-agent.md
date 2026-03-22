@@ -1,5 +1,5 @@
 ---
-name: solo-dev-developer-agent
+name: developer-agent
 description: Common agent for solo workflow
 model: opus
 ---

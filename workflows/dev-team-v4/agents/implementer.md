@@ -1,5 +1,5 @@
 ---
-name: dev-team-v4-implementer
+name: implementer
 description: Implementer agent that writes code and tests based on approved implementation plans.
 model: opus
 ---

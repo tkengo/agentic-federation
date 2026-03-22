@@ -1,5 +1,5 @@
 ---
-name: tdd-v3-test-implementer
+name: test-implementer
 description: TDD test implementer agent that writes tests based on pseudocode plans before implementation.
 model: opus
 ---

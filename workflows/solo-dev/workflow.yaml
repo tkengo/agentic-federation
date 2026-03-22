@@ -24,7 +24,7 @@ windows:
       - id: developer
         name: Developer
         pane: 1
-        command: 'fed claude --dangerously-skip-permissions --agent solo-dev-developer-agent'
+        command: 'fed claude --dangerously-skip-permissions --agent developer-agent'
       - id: human
         name: Human
         pane: 2

@@ -1,5 +1,5 @@
 ---
-name: dev-team-v4-plan-reviewer
+name: plan-reviewer
 description: Comprehensive plan reviewer. Evaluates design quality, feasibility, risks, and codebase consistency.
 ---
 

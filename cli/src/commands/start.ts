@@ -3,7 +3,7 @@ import path from "node:path";
 import os from "node:os";
 import crypto from "node:crypto";
 import { execSync, spawn } from "node:child_process";
-import { ACTIVE_DIR, WORKFLOWS_DIR } from "../lib/paths.js";
+import { ACTIVE_DIR, WORKFLOWS_DIR, CLAUDE_AGENTS_DIR } from "../lib/paths.js";
 import { loadRepoConfig } from "../lib/repo.js";
 import { createSessionDir, linkActiveSession, resolveSession } from "../lib/session.js";
 import * as tmux from "../lib/tmux.js";
@@ -15,7 +15,6 @@ import {
   expandTemplateVariables,
   composeAgentInstruction,
   applyWorkflowOverrides,
-  resolveAgentName,
   type WorkflowDefinition,
   type WorkflowWindow,
 } from "../lib/workflow.js";
@@ -209,8 +208,10 @@ function startStandalone(
   // Sync commands (skills)
   syncCommands();
 
-  // Compose and write agent instructions
-  syncAgents(workflowName, tmuxSession, sessionPath, null, meta);
+  // Cleanup broken agent symlinks, compose and link agent instructions
+  cleanupStaleAgentLinks();
+  const composedAgents1 = syncAgents(workflowName, tmuxSession, sessionPath, null, meta);
+  linkAgents(composedAgents1);
 
   // Create logs directory
   fs.mkdirSync(path.join(sessionPath, "logs"), { recursive: true });
@@ -303,8 +304,10 @@ function startWithRepo(
   // Sync commands (skills)
   syncCommands();
 
-  // Compose and write agent instructions
-  syncAgents(workflowName, tmuxSession, sessionPath, config, meta);
+  // Cleanup broken agent symlinks, compose and link agent instructions
+  cleanupStaleAgentLinks();
+  const composedAgents2 = syncAgents(workflowName, tmuxSession, sessionPath, config, meta);
+  linkAgents(composedAgents2);
 
   // Create logs directory
   const logsDir = path.join(sessionPath, "logs");
@@ -520,10 +523,8 @@ function dispatchEntryPointTasks(
   ) as MetaJson;
 
   for (const task of entryStateDef.tasks) {
-    // Resolve agent name with workflow prefix
-    const agentFullName = resolveAgentName(workflow.name, task.agent);
     const message = task.message
-      ?? `'fed prompt read ${agentFullName}' を実行して作業を開始してください。`;
+      ?? `'fed prompt read ${task.agent}' を実行して作業を開始してください。`;
 
     // Find tmux target for this pane ID
     let target = "";
@@ -640,19 +641,20 @@ export function syncCommands(): void {
 }
 
 // --- Compose and write agent instructions to session dir ---
+// Returns list of absolute paths to composed files (for symlink creation).
 export function syncAgents(
   workflowName: string,
-  _tmuxSession: string,
+  tmuxSession: string,
   sessionDir: string,
   config: RepoConfig | null,
   meta: MetaJson
-): void {
+): string[] {
   const fedRepoRoot = path.resolve(import.meta.dirname, "..", "..", "..");
   const wfAgentsDir = path.join(WORKFLOWS_DIR, workflowName, "agents");
 
   if (!fs.existsSync(wfAgentsDir)) {
     console.log("No agent instructions found.");
-    return;
+    return [];
   }
 
   const agentsOutputDir = path.join(sessionDir, "agents");
@@ -664,18 +666,99 @@ export function syncAgents(
   };
 
   const files = fs.readdirSync(wfAgentsDir).filter((f) => f.endsWith(".md"));
-  let count = 0;
+  const composedFiles: string[] = [];
 
   for (const file of files) {
     const src = path.join(wfAgentsDir, file);
     const content = fs.readFileSync(src, "utf-8");
-    const composed = composeAgentInstruction(content, fedRepoRoot, bindings);
+    let composed = composeAgentInstruction(content, fedRepoRoot, bindings);
 
-    fs.writeFileSync(path.join(agentsOutputDir, file), composed);
-    count++;
+    // Derive role name: strip workflow prefix if present
+    const baseName = file.replace(/\.md$/, "");
+    const role = baseName.startsWith(`${workflowName}-`)
+      ? baseName.slice(workflowName.length + 1)
+      : baseName;
+    const newName = `__fed-${workflowName}-${tmuxSession}-${role}`;
+    const newFileName = `${newName}.md`;
+
+    // Rewrite frontmatter name field
+    composed = composed.replace(
+      /^(name:\s*).+$/m,
+      `$1${newName}`
+    );
+
+    const outPath = path.join(agentsOutputDir, newFileName);
+    fs.writeFileSync(outPath, composed);
+    composedFiles.push(outPath);
   }
 
-  console.log(`Composed ${count} agents to ${agentsOutputDir}`);
+  console.log(`Composed ${composedFiles.length} agents to ${agentsOutputDir}`);
+  return composedFiles;
+}
+
+// --- Link composed agent files to ~/.claude/agents/ ---
+function linkAgents(composedFiles: string[]): void {
+  if (composedFiles.length === 0) return;
+  fs.mkdirSync(CLAUDE_AGENTS_DIR, { recursive: true });
+
+  for (const filePath of composedFiles) {
+    const fileName = path.basename(filePath);
+    const linkPath = path.join(CLAUDE_AGENTS_DIR, fileName);
+    syncSymlink(filePath, linkPath);
+  }
+  console.log(`Linked ${composedFiles.length} agents to ~/.claude/agents/`);
+}
+
+// --- Cleanup stale agent symlinks in ~/.claude/agents/ ---
+// Removes symlinks that are broken OR point to non-active sessions.
+function cleanupStaleAgentLinks(): void {
+  if (!fs.existsSync(CLAUDE_AGENTS_DIR)) return;
+
+  // Collect active session directories from ~/.fed/active/ symlinks
+  const activeSessionDirs = new Set<string>();
+  if (fs.existsSync(ACTIVE_DIR)) {
+    for (const entry of fs.readdirSync(ACTIVE_DIR)) {
+      const linkPath = path.join(ACTIVE_DIR, entry);
+      try {
+        const target = fs.realpathSync(linkPath);
+        activeSessionDirs.add(target);
+      } catch {
+        // Broken active symlink, skip
+      }
+    }
+  }
+
+  const files = fs.readdirSync(CLAUDE_AGENTS_DIR);
+  let cleaned = 0;
+  for (const file of files) {
+    const linkPath = path.join(CLAUDE_AGENTS_DIR, file);
+    try {
+      const stat = fs.lstatSync(linkPath);
+      if (!stat.isSymbolicLink()) continue;
+
+      // Remove if broken
+      if (!fs.existsSync(linkPath)) {
+        fs.unlinkSync(linkPath);
+        cleaned++;
+        continue;
+      }
+
+      // Remove if target is not under an active session directory
+      const target = fs.realpathSync(linkPath);
+      const belongsToActive = [...activeSessionDirs].some((dir) =>
+        target.startsWith(dir + path.sep)
+      );
+      if (!belongsToActive) {
+        fs.unlinkSync(linkPath);
+        cleaned++;
+      }
+    } catch {
+      // Skip errors
+    }
+  }
+  if (cleaned > 0) {
+    console.log(`Cleaned up ${cleaned} stale agent symlink(s) in ~/.claude/agents/`);
+  }
 }
 
 function syncSymlink(src: string, dest: string): void {

@@ -1,5 +1,5 @@
 ---
-name: tdd-v3-code-reviewer-diff
+name: code-reviewer-diff
 description: Diff-focused code reviewer. Analyzes the current changes for bugs, security vulnerabilities, performance issues, and edge cases.
 ---
 
