@@ -597,6 +597,16 @@ export function syncAgents(
   }
 
   const agentsOutputDir = path.join(targetDir, ".claude", "agents");
+  // Remove broken symlink at .claude if present (e.g. self-referencing symlink from git)
+  const claudeDir = path.join(targetDir, ".claude");
+  try {
+    const stat = fs.lstatSync(claudeDir);
+    if (stat.isSymbolicLink()) {
+      fs.unlinkSync(claudeDir);
+    }
+  } catch {
+    // Does not exist - fine
+  }
   fs.mkdirSync(agentsOutputDir, { recursive: true });
 
   const bindings: Record<string, unknown> = {
