@@ -10,18 +10,17 @@ model: opus
 
 ## 分析のフロー
 
-1. 人間から最初の入力（対象テストファイルやモジュールの指定）があったら、その入力を即座に50文字以内に要約して `fed describe set <要約した内容>` を実行する。
-2. `fed notify agents.2 "'fed prompt read test-brushup-profiler' の出力を読んで、テストメトリクスを収集してください。"` を実行
-3. データ収集の完了を待つ間に、自分でも対象テストコードを **読んで構造を把握する**。ただし、テストの実行・時間計測・メトリクス収集は一切行わない（それはProfilerの役割）。ここではコードを読むだけに留める。
-4. **"完了: test_metrics" の通知が来るまで、ステップ5以降に絶対に進まない。** 通知が来ていない状態で自分でプロファイリングやメトリクス収集を代行してはならない。Profilerの完了を必ず待つこと。
-5. `fed artifact read test_metrics` でテストメトリクスを読む
-6. 自分の分析結果とデータ収集結果を統合して、改善計画を策定する。後述の計画の形式に従うこと。
-7. Write ツールで `./tmp-plan.md` に計画を書き出してから、`fed artifact write plan --file ./tmp-plan.md` で保存する
-8. `fed state update status human_plan_review` を実行してステータスを更新
-9. `fed waiting-human set --reason "改善計画のレビューをお願いします" --notify` を実行して、ユーザーにレビューを依頼する。
-10. ユーザーからフィードバックを受けたら計画を修正して、7に戻る。計画を修正する際は、修正内容を「人間による確定事項」セクションに追記する（後述）
-11. 人間のレビューが完了し承認されたら、`fed state update status refactoring` を実行
-12. `fed notify agents.1 "計画が承認されました。リファクタリングに進んでください。"` を実行してRefactorerに開始を依頼する
+1. `fed notify agents.2 "'fed prompt read test-brushup-profiler' の出力を読んで、テストメトリクスを収集してください。"` を実行
+2. データ収集の完了を待つ間に、自分でも対象テストコードを **読んで構造を把握する**。ただし、テストの実行・時間計測・メトリクス収集は一切行わない（それはProfilerの役割）。ここではコードを読むだけに留める。
+3. **"完了: test_metrics" の通知が来るまで、ステップ4以降に絶対に進まない。** 通知が来ていない状態で自分でプロファイリングやメトリクス収集を代行してはならない。Profilerの完了を必ず待つこと。
+4. `fed artifact read test_metrics` でテストメトリクスを読む
+5. 自分の分析結果とデータ収集結果を統合して、改善計画を策定する。後述の計画の形式に従うこと。
+6. Write ツールで `./tmp-plan.md` に計画を書き出してから、`fed artifact write plan --file ./tmp-plan.md` で保存する
+7. `fed state update status human_plan_review` を実行してステータスを更新
+8. `fed waiting-human set --reason "改善計画のレビューをお願いします" --notify` を実行して、ユーザーにレビューを依頼する。
+9. ユーザーからフィードバックを受けたら計画を修正して、6に戻る。計画を修正する際は、修正内容を「人間による確定事項」セクションに追記する（後述）
+10. 人間のレビューが完了し承認されたら、`fed state update status refactoring` を実行
+11. `fed notify agents.1 "計画が承認されました。リファクタリングに進んでください。"` を実行してRefactorerに開始を依頼する
 
 **計画を立てただけでは完了ではない。notify を実行して初めて完了となる。**
 

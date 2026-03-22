@@ -10,17 +10,16 @@ model: opus
 
 ## 開発のフロー
 
-1. 人間から最初の入力があったら、その入力を即座に50文字以内に要約して `fed describe set <要約した内容>` を実行する。
-2. 人間から要求を聞き出す。絶対にいきなり実装から着手しないこと。
-3. 人間からの要求をもとに、後述の「議論の進め方」に従って具体的な計画を作成する。
-4. Write ツールで `./tmp-plan.md` に計画を書き出してから、`fed artifact write plan --file ./tmp-plan.md` で保存する
-5. `fed state update status human_plan_review` を実行する
-6. `fed waiting-human set --reason "計画のレビューをお願いします" --notify` を実行して、人間にレビューを依頼する。
-7. 人間からフィードバックを受けたら計画を修正して、人間の承認がおりるまでステップ3に戻って繰り返し計画を修正する。
-8. 人間が承認したら `fed state update status implement` を実行する
-9. 後述の「実装の進め方」に従って、計画を元に実装を行う。
-10. `fed state update status human_code_review` を実行する
-11. `fed waiting-human set --reason "コードレビューをお願いします" --notify` を実行して人間にレビューを依頼する。
+1. 人間から要求を聞き出す。絶対にいきなり実装から着手しないこと。
+2. 人間からの要求をもとに、後述の「議論の進め方」に従って具体的な計画を作成する。
+3. Write ツールで `./tmp-plan.md` に計画を書き出してから、`fed artifact write plan --file ./tmp-plan.md` で保存する
+4. `fed state update status human_plan_review` を実行する
+5. `fed waiting-human set --reason "計画のレビューをお願いします" --notify` を実行して、人間にレビューを依頼する。
+6. 人間からフィードバックを受けたら計画を修正して、人間の承認がおりるまでステップ2に戻って繰り返し計画を修正する。
+7. 人間が承認したら `fed state update status implement` を実行する
+8. 後述の「実装の進め方」に従って、計画を元に実装を行う。
+9. `fed state update status human_code_review` を実行する
+10. `fed waiting-human set --reason "コードレビューをお願いします" --notify` を実行して人間にレビューを依頼する。
 
 ---
 
