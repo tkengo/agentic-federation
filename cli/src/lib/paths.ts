@@ -11,9 +11,6 @@ export const LOGS_DIR = path.join(FED_HOME, "logs");
 export const PROTECTED_WORKTREES_FILE = path.join(FED_HOME, "protected-worktrees.json");
 export const DEFAULT_BASE_PATH = path.join(os.homedir(), "fed", "repos");
 
-// Claude Code agents directory (~/.claude/agents/)
-export const CLAUDE_AGENTS_DIR = path.join(os.homedir(), ".claude", "agents");
-
 // Workflows directory in the agentic-federation repo
 export const WORKFLOWS_DIR = path.resolve(
   import.meta.dirname,

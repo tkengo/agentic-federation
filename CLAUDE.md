@@ -124,9 +124,9 @@ Agent instruction files (`.md`) support `@include()` directives to eliminate dup
 At `fed session start`, agent instructions go through a compose pipeline:
 1. `@include()` directives are expanded (no nesting)
 2. `{{repo.*}}` / `{{meta.*}}` template variables are expanded
-3. Composed files are written to `<worktree>/.claude/agents/__fed-<session>-<name>.md`
+3. Composed files are written to `<sessionDir>/agents/<name>.md`
 
-`fed claude --agent <name>` resolves to the composed file automatically.
+Agents read their instructions via `fed prompt read <name>` at runtime.
 
 ### Workflow Overrides
 
@@ -163,8 +163,7 @@ Dashboard duplicates minimal type definitions from cli/src/lib/ (MetaJson, State
 - Watcher processes (notification, stale) write PID files to session dir for cleanup
 - `fed session stop` kills watchers via PID files, then kills tmux session, then archives
 - Agent prompts are role-only; operational instructions come from workflow YAML via orchestrator
-- Composed agent instructions are written to `<worktree>/.claude/agents/__fed-<session>-<name>.md` (not symlinked to `~/.claude/agents/`)
-- `.gitignore` should include `.claude/agents/__fed-*.md` to avoid tracking composed files
+- Composed agent instructions are written to `<sessionDir>/agents/<name>.md`
 - `workflow` is a required positional argument to `fed session start`
 - Scripts defined in repo config JSON can be run via `fed repo-script run` or from the dashboard
 

@@ -3,7 +3,7 @@ import path from "node:path";
 import os from "node:os";
 import crypto from "node:crypto";
 import { execSync, spawn } from "node:child_process";
-import { ACTIVE_DIR, CLAUDE_AGENTS_DIR, WORKFLOWS_DIR } from "../lib/paths.js";
+import { ACTIVE_DIR, WORKFLOWS_DIR } from "../lib/paths.js";
 import { loadRepoConfig } from "../lib/repo.js";
 import { createSessionDir, linkActiveSession, resolveSession } from "../lib/session.js";
 import * as tmux from "../lib/tmux.js";
@@ -304,7 +304,7 @@ function startWithRepo(
   syncCommands();
 
   // Compose and write agent instructions
-  syncAgents(workflowName, tmuxSession, worktreePath, config, meta);
+  syncAgents(workflowName, tmuxSession, sessionPath, config, meta);
 
   // Create logs directory
   const logsDir = path.join(sessionPath, "logs");
@@ -639,11 +639,11 @@ export function syncCommands(): void {
   console.log(`Synced ${commands.length} commands to ~/.claude/commands/`);
 }
 
-// --- Compose and write agent instructions to target dir ---
+// --- Compose and write agent instructions to session dir ---
 export function syncAgents(
   workflowName: string,
-  tmuxSession: string,
-  targetDir: string,
+  _tmuxSession: string,
+  sessionDir: string,
   config: RepoConfig | null,
   meta: MetaJson
 ): void {
@@ -655,17 +655,7 @@ export function syncAgents(
     return;
   }
 
-  const agentsOutputDir = path.join(targetDir, ".claude", "agents");
-  // Remove broken symlink at .claude if present (e.g. self-referencing symlink from git)
-  const claudeDir = path.join(targetDir, ".claude");
-  try {
-    const stat = fs.lstatSync(claudeDir);
-    if (stat.isSymbolicLink()) {
-      fs.unlinkSync(claudeDir);
-    }
-  } catch {
-    // Does not exist - fine
-  }
+  const agentsOutputDir = path.join(sessionDir, "agents");
   fs.mkdirSync(agentsOutputDir, { recursive: true });
 
   const bindings: Record<string, unknown> = {
@@ -681,9 +671,7 @@ export function syncAgents(
     const content = fs.readFileSync(src, "utf-8");
     const composed = composeAgentInstruction(content, fedRepoRoot, bindings);
 
-    const agentName = file.replace(/\.md$/, "");
-    const destFile = `__fed-${tmuxSession}-${agentName}.md`;
-    fs.writeFileSync(path.join(agentsOutputDir, destFile), composed);
+    fs.writeFileSync(path.join(agentsOutputDir, file), composed);
     count++;
   }
 

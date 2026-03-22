@@ -29,7 +29,7 @@ windows:
       - id: planner
         name: Planner
         pane: 1
-        command: 'fed claude --dangerously-skip-permissions --agent tdd-v3-planner'
+        command: 'fed claude --dangerously-skip-permissions'
       - id: human
         name: Human
         pane: 2
@@ -48,7 +48,7 @@ windows:
       - id: plan_revisor
         name: "Plan Revisor"
         pane: 1
-        command: 'fed claude --dangerously-skip-permissions --agent tdd-v3-plan-revisor'
+        command: 'fed claude --dangerously-skip-permissions'
       - id: plan_reviewer
         name: "Plan Reviewer"
         pane: 2
@@ -56,11 +56,11 @@ windows:
       - id: test_implementer
         name: "Test Implementer"
         pane: 3
-        command: 'fed claude --dangerously-skip-permissions --agent tdd-v3-test-implementer'
+        command: 'fed claude --dangerously-skip-permissions'
       - id: implementer
         name: Implementer
         pane: 4
-        command: 'fed claude --dangerously-skip-permissions --agent tdd-v3-implementer'
+        command: 'fed claude --dangerously-skip-permissions'
     # +------------------------+------------------------+
     # |     plan_revisor       |     plan_reviewer      |
     # |       (pane 1)         |       (pane 2)         |
@@ -88,7 +88,7 @@ windows:
       - id: code_reviewer_impact
         name: "Code Reviewer (Impact)"
         pane: 3
-        command: 'fed claude --dangerously-skip-permissions --agent tdd-v3-code-reviewer-impact'
+        command: 'fed claude --dangerously-skip-permissions'
       - id: code_reviewer_conventions
         name: "Code Reviewer (Conventions)"
         pane: 4
@@ -96,7 +96,7 @@ windows:
       - id: code_review_integrator
         name: "Code Review Integrator"
         pane: 5
-        command: 'fed claude --dangerously-skip-permissions --agent tdd-v3-code-review-integrator'
+        command: 'fed claude --dangerously-skip-permissions'
     # +------+------+------+------+
     # |  A   |  B   |  C   |  D   |
     # | (1)  | (2)  | (3)  | (4)  |
@@ -117,11 +117,11 @@ windows:
       - id: learnings
         name: "Learnings"
         pane: 1
-        command: 'fed claude --dangerously-skip-permissions --agent tdd-v3-learnings'
+        command: 'fed claude --dangerously-skip-permissions'
       - id: evidence
         name: "Evidence"
         pane: 2
-        command: 'fed claude --dangerously-skip-permissions --agent tdd-v3-frontend-evidence'
+        command: 'fed claude --dangerously-skip-permissions'
     # +---------------------+---------------------+
     # |     learnings       |      evidence       |
     # |      (pane 1)       |      (pane 2)       |
