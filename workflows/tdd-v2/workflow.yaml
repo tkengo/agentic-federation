@@ -1,0 +1,176 @@
+name: tdd-v2
+description: "TDD開発チームパイプライン: 計画策定(擬似コード) → 計画レビュー → テスト実装 → 本実装 → コードレビュー → 後処理"
+
+focus: planner
+
+windows:
+  - name: dev
+    panes:
+      - id: terminal
+        name: Terminal
+        pane: 1
+        command: null
+      - id: editor
+        name: Editor
+        pane: 2
+        command: nvim
+      - id: dev_server
+        name: Dev Server
+        pane: 3
+        command: "{{repo.extra.dev_server}}"
+    layout:
+      splits:
+        - { source: 1, direction: v, percent: 10 }
+        - { source: 1, direction: h, percent: 50 }
+      focus: 1
+
+  - name: planner
+    panes:
+      - id: planner
+        name: Planner
+        pane: 1
+        command: 'fed claude --dangerously-skip-permissions --agent tdd-v2-planner'
+      - id: human
+        name: Human
+        pane: 2
+        command: "cd {{meta.session_dir}} && nvim"
+    # +---------------------+---------------------+
+    # |      planner        |       human         |
+    # |      (pane 1)       |      (pane 2)       |
+    # +---------------------+---------------------+
+    layout:
+      splits:
+        - { source: 1, direction: h, percent: 50 }
+      focus: 1
+
+  - name: implement
+    panes:
+      - id: plan_revisor
+        name: "Plan Revisor"
+        pane: 1
+        command: 'fed claude --dangerously-skip-permissions --agent tdd-v2-plan-revisor'
+      - id: plan_reviewer
+        name: "Plan Reviewer"
+        pane: 2
+        command: yolocodex
+      - id: test_implementer
+        name: "Test Implementer"
+        pane: 3
+        command: 'fed claude --dangerously-skip-permissions --agent tdd-v2-test-implementer'
+      - id: implementer
+        name: Implementer
+        pane: 4
+        command: 'fed claude --dangerously-skip-permissions --agent tdd-v2-implementer'
+    # +------------------------+------------------------+
+    # |     plan_revisor       |     plan_reviewer      |
+    # |       (pane 1)         |       (pane 2)         |
+    # +------------------------+------------------------+
+    # |    test_implementer    |      implementer       |
+    # |       (pane 3)         |       (pane 4)         |
+    # +------------------------+------------------------+
+    layout:
+      splits:
+        - { source: 1, direction: h, percent: 50 }
+        - { source: 1, direction: v, percent: 50 }
+        - { source: 2, direction: v, percent: 50 }
+      focus: 1
+
+  - name: review
+    panes:
+      - id: code_reviewer_diff
+        name: "Code Reviewer (Diff)"
+        pane: 1
+        command: yolocodex
+      - id: code_reviewer_history
+        name: "Code Reviewer (History)"
+        pane: 2
+        command: yologemini
+      - id: code_reviewer_impact
+        name: "Code Reviewer (Impact)"
+        pane: 3
+        command: 'fed claude --dangerously-skip-permissions --agent tdd-v2-code-reviewer-impact'
+      - id: code_reviewer_conventions
+        name: "Code Reviewer (Conventions)"
+        pane: 4
+        command: yolocodex
+      - id: code_review_integrator
+        name: "Code Review Integrator"
+        pane: 5
+        command: 'fed claude --dangerously-skip-permissions --agent tdd-v2-code-review-integrator'
+    # +------+------+------+------+
+    # |  A   |  B   |  C   |  D   |
+    # | (1)  | (2)  | (3)  | (4)  |
+    # +------+------+------+------+
+    # |             E              |
+    # |            (5)             |
+    # +------+------+------+------+
+    layout:
+      splits:
+        - { source: 1, direction: v, percent: 50 }
+        - { source: 1, direction: h, percent: 75 }
+        - { source: 2, direction: h, percent: 66 }
+        - { source: 3, direction: h, percent: 50 }
+      focus: 1
+
+  - name: postprocess
+    panes:
+      - id: learnings
+        name: "Learnings"
+        pane: 1
+        command: 'fed claude --dangerously-skip-permissions --agent tdd-v2-learnings'
+      - id: evidence
+        name: "Evidence"
+        pane: 2
+        command: 'fed claude --dangerously-skip-permissions --agent tdd-v2-frontend-evidence'
+    # +---------------------+---------------------+
+    # |     learnings       |      evidence       |
+    # |      (pane 1)       |      (pane 2)       |
+    # +---------------------+---------------------+
+    layout:
+      splits:
+        - { source: 1, direction: h, percent: 50 }
+      focus: 1
+
+states:
+  planning:
+    description: "人間と対話しながら擬似コードベースの計画を策定する"
+    color: blue
+    entry_point: true
+  human_plan_review:
+    description: "人間に計画レビューをお願いする"
+    color: blue
+  plan_review:
+    description: "計画レビュー（TDD適合性を含む）"
+    color: yellow
+  plan_revision:
+    description: "レビューフィードバックに基づく計画修正"
+    color: yellow
+  test_implementing:
+    description: "計画の擬似コードに基づくテスト実装フェーズ"
+    color: cyan
+  test_revision:
+    description: "実装者からのフィードバックに基づくテスト修正"
+    color: cyan
+  implementing:
+    description: "テストを満たす本実装フェーズ"
+    color: blue
+  code_review:
+    description: "複数レビュアーによる並列コードレビュー"
+    color: yellow
+  code_revision:
+    description: "レビューフィードバックに基づくコード修正"
+    color: yellow
+  post_processing:
+    description: "知見抽出・エビデンス収集の後処理フェーズ"
+    color: cyan
+  completed:
+    description: "全レビュー通過、人間の最終承認待ち"
+    mark: "✓"
+    color: green
+  approved:
+    description: "ワークフロー完了"
+    mark: "+"
+    color: green
+  waiting_human:
+    description: "エスカレーション - 人間の判断待ち"
+    color: magenta

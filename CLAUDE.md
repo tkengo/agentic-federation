@@ -11,6 +11,7 @@ Runtime data lives in `~/.fed/`, code lives in this repo.
 - **dashboard/** - Terminal UI (TypeScript + Ink/React)
 - **workflows/** - Workflow definitions (YAML state machines)
 - **commands/** - Claude Code skill definitions (.md), synced to `~/.claude/commands/` by `fed session start`
+- **workflow-components/** - Shared agent instruction fragments (used via `@include()` in agent .md files)
 - **prompts/** - Agent role prompts (orchestrator, planner, implementer, reviewers)
 
 ## Build
@@ -53,11 +54,11 @@ Each command is a file in `cli/src/commands/<name>.ts`:
 | Module | Purpose |
 |---|---|
 | `paths.ts` | Constants: `FED_HOME`, `SESSIONS_DIR`, `ACTIVE_DIR`, `ARCHIVE_DIR`, etc. |
-| `types.ts` | Interfaces: `MetaJson`, `StateJson`, `RepoConfig`, `ScriptDef` |
+| `types.ts` | Interfaces: `MetaJson`, `StateJson`, `RepoConfig`, `ScriptDef`, `WorkflowOverride` |
 | `session.ts` | Session resolution: `requireSessionDir()`, `resolveSession()`, `readMeta()` |
 | `tmux.ts` | tmux wrapper: `hasSession()`, `newSession()`, `sendKeys()`, etc. |
 | `repo.ts` | Repo config: `loadRepoConfig()`, `listRepoConfigs()`, `resolveRepoScriptPath()` |
-| `workflow.ts` | Workflow loading, validation, utilities |
+| `workflow.ts` | Workflow loading, validation, template expansion, @include() composition, workflow overrides |
 | `notification-watcher.ts` | Standalone process: watches notifications/ with chokidar |
 | `stale-watcher.ts` | Standalone process: checks state.json staleness periodically |
 
@@ -108,9 +109,46 @@ Scripts can use these variables directly (e.g., `$FED_REPO_DIR`, `$FED_BRANCH`).
 Scripts are executed via `fed repo-script run <name>` or from the dashboard detail panel.
 Script logs are saved to `<sessionDir>/script-logs/<timestamp>_<id>_<name>.log`.
 
-### Template Variables (Workflow YAML only)
+### Template Variables
 
-Template variables (`{{meta.*}}`, `{{repo.*}}`) are used in workflow YAML for pane commands and other workflow-level config. They are expanded at `fed session start` time when the workflow is saved to the session directory. They are NOT used in repo script definitions.
+Template variables (`{{meta.*}}`, `{{repo.*}}`) are used in workflow YAML for pane commands and in agent instruction files. They are expanded at `fed session start` time. They are NOT used in repo script definitions.
+
+### Agent Instruction Composition
+
+Agent instruction files (`.md`) support `@include()` directives to eliminate duplication across workflows. Shared fragments live in `workflow-components/`.
+
+```markdown
+@include(workflow-components/planner/absolute-rules.md)
+```
+
+At `fed session start`, agent instructions go through a compose pipeline:
+1. `@include()` directives are expanded (no nesting)
+2. `{{repo.*}}` / `{{meta.*}}` template variables are expanded
+3. Composed files are written to `<worktree>/.claude/agents/__fed-<session>-<name>.md`
+
+`fed claude --agent <name>` resolves to the composed file automatically.
+
+### Workflow Overrides
+
+Repo config can override pane commands per workflow via `workflow_overrides`:
+
+```json
+{
+  "workflow_overrides": {
+    "tdd-v2": {
+      "windows": {
+        "human": {
+          "panes": {
+            "human": { "command": "source .venv/bin/activate && cd {{meta.session_dir}} && nvim" }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+Overrides are applied after template expansion during `fed session start`.
 
 ## Dashboard Structure (dashboard/src/)
 
@@ -125,6 +163,8 @@ Dashboard duplicates minimal type definitions from cli/src/lib/ (MetaJson, State
 - Watcher processes (notification, stale) write PID files to session dir for cleanup
 - `fed session stop` kills watchers via PID files, then kills tmux session, then archives
 - Agent prompts are role-only; operational instructions come from workflow YAML via orchestrator
+- Composed agent instructions are written to `<worktree>/.claude/agents/__fed-<session>-<name>.md` (not symlinked to `~/.claude/agents/`)
+- `.gitignore` should include `.claude/agents/__fed-*.md` to avoid tracking composed files
 - `workflow` is a required positional argument to `fed session start`
 - Scripts defined in repo config JSON can be run via `fed repo-script run` or from the dashboard
 

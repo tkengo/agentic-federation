@@ -13,6 +13,8 @@ import {
   loadWorkflowByName,
   getEntryPointState,
   expandTemplateVariables,
+  composeAgentInstruction,
+  applyWorkflowOverrides,
   type WorkflowDefinition,
   type WorkflowWindow,
 } from "../lib/workflow.js";
@@ -206,8 +208,8 @@ function startStandalone(
   // Sync commands (skills)
   syncCommands();
 
-  // Sync agent prompts to ~/.claude/agents/
-  syncAgents(workflowName);
+  // Compose and write agent instructions
+  syncAgents(workflowName, tmuxSession, sessionPath, null, meta);
 
   // Create logs directory
   fs.mkdirSync(path.join(sessionPath, "logs"), { recursive: true });
@@ -297,8 +299,8 @@ function startWithRepo(
   // Sync commands (skills)
   syncCommands();
 
-  // Sync agent prompts to ~/.claude/agents/
-  syncAgents(workflowName);
+  // Compose and write agent instructions
+  syncAgents(workflowName, tmuxSession, worktreePath, config, meta);
 
   // Create logs directory
   const logsDir = path.join(sessionPath, "logs");
@@ -499,7 +501,13 @@ function expandAndSaveWorkflow(
   const rawYaml = fs.readFileSync(srcWorkflow, "utf-8");
   const expandedYaml = expandTemplateVariables(rawYaml, { repo: config, meta });
 
-  const wf = parseYaml(expandedYaml) as WorkflowDefinition;
+  let wf = parseYaml(expandedYaml) as WorkflowDefinition;
+
+  // Apply repo-specific workflow overrides
+  const overrides = config.workflow_overrides[workflowName];
+  if (overrides) {
+    wf = applyWorkflowOverrides(wf, overrides);
+  }
 
   fs.writeFileSync(
     path.join(sessionPath, "workflow.yaml"),
@@ -572,25 +580,45 @@ export function syncCommands(): void {
   console.log(`Synced ${commands.length} commands to ~/.claude/commands/`);
 }
 
-// --- Sync agent prompts to ~/.claude/agents/ ---
-export function syncAgents(workflowName: string): void {
-  fs.mkdirSync(CLAUDE_AGENTS_DIR, { recursive: true });
-
-  let count = 0;
-
-  // Workflow-specific agents: workflows/<name>/agents/*.md -> ~/.claude/agents/*.md
+// --- Compose and write agent instructions to target dir ---
+export function syncAgents(
+  workflowName: string,
+  tmuxSession: string,
+  targetDir: string,
+  config: RepoConfig | null,
+  meta: MetaJson
+): void {
+  const fedRepoRoot = path.resolve(import.meta.dirname, "..", "..", "..");
   const wfAgentsDir = path.join(WORKFLOWS_DIR, workflowName, "agents");
-  if (fs.existsSync(wfAgentsDir)) {
-    const files = fs.readdirSync(wfAgentsDir).filter((f) => f.endsWith(".md"));
-    for (const file of files) {
-      const src = path.join(wfAgentsDir, file);
-      const dest = path.join(CLAUDE_AGENTS_DIR, file);
-      syncSymlink(src, dest);
-      count++;
-    }
+
+  if (!fs.existsSync(wfAgentsDir)) {
+    console.log("No agent instructions found.");
+    return;
   }
 
-  console.log(`Synced ${count} agents to ~/.claude/agents/`);
+  const agentsOutputDir = path.join(targetDir, ".claude", "agents");
+  fs.mkdirSync(agentsOutputDir, { recursive: true });
+
+  const bindings: Record<string, unknown> = {
+    repo: config ?? {},
+    meta,
+  };
+
+  const files = fs.readdirSync(wfAgentsDir).filter((f) => f.endsWith(".md"));
+  let count = 0;
+
+  for (const file of files) {
+    const src = path.join(wfAgentsDir, file);
+    const content = fs.readFileSync(src, "utf-8");
+    const composed = composeAgentInstruction(content, fedRepoRoot, bindings);
+
+    const agentName = file.replace(/\.md$/, "");
+    const destFile = `__fed-${tmuxSession}-${agentName}.md`;
+    fs.writeFileSync(path.join(agentsOutputDir, destFile), composed);
+    count++;
+  }
+
+  console.log(`Composed ${count} agents to ${agentsOutputDir}`);
 }
 
 function syncSymlink(src: string, dest: string): void {

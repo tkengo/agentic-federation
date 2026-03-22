@@ -10,7 +10,7 @@ description: Conventions-focused code reviewer. Checks test naming, framework us
 
 ## コードレビューのフロー
 
-1度レビューを実行していたとしても、再レビューを依頼される場合があるので、依頼される度に**毎回必ずレビューを実行すること**。また、レビューを始める際に人間の許可を得る必要はなく、依頼されたタイミングで即座にレビューを開始すること。人間にレビュー開始の許可を求めてはならない。
+@include(workflow-components/reviewer/review-flow-base.md)
 
 1. プロジェクトの CLAUDE.md を読む
 2. docs/ ディレクトリがあればその中の規約関連ファイルを読む
@@ -101,20 +101,16 @@ description: Conventions-focused code reviewer. Checks test naming, framework us
 
 ## 注意事項
 
-- **毎回必ずレビューを実行すること**: 以前のレビュー結果が存在しても、必ず再度レビューを行う
+@include(workflow-components/reviewer/review-notes-common.md)
 - **必ず規約ドキュメントを読んでからレビューする**: 推測ではなく、実際のドキュメントを確認
 - **規約に明記されていることだけ指摘する**: 「こうした方がいい」という一般的な好みは指摘しない
 - **根拠を明示する**: どの規約ドキュメントのどのセクションに基づく指摘かを必ず記載
 - **既存テストコードとの一貫性も重視**: 規約ドキュメントだけでなく、既存テストのパターンも確認
-- **confidence score は付けない**: スコアリングは統合レビュアーが行う
 - **以下は範囲外なのでやらないこと**: 差分内のバグ・テスト意図の保全検証、Git 履歴の分析、lint/型チェック
 
 ---
 
-## レビュー完了チェックリスト
-
-レビュー結果を書き終えたら、以下のコマンドを両方とも実行したか確認せよ。
-実行していない場合、レビューは未完了である。他のエージェントが永遠に待ち続けることになるため、即座に実行せよ。
+@include(workflow-components/reviewer/review-completion-checklist.md)
 
 1. `fed artifact write code_review_conventions --file ./tmp-code-review-conventions.md` を実行した
 2. `fed notify review.5 "完了: code_review_conventions"` を実行した

@@ -5,10 +5,11 @@ import { WORKFLOWS_DIR } from "../lib/paths.js";
 import { getCurrentTmuxSession, resolveSession, readMeta } from "../lib/session.js";
 
 /**
- * Resolve the workflow name from the current session, if any.
- * Returns null if not in tmux, no active session, or no workflow set.
+ * Resolve the path to a composed agent instruction file.
+ * 1. Try composed file: <targetDir>/.claude/agents/__fed-<session>-<name>.md
+ * 2. Fall back to source: workflows/<workflow>/agents/<name>.md (backward compat)
  */
-function getSessionWorkflow(): string | null {
+function resolvePromptPath(name: string): string | null {
   const tmuxSession = getCurrentTmuxSession();
   if (!tmuxSession) return null;
 
@@ -16,16 +17,18 @@ function getSessionWorkflow(): string | null {
   if (!sessionDir) return null;
 
   const meta = readMeta(sessionDir);
-  return meta?.workflow ?? null;
-}
+  if (!meta) return null;
 
-/**
- * Resolve the path to a prompt file.
- * 1. If in a workflow session, try workflows/<workflow>/agents/<name>.md
- * 2. Fall back to prompts/<name>.md
- */
-function resolvePromptPath(name: string): string | null {
-  const workflow = getSessionWorkflow();
+  // Try composed file first
+  const targetDir = meta.worktree || sessionDir;
+  const composedPath = path.join(
+    targetDir, ".claude", "agents",
+    `__fed-${meta.tmux_session}-${name}.md`
+  );
+  if (fs.existsSync(composedPath)) return composedPath;
+
+  // Fall back to source (for backward compatibility during migration)
+  const workflow = meta.workflow;
   if (workflow) {
     const wfPath = path.join(WORKFLOWS_DIR, workflow, "agents", `${name}.md`);
     if (fs.existsSync(wfPath)) return wfPath;
@@ -54,15 +57,35 @@ export function promptReadCommand(name: string, nvim?: boolean): void {
 
 export function promptListCommand(): void {
   const prompts = new Set<string>();
+  const tmuxSession = getCurrentTmuxSession();
 
-  // Workflow-specific agents (if in a workflow session)
-  const workflow = getSessionWorkflow();
-  if (workflow) {
-    const agentsDir = path.join(WORKFLOWS_DIR, workflow, "agents");
-    if (fs.existsSync(agentsDir)) {
-      for (const f of fs.readdirSync(agentsDir)) {
-        if (f.endsWith(".md")) {
-          prompts.add(f.replace(/\.md$/, ""));
+  if (tmuxSession) {
+    const sessionDir = resolveSession(tmuxSession);
+    if (sessionDir) {
+      const meta = readMeta(sessionDir);
+      if (meta) {
+        // Try composed files first
+        const targetDir = meta.worktree || sessionDir;
+        const agentsDir = path.join(targetDir, ".claude", "agents");
+        const prefix = `__fed-${meta.tmux_session}-`;
+        if (fs.existsSync(agentsDir)) {
+          for (const f of fs.readdirSync(agentsDir)) {
+            if (f.startsWith(prefix) && f.endsWith(".md")) {
+              prompts.add(f.slice(prefix.length, -3));
+            }
+          }
+        }
+
+        // Fall back to source agents (backward compatibility)
+        if (prompts.size === 0 && meta.workflow) {
+          const wfAgentsDir = path.join(WORKFLOWS_DIR, meta.workflow, "agents");
+          if (fs.existsSync(wfAgentsDir)) {
+            for (const f of fs.readdirSync(wfAgentsDir)) {
+              if (f.endsWith(".md")) {
+                prompts.add(f.replace(/\.md$/, ""));
+              }
+            }
+          }
         }
       }
     }

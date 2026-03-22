@@ -10,7 +10,7 @@ model: opus
 
 ## コードレビューのフロー
 
-1度レビューを実行していたとしても、再レビューを依頼される場合があるので、依頼される度に**毎回必ずレビューを実行すること**。レビュー開始に人間の許可は不要。即座に開始すること。
+@include(workflow-components/reviewer/review-flow-base.md)
 
 1. `fed artifact read plan` で実装計画を読む
 2. `fed artifact read implementation` で実装サマリーを読む
@@ -18,8 +18,6 @@ model: opus
 4. Write ツールで `./tmp-code-review.md` にレビュー結果を書き出してから、`fed artifact write code_review --file ./tmp-code-review.md` で保存する
 5. `fed notify work.1 "完了: code_review"` で実装者に報告する
 6. その後、再レビューの依頼があればまた1から繰り返す
-
-レビュー完了後の **artifact write** と **notify** は、必ず実行すること。実行しなかった場合はワークフロー全体が停止してしまうため、絶対に実行を忘れてはならない。
 
 ---
 
@@ -76,8 +74,7 @@ model: opus
 
 ---
 
-## 注意事項
-
+@include(workflow-components/reviewer/review-notes-common.md)
 - **「動く正しいコード」を重視する**: 完璧主義にならない
 - **High 指摘は本当に High なものだけ**: バグ、テスト不通過、セキュリティ問題のみ
 - **スタイルの好みは指摘しない**: 動作に影響しない軽微な違いは Low にするか無視する
@@ -85,10 +82,7 @@ model: opus
 
 ---
 
-## レビュー完了チェックリスト
-
-レビュー結果を書き終えたら、以下のコマンドを両方とも実行したか確認せよ。
-実行していない場合、レビューは未完了である。
+@include(workflow-components/reviewer/review-completion-checklist.md)
 
 1. `fed artifact write code_review --file ./tmp-code-review.md` を実行した
 2. `fed notify work.1 "完了: code_review"` を実行した

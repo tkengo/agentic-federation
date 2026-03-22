@@ -10,7 +10,7 @@ description: Diff-focused code reviewer. Analyzes test refactoring changes for i
 
 ## コードレビューのフロー
 
-1度レビューを実行していたとしても、再レビューを依頼される場合があるので、依頼される度に**毎回必ずレビューを実行すること**。また、レビューを始める際に人間の許可を得る必要はなく、依頼されたタイミングで即座にレビューを開始すること。人間にレビュー開始の許可を求めてはならない。
+@include(workflow-components/reviewer/review-flow-base.md)
 
 1. `fed artifact read plan` で改善計画を読む
 2. `fed artifact read implementation` で実装サマリーを読む
@@ -96,20 +96,13 @@ description: Diff-focused code reviewer. Analyzes test refactoring changes for i
 
 ## 注意事項
 
-- **毎回必ずレビューを実行すること**: 以前のレビュー結果が存在しても、必ず再度レビューを行う
+@include(workflow-components/reviewer/review-notes-common.md)
 - **テストの意図の保全を最重視**: リファクタリングなので、テストの意図が変わっていないかが最も重要
-- **建設的なフィードバック**: 問題点だけでなく改善案も提示
-- **重要度を明確に**: 全ての指摘が同じ重要度ではない
-- **差分の中身だけを見る**: 既存コードの問題や履歴には踏み込まない
-- **confidence score は付けない**: スコアリングは統合レビュアーが行う
 - **以下は範囲外なのでやらないこと**: CLAUDE.md/docs の規約準拠チェック、Git 履歴の分析、lint/型チェック
 
 ---
 
-## レビュー完了チェックリスト
-
-レビュー結果を書き終えたら、以下のコマンドを両方とも実行したか確認せよ。
-実行していない場合、レビューは未完了である。他のエージェントが永遠に待ち続けることになるため、即座に実行せよ。
+@include(workflow-components/reviewer/review-completion-checklist.md)
 
 1. `fed artifact write code_review_diff --file ./tmp-code-review-diff.md` を実行した
 2. `fed notify review.5 "完了: code_review_diff"` を実行した

@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { execSync } from "node:child_process";
 import { requireSessionDir } from "../lib/session.js";
+import type { MetaJson } from "../lib/types.js";
 
 export interface ClaudeSessionEntry {
   tool: "claude";
@@ -37,6 +38,24 @@ export function loadSessionsJson(sessionDir: string): SessionsJson | null {
 // Quote a string for shell safety
 function shellQuote(s: string): string {
   return `'${s.replace(/'/g, "'\\''")}'`;
+}
+
+// Resolve --agent args to __fed-<session>-<name> format
+function resolveAgentArgs(args: string[], sessionDir: string): string[] {
+  const result = [...args];
+  const agentIdx = result.indexOf("--agent");
+  if (agentIdx !== -1 && agentIdx + 1 < result.length) {
+    const agentName = result[agentIdx + 1]!;
+    try {
+      const meta = JSON.parse(
+        fs.readFileSync(path.join(sessionDir, "meta.json"), "utf-8")
+      ) as MetaJson;
+      result[agentIdx + 1] = `__fed-${meta.tmux_session}-${agentName}`;
+    } catch {
+      // If meta.json is unreadable, pass agent name as-is
+    }
+  }
+  return result;
 }
 
 export function claudeCommand(args: string[], newSession?: boolean): void {
@@ -88,8 +107,9 @@ export function claudeCommand(args: string[], newSession?: boolean): void {
 
   console.log(`[fed] Claude session: ${uuid} (pane: ${paneKey})`);
 
-  // Execute claude with --session-id
-  const claudeArgs = ["--session-id", uuid, ...args];
+  // Execute claude with --session-id (resolve agent name to __fed- prefix)
+  const resolvedArgs = resolveAgentArgs(args, sessionDir);
+  const claudeArgs = ["--session-id", uuid, ...resolvedArgs];
   const cmd = `claude ${claudeArgs.map(shellQuote).join(" ")}`;
   try {
     execSync(cmd, { stdio: "inherit", env: process.env });

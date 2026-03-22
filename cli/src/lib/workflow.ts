@@ -239,3 +239,79 @@ export function expandTemplateVariables(
     return resolveBinding(keyPath.trim(), bindings);
   });
 }
+
+// ---- @include() expansion ----
+
+/**
+ * Expand @include() directives in agent instruction content.
+ * Replaces lines like `@include(workflow-components/foo.md)` with file contents.
+ * Nesting is not supported - @include() inside included files is ignored.
+ * Paths are relative to baseDir (fed repo root).
+ */
+export function expandIncludes(
+  content: string,
+  baseDir: string
+): string {
+  return content.replace(
+    /^@include\(([^)]+)\)\s*$/gm,
+    (_match, filePath: string) => {
+      const trimmed = filePath.trim();
+
+      // Security: reject absolute paths and path traversal
+      if (path.isAbsolute(trimmed) || trimmed.includes("..")) {
+        console.error(`Warning: @include path rejected (must be relative, no ..): ${trimmed}`);
+        return `<!-- @include rejected: ${trimmed} -->`;
+      }
+
+      const resolved = path.resolve(baseDir, trimmed);
+      if (!fs.existsSync(resolved)) {
+        console.error(`Warning: @include file not found: ${resolved}`);
+        return `<!-- @include not found: ${trimmed} -->`;
+      }
+      return fs.readFileSync(resolved, "utf-8").trimEnd();
+    }
+  );
+}
+
+/**
+ * Full compose pipeline for agent instructions:
+ * 1. @include() expansion
+ * 2. Template variable expansion ({{repo.*}}, {{meta.*}})
+ */
+export function composeAgentInstruction(
+  content: string,
+  fedRepoRoot: string,
+  bindings: Record<string, unknown>
+): string {
+  let result = expandIncludes(content, fedRepoRoot);
+  result = expandTemplateVariables(result, bindings);
+  return result;
+}
+
+// ---- Workflow overrides ----
+
+import type { WorkflowOverride } from "./types.js";
+
+/**
+ * Apply repo-specific workflow overrides to a WorkflowDefinition.
+ * Currently supports pane command overrides only.
+ */
+export function applyWorkflowOverrides(
+  workflow: WorkflowDefinition,
+  overrides: WorkflowOverride
+): WorkflowDefinition {
+  if (!overrides.windows) return workflow;
+
+  const result = structuredClone(workflow);
+  for (const win of result.windows) {
+    const winOverride = overrides.windows[win.name];
+    if (!winOverride?.panes) continue;
+    for (const pane of win.panes) {
+      const paneOverride = winOverride.panes[pane.id];
+      if (paneOverride?.command !== undefined) {
+        pane.command = paneOverride.command;
+      }
+    }
+  }
+  return result;
+}

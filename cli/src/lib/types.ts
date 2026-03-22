@@ -33,6 +33,19 @@ export interface ScriptDef {
   cwd?: string;
 }
 
+// Workflow override for repo-specific customization
+export interface WorkflowPaneOverride {
+  command: string;
+}
+
+export interface WorkflowWindowOverride {
+  panes?: Record<string, WorkflowPaneOverride>; // key = pane id
+}
+
+export interface WorkflowOverride {
+  windows?: Record<string, WorkflowWindowOverride>; // key = window name
+}
+
 // New JSON format saved by `fed repo add <clone-url>`
 export interface NewRepoConfig {
   repo_name: string;
@@ -45,6 +58,7 @@ export interface NewRepoConfig {
   extra: Record<string, unknown>;
   scripts?: Record<string, ScriptDef>;
   env?: Record<string, string>;
+  workflow_overrides?: Record<string, WorkflowOverride>; // key = workflow name
 }
 
 // Normalized runtime type — all consumers use this
@@ -59,4 +73,5 @@ export interface RepoConfig {
   extra: Record<string, unknown>;
   scripts: Record<string, ScriptDef>;
   env: Record<string, string>;
+  workflow_overrides: Record<string, WorkflowOverride>;
 }

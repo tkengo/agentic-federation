@@ -27,6 +27,7 @@ function deriveFromNewFormat(raw: NewRepoConfig): RepoConfig {
     extra: raw.extra ?? {},
     scripts: raw.scripts ?? {},
     env: raw.env ?? {},
+    workflow_overrides: raw.workflow_overrides ?? {},
   };
 }
 

@@ -264,10 +264,12 @@ export function restoreCommand(
 
   // 4. Sync commands and agents
   syncCommands();
-  syncAgents(meta.workflow);
+  const config = meta.repo ? loadRepoConfig(meta.repo) : null;
+  const targetDir = meta.worktree || sessionDir;
+  syncAgents(meta.workflow, sessionName, targetDir, config, meta);
 
   // 5. Determine cwd
-  const cwd = meta.worktree || sessionDir;
+  const cwd = targetDir;
 
   // Verify cwd exists
   if (!fs.existsSync(cwd)) {
