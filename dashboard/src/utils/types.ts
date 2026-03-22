@@ -86,7 +86,8 @@ export type FooterOverride =
   | { type: "confirmDeleteSession"; name: string }
   | { type: "confirmRestore"; name: string }
   | { type: "confirmUnprotect"; name: string }
-  | { type: "restoring" };
+  | { type: "restoring" }
+  | { type: "creating" };
 
 // Workflow info for dashboard display
 export interface WorkflowInfo {

@@ -57,6 +57,12 @@ export function Footer() {
         <Spinner /> Restoring session...
       </Text>
     );
+  } else if (override?.type === "creating") {
+    content = (
+      <Text color="yellow">
+        <Spinner /> Creating session...
+      </Text>
+    );
   } else if (ctrlCPending) {
     content = <Text color="yellow">Press Ctrl+C again to quit</Text>;
   } else if (message) {

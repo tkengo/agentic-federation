@@ -2,7 +2,7 @@ import React, { useState, useCallback, useMemo, useRef, useEffect } from "react"
 import { Box, Text, useApp, useInput } from "ink";
 import fs from "node:fs";
 import path from "node:path";
-import { execSync } from "node:child_process";
+import { execSync, spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { Header, HEADER_HEIGHT_FULL, HEADER_HEIGHT_COMPACT } from "./components/Header.js";
 import { Home } from "./components/Home.js";
@@ -45,7 +45,7 @@ function AppInner() {
   const [createStep, setCreateStep] = useState<"workflow" | "repo" | "branch" | "session-name">("workflow");
   const lastCtrlCRef = useRef(0);
 
-  const { showMessage, setCtrlCPending, state: footerState } = useFooter();
+  const { showMessage, showError, setOverride, clearOverride, setCtrlCPending, state: footerState } = useFooter();
 
   // Active session reported by Home (used by CommandPalette)
   const [activeSession, setActiveSession] = useState<SessionData | undefined>();
@@ -147,49 +147,53 @@ function AppInner() {
   // Create new session via fed session start --no-attach
   const createSession = useCallback(
     (repo: string, branch: string, workflow: string) => {
-      try {
-        let args: string[];
-        if (repo) {
-          if (branch) {
-            args = ["fed", "session", "start", workflow, repo, branch, "--no-attach"];
-          } else {
-            // Auto-generate branch name (omit branch argument)
-            args = ["fed", "session", "start", workflow, repo, "--no-attach"];
+      let cliArgs: string[];
+      if (repo) {
+        if (branch) {
+          cliArgs = ["session", "start", workflow, repo, branch, "--no-attach"];
+        } else {
+          // Auto-generate branch name (omit branch argument)
+          cliArgs = ["session", "start", workflow, repo, "--no-attach"];
+        }
+      } else {
+        if (branch) {
+          // Standalone mode: branch param is actually the session name
+          cliArgs = ["session", "start", workflow, "--session-name", branch, "--no-attach"];
+        } else {
+          // Standalone mode: auto-generate session name
+          cliArgs = ["session", "start", workflow, "--no-attach"];
+        }
+      }
+
+      setScreen("list");
+      setOverride({ type: "creating" });
+
+      const proc = spawn("fed", cliArgs, { stdio: ["ignore", "pipe", "pipe"] });
+      let stdout = "";
+      proc.stdout?.on("data", (data: Buffer) => { stdout += data.toString(); });
+      proc.on("close", (code) => {
+        clearOverride();
+        refresh();
+        if (code === 0) {
+          // Extract auto-generated branch name from CLI output if branch was empty
+          const autoMatch = stdout.match(/Auto-generated branch: (.+)/);
+          const sessionLabel = branch || autoMatch?.[1] || "auto";
+          showMessage(`Created session: ${sessionLabel}`);
+          // Auto-switch to the new tmux session
+          const ok = switchToTmuxSession(sessionLabel);
+          if (ok) {
+            showMessage(`Detached from ${sessionLabel}`);
           }
         } else {
-          if (branch) {
-            // Standalone mode: branch param is actually the session name
-            args = ["fed", "session", "start", workflow, "--session-name", branch, "--no-attach"];
-          } else {
-            // Standalone mode: auto-generate session name
-            args = ["fed", "session", "start", workflow, "--no-attach"];
-          }
+          showError(`Failed to create session: ${branch || "auto"}`);
         }
-        const result = execSync(args.join(" "), { stdio: "pipe", encoding: "utf-8" });
-        if (process.stdin.isTTY && process.stdin.setRawMode) {
-          process.stdin.setRawMode(true);
-        }
-        process.stdout.write("\x1b[2J\x1b[H");
-        refresh();
-        // Extract auto-generated branch name from CLI output if branch was empty
-        const autoMatch = result.match(/Auto-generated branch: (.+)/);
-        const sessionLabel = branch || autoMatch?.[1] || "auto";
-        showMessage(`Created session: ${sessionLabel}`);
-        // Auto-switch to the new tmux session
-        const ok = switchToTmuxSession(sessionLabel);
-        if (ok) {
-          showMessage(`Detached from ${sessionLabel}`);
-        }
-      } catch {
-        if (process.stdin.isTTY && process.stdin.setRawMode) {
-          process.stdin.setRawMode(true);
-        }
-        process.stdout.write("\x1b[2J\x1b[H");
-        showMessage(`Failed to create session: ${branch || "auto"}`);
-      }
-      setScreen("list");
+      });
+      proc.on("error", () => {
+        clearOverride();
+        showError(`Failed to create session: ${branch || "auto"}`);
+      });
     },
-    [refresh, showMessage]
+    [refresh, showMessage, showError, setOverride, clearOverride]
   );
 
   // Add a new repo via fed repo add (clone)
