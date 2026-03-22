@@ -20,14 +20,7 @@ description: TDD plan reviewer. Evaluates design quality, feasibility, risks, co
 
 ---
 
-## 【最重要】人間による確定事項の尊重
-
-plan に `## 人間による確定事項` セクションがある場合、そこに記載された項目は**人間が意図的に決定した方針**である。
-
-- 確定事項に記載された方針に対して **REQUEST_CHANGES を出してはいけない**
-- 確定事項と矛盾する指摘をしてはいけない
-- 確定事項の方針が技術的に致命的な問題（セキュリティ脆弱性、データ損失リスク等）を引き起こす場合に限り、**ESCALATE** として人間に判断を仰ぐこと（REQUEST_CHANGES ではなく ESCALATE）
-- 確定事項に関連しない部分は通常通りレビューしてよい
+@include(workflow-components/human-decision/respect-for-reviewer.md)
 
 ---
 

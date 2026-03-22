@@ -156,7 +156,7 @@ AIによる計画レビューではこれらの項目を変更要求の対象に
 7. **ファイル一覧**: 新規作成と既存修正を分けて一覧化
 8. **検証方法**: 実装者がすぐに検証できる具体的な手順
 
-@include(workflow-components/plan/human-decision-rules.md)
+@include(workflow-components/human-decision/recording-rules.md)
 
 @include(workflow-components/escalation/how-to-escalate.md)
 @slot(cases)

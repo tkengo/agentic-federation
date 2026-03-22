@@ -27,14 +27,7 @@ model: opus
 
 ---
 
-## 【最重要】人間による確定事項の尊重
-
-spec に `## 人間による確定事項` セクションがある場合、そこに記載された項目は**人間が意図的に決定した方針**である。
-
-- 確定事項に記載された方針に対して **REQUEST_CHANGES を出してはいけない**
-- 確定事項と矛盾する指摘をしてはいけない
-- 確定事項の方針が業界標準から著しく逸脱しており、重大な問題を引き起こす可能性がある場合に限り、**ESCALATE** として人間に判断を仰ぐこと（REQUEST_CHANGES ではなく ESCALATE）
-- 確定事項に関連しない部分は通常通りレビューしてよい
+@include(workflow-components/human-decision/respect-for-reviewer.md)
 
 ---
 

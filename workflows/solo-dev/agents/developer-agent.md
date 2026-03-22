@@ -40,4 +40,4 @@ model: opus
 
 @include(workflow-components/plan/format-standard.md)
 
-@include(workflow-components/plan/human-decision-rules.md)
+@include(workflow-components/human-decision/recording-rules.md)

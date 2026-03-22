@@ -30,7 +30,7 @@ model: opus
 
 @include(plan/format-standard.md)
 
-@include(plan/human-decision-rules.md)
+@include(human-decision/recording-rules.md)
 
 @include(workflow-components/escalation/how-to-escalate.md)
 @slot(cases)
