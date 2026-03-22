@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { getCurrentTmuxSession, resolveSession, requireSessionDir } from "../lib/session.js";
 import { notifyHumanCommand } from "./notify-human.js";
+import { log } from "../lib/logger.js";
 
 interface WaitingHumanJson {
   waiting: boolean;
@@ -29,10 +30,12 @@ export function waitingHumanClearCommand(): void {
   // Silently exit 0 if not in a fed session (for hook safety)
   const tmuxSession = getCurrentTmuxSession();
   if (!tmuxSession) {
+    log("[waiting-human clear] skipped: no tmux session detected (FED_SESSION and TMUX both unset)");
     return;
   }
   const sessionDir = resolveSession(tmuxSession);
   if (!sessionDir) {
+    log(`[waiting-human clear] skipped: no active session for tmux="${tmuxSession}"`);
     return;
   }
 

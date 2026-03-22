@@ -28,13 +28,25 @@ function timestamp(): string {
   return new Date().toISOString();
 }
 
+// Build context tag from environment (session, pane, etc.)
+function buildContextTag(): string {
+  const parts: string[] = [];
+  const session = process.env.FED_SESSION;
+  const pane = process.env.TMUX_PANE;
+  if (session) parts.push(`session:${session}`);
+  if (pane) parts.push(`pane:${pane}`);
+  if (parts.length === 0) parts.push("no-session");
+  return `[${parts.join(" ")}]`;
+}
+
 // Initialize logging: set up log file, monkey-patch console
 export function initLogger(argv: string[]): void {
   fs.mkdirSync(LOGS_DIR, { recursive: true });
   logFile = getLogFilePath();
 
   const commandLabel = argv.slice(2).join(" ") || "(no args)";
-  writeLog(`\n[${timestamp()}] === fed ${commandLabel} ===`);
+  const ctx = buildContextTag();
+  writeLog(`\n[${timestamp()}] ${ctx} === fed ${commandLabel} ===`);
 
   // Monkey-patch console.log and console.error
   const origLog = console.log;
