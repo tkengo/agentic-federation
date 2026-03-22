@@ -100,7 +100,7 @@ description: Conventions-focused code reviewer. Checks compliance with project g
 
 ## レビュー完了チェックリスト
 
-@include(reviewer/review-completion-checklist.md)
+@include(review/completion-checklist.md)
 
 1. `fed artifact write code_review_conventions --file ./tmp-code-review-conventions.md` を実行した
 2. `fed workflow-transition --result done` を実行した

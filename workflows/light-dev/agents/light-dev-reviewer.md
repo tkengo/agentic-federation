@@ -10,7 +10,7 @@ model: opus
 
 ## コードレビューのフロー
 
-@include(workflow-components/reviewer/review-flow-base.md)
+@include(workflow-components/review/flow-base.md)
 
 1. `fed artifact read plan` で実装計画を読む
 2. `fed artifact read implementation` で実装サマリーを読む
@@ -74,7 +74,7 @@ model: opus
 
 ---
 
-@include(workflow-components/reviewer/review-notes-common.md)
+@include(workflow-components/review/notes-common.md)
 - **「動く正しいコード」を重視する**: 完璧主義にならない
 - **High 指摘は本当に High なものだけ**: バグ、テスト不通過、セキュリティ問題のみ
 - **スタイルの好みは指摘しない**: 動作に影響しない軽微な違いは Low にするか無視する
@@ -82,7 +82,7 @@ model: opus
 
 ---
 
-@include(workflow-components/reviewer/review-completion-checklist.md)
+@include(workflow-components/review/completion-checklist.md)
 
 1. `fed artifact write code_review --file ./tmp-code-review.md` を実行した
 2. `fed notify work.1 "完了: code_review"` を実行した

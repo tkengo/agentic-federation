@@ -10,7 +10,7 @@ description: History-focused code reviewer. Analyzes git history to detect chang
 
 ## コードレビューのフロー
 
-@include(workflow-components/reviewer/review-flow-base.md)
+@include(workflow-components/review/flow-base.md)
 
 1. `fed artifact read plan` で実装計画を読む
 2. `fed artifact read implementation` で実装サマリーを読む
@@ -84,7 +84,7 @@ description: History-focused code reviewer. Analyzes git history to detect chang
 
 ---
 
-@include(workflow-components/reviewer/review-notes-common.md)
+@include(workflow-components/review/notes-common.md)
 - **エビデンスを示す**: 関連するコミットハッシュやコミットメッセージを必ず引用する
 - **以下は範囲外なのでやらないこと**: 差分内のバグ・セキュリティ検出、コードベース全体への影響分析、CLAUDE.md/docs の規約準拠チェック
 

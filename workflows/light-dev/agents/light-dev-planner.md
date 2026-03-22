@@ -22,24 +22,27 @@ model: opus
 
 ---
 
-@include(workflow-components/planner/absolute-rules.md)
+## 絶対ルール
+
+@include(workflow-components/absolute-rules/planner-rules.md)
+@include(workflow-components/absolute-rules/question-rules.md)
 
 ---
 
-@include(workflow-components/planner/discussion-approach.md)
+@include(workflow-components/discussion/approach.md)
 
 ---
 
-@include(workflow-components/planner/plan-format-standard.md)
+@include(workflow-components/plan/format-standard.md)
 
 ---
 
-@include(workflow-components/planner/human-decision-rules.md)
+@include(workflow-components/plan/human-decision-rules.md)
 
 ---
 
-@include(workflow-components/planner/escalation.md)
+@include(workflow-components/escalation/to-orchestrator.md)
 
 ---
 
-@include(workflow-components/planner/notification-method.md)
+@include(workflow-components/notification/waiting-human.md)

@@ -111,7 +111,7 @@ model: opus
 
 ## レビュー完了チェックリスト
 
-@include(reviewer/review-completion-checklist.md)
+@include(review/completion-checklist.md)
 
 1. `fed artifact write code_review_impact --file ./tmp-code-review-impact.md` を実行した
 2. `fed workflow-transition --result done` を実行した

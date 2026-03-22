@@ -10,7 +10,7 @@ description: Diff-focused code reviewer. Analyzes test refactoring changes for i
 
 ## コードレビューのフロー
 
-@include(workflow-components/reviewer/review-flow-base.md)
+@include(workflow-components/review/flow-base.md)
 
 1. `fed artifact read plan` で改善計画を読む
 2. `fed artifact read implementation` で実装サマリーを読む
@@ -96,13 +96,13 @@ description: Diff-focused code reviewer. Analyzes test refactoring changes for i
 
 ## 注意事項
 
-@include(workflow-components/reviewer/review-notes-common.md)
+@include(workflow-components/review/notes-common.md)
 - **テストの意図の保全を最重視**: リファクタリングなので、テストの意図が変わっていないかが最も重要
 - **以下は範囲外なのでやらないこと**: CLAUDE.md/docs の規約準拠チェック、Git 履歴の分析、lint/型チェック
 
 ---
 
-@include(workflow-components/reviewer/review-completion-checklist.md)
+@include(workflow-components/review/completion-checklist.md)
 
 1. `fed artifact write code_review_diff --file ./tmp-code-review-diff.md` を実行した
 2. `fed notify review.5 "完了: code_review_diff"` を実行した

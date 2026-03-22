@@ -118,7 +118,7 @@ Template variables (`{{meta.*}}`, `{{repo.*}}`) are used in workflow YAML for pa
 Agent instruction files (`.md`) support `@include()` directives to eliminate duplication across workflows. Shared fragments live in `workflow-components/`.
 
 ```markdown
-@include(workflow-components/planner/absolute-rules.md)
+@include(workflow-components/discussion/approach.md)
 ```
 
 At `fed session start`, agent instructions go through a compose pipeline:

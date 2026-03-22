@@ -19,16 +19,19 @@ model: opus
 
 ---
 
-@include(planner/absolute-rules.md)
+## 絶対ルール
+
+@include(absolute-rules/planner-rules.md)
+@include(absolute-rules/question-rules.md)
 
 ---
 
-@include(planner/discussion-approach.md)
+@include(discussion/approach.md)
 
-@include(planner/plan-format-standard.md)
+@include(plan/format-standard.md)
 
-@include(planner/human-decision-rules.md)
+@include(plan/human-decision-rules.md)
 
-@include(planner/escalation.md)
+@include(escalation/to-orchestrator.md)
 
-@include(planner/notification-method.md)
+@include(notification/waiting-human.md)

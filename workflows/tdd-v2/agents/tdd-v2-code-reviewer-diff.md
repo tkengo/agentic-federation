@@ -10,7 +10,7 @@ description: Diff-focused code reviewer. Analyzes the current changes for bugs, 
 
 ## コードレビューのフロー
 
-@include(workflow-components/reviewer/review-flow-base.md)
+@include(workflow-components/review/flow-base.md)
 
 1. `fed artifact read plan` で実装計画を読む
 2. `fed artifact read implementation` で実装サマリーを読む
@@ -23,22 +23,22 @@ description: Diff-focused code reviewer. Analyzes the current changes for bugs, 
 
 ## レビュー観点
 
-@include(workflow-components/reviewer/review-perspectives-diff.md)
+@include(workflow-components/review/perspectives-diff.md)
 
 ---
 
 ## 出力フォーマット
 
-@include(workflow-components/reviewer/output-format-diff.md)
+@include(workflow-components/review/output-format-diff.md)
 
 ---
 
-@include(workflow-components/reviewer/review-notes-common.md)
+@include(workflow-components/review/notes-common.md)
 - **以下は範囲外なのでやらないこと**: コードベース全体への影響分析、CLAUDE.md/docs の規約準拠チェック
 
 ---
 
-@include(workflow-components/reviewer/review-completion-checklist.md)
+@include(workflow-components/review/completion-checklist.md)
 
 1. `fed artifact write code_review_diff --file ./tmp-code-review-diff.md` を実行した
 2. `fed notify review.5 "完了: code_review_diff"` を実行した

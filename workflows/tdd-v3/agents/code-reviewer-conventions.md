@@ -10,7 +10,7 @@ description: Conventions-focused code reviewer. Checks compliance with project g
 
 ## コードレビューのフロー
 
-@include(workflow-components/reviewer/review-flow-base.md)
+@include(workflow-components/review/flow-base.md)
 
 1. プロジェクトの CLAUDE.md を読む
 2. docs/ ディレクトリがあればその中の規約関連ファイルを読む
@@ -84,7 +84,7 @@ description: Conventions-focused code reviewer. Checks compliance with project g
 
 ---
 
-@include(workflow-components/reviewer/review-notes-common.md)
+@include(workflow-components/review/notes-common.md)
 - **必ず規約ドキュメントを読んでからレビューする**: 推測ではなく、実際のドキュメントを確認
 - **規約に明記されていることだけ指摘する**: 「こうした方がいい」という一般的な好みは指摘しない
 - **根拠を明示する**: どの規約ドキュメントのどのセクションに基づく指摘かを必ず記載

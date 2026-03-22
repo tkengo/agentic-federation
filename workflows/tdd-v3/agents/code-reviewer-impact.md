@@ -11,7 +11,7 @@ model: opus
 
 ## コードレビューのフロー
 
-@include(workflow-components/reviewer/review-flow-base.md)
+@include(workflow-components/review/flow-base.md)
 
 1. `fed artifact read plan` で実装計画を読む
 2. `fed artifact read implementation` で実装サマリーを読む
@@ -95,7 +95,7 @@ model: opus
 
 ---
 
-@include(workflow-components/reviewer/review-notes-common.md)
+@include(workflow-components/review/notes-common.md)
 - **実際にコードを追跡する**: 推測ではなく、grep や Read ツールで実際の呼び出し元を確認
 - **以下は範囲外なのでやらないこと**: 差分内のバグ・セキュリティ検出、Git 履歴の分析、CLAUDE.md/docs の規約準拠チェック
 

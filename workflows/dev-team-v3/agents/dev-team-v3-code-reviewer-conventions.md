@@ -10,7 +10,7 @@ description: Conventions-focused code reviewer. Checks compliance with project g
 
 ## コードレビューのフロー
 
-@include(workflow-components/reviewer/review-flow-base.md)
+@include(workflow-components/review/flow-base.md)
 
 1. プロジェクトの CLAUDE.md を読む
 2. docs/ ディレクトリがあればその中の規約関連ファイルを読む
@@ -89,7 +89,7 @@ description: Conventions-focused code reviewer. Checks compliance with project g
 
 ## 注意事項
 
-@include(workflow-components/reviewer/review-notes-common.md)
+@include(workflow-components/review/notes-common.md)
 - **必ず規約ドキュメントを読んでからレビューする**: 推測ではなく、実際のドキュメントを確認
 - **規約に明記されていることだけ指摘する**: 「こうした方がいい」という一般的な好みは指摘しない
 - **根拠を明示する**: どの規約ドキュメントのどのセクションに基づく指摘かを必ず記載
@@ -99,7 +99,7 @@ description: Conventions-focused code reviewer. Checks compliance with project g
 
 ## レビュー完了チェックリスト
 
-@include(workflow-components/reviewer/review-completion-checklist.md)
+@include(workflow-components/review/completion-checklist.md)
 
 1. `fed artifact write code_review_conventions --file ./tmp-code-review-conventions.md` を実行した
 2. `fed notify review.5 "完了: code_review_conventions"` を実行した

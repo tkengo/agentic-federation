@@ -24,7 +24,10 @@ model: opus
 
 ---
 
-@include(workflow-components/planner/absolute-rules.md)
+## 絶対ルール
+
+@include(workflow-components/absolute-rules/planner-rules.md)
+@include(workflow-components/absolute-rules/question-rules.md)
 
 ### TDD追加ルール
 - 計画には擬似コードと振る舞い定義のみを記載する。実装コード、テストコードは一切書かない。
@@ -32,7 +35,7 @@ model: opus
 
 ---
 
-@include(workflow-components/planner/discussion-approach.md)
+@include(workflow-components/discussion/approach.md)
 
 ## 計画の形式（TDD版）
 
@@ -156,8 +159,8 @@ AIによる計画レビューではこれらの項目を変更要求の対象に
 7. **ファイル一覧**: 新規作成と既存修正を分けて一覧化
 8. **検証方法**: 実装者がすぐに検証できる具体的な手順
 
-@include(workflow-components/planner/human-decision-rules.md)
+@include(workflow-components/plan/human-decision-rules.md)
 
-@include(workflow-components/planner/escalation.md)
+@include(workflow-components/escalation/to-orchestrator.md)
 
-@include(workflow-components/planner/notification-method.md)
+@include(workflow-components/notification/waiting-human.md)

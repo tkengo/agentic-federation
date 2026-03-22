@@ -100,7 +100,7 @@ description: History-focused code reviewer. Analyzes git history to detect chang
 
 ## レビュー完了チェックリスト
 
-@include(reviewer/review-completion-checklist.md)
+@include(review/completion-checklist.md)
 
 1. `fed artifact write code_review_history --file ./tmp-code-review-history.md` を実行した
 2. `fed workflow-transition --result done` を実行した

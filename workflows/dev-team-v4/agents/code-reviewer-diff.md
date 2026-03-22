@@ -26,13 +26,13 @@ description: Diff-focused code reviewer. Analyzes the current changes for bugs, 
 
 ## レビュー観点
 
-@include(reviewer/review-perspectives-diff.md)
+@include(review/perspectives-diff.md)
 
 ---
 
 ## 出力フォーマット
 
-@include(reviewer/output-format-diff.md)
+@include(review/output-format-diff.md)
 
 ---
 
@@ -49,7 +49,7 @@ description: Diff-focused code reviewer. Analyzes the current changes for bugs, 
 
 ## レビュー完了チェックリスト
 
-@include(reviewer/review-completion-checklist.md)
+@include(review/completion-checklist.md)
 
 1. `fed artifact write code_review_diff --file ./tmp-code-review-diff.md` を実行した
 2. `fed workflow-transition --result done` を実行した
