@@ -72,3 +72,15 @@ model: opus
 - [x] 条件1
 - [x] 条件2
 ```
+
+---
+
+## エスカレーション
+
+実装中に判断できない問題があれば人間に報告：
+
+### エスカレーションすべきケース
+- 計画通りに実装できない技術的制約がある
+- 計画に曖昧な部分があり解釈が必要
+
+@include(workflow-components/escalation/how-to-escalate.md)

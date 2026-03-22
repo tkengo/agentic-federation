@@ -149,11 +149,7 @@ model: opus
 - 既存のテストパターンと計画の要件が両立しない
 - テストフレームワークの制約で計画通りのテストが書けない
 
-### エスカレーション手順
-
-1. テスト実装サマリーに問題を記載して `fed artifact write test_implementation` で保存
-2. `fed waiting-human set --reason "<問題の説明>" --notify` で人間に通知
-3. 人間の指示を受けて作業を継続
+@include(workflow-components/escalation/how-to-escalate.md)
 
 ---
 

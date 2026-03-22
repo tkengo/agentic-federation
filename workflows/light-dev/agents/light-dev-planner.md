@@ -41,7 +41,19 @@ model: opus
 
 ---
 
-@include(workflow-components/escalation/to-orchestrator.md)
+## エスカレーション
+
+計画策定・修正中に判断できない問題があれば人間に報告：
+
+### エスカレーションすべきケース
+
+- 要件の解釈に複数の可能性がある
+- 複数のアプローチがあり、トレードオフの判断が必要
+- 技術的な制約で要件を満たせない可能性がある
+- セキュリティ上の懸念がある
+- 要件の妥当性に疑問がある
+
+@include(workflow-components/escalation/how-to-escalate.md)
 
 ---
 
