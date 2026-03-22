@@ -150,30 +150,42 @@ function AppInner() {
       try {
         let args: string[];
         if (repo) {
-          // Repo mode
-          args = ["fed", "session", "start", workflow, repo, branch, "--no-attach"];
+          if (branch) {
+            args = ["fed", "session", "start", workflow, repo, branch, "--no-attach"];
+          } else {
+            // Auto-generate branch name (omit branch argument)
+            args = ["fed", "session", "start", workflow, repo, "--no-attach"];
+          }
         } else {
-          // Standalone mode: branch param is actually the session name
-          args = ["fed", "session", "start", workflow, "--session-name", branch, "--no-attach"];
+          if (branch) {
+            // Standalone mode: branch param is actually the session name
+            args = ["fed", "session", "start", workflow, "--session-name", branch, "--no-attach"];
+          } else {
+            // Standalone mode: auto-generate session name
+            args = ["fed", "session", "start", workflow, "--no-attach"];
+          }
         }
-        execSync(args.join(" "), { stdio: "inherit" });
+        const result = execSync(args.join(" "), { stdio: "pipe", encoding: "utf-8" });
         if (process.stdin.isTTY && process.stdin.setRawMode) {
           process.stdin.setRawMode(true);
         }
         process.stdout.write("\x1b[2J\x1b[H");
         refresh();
-        showMessage(`Created session: ${branch}`);
+        // Extract auto-generated branch name from CLI output if branch was empty
+        const autoMatch = result.match(/Auto-generated branch: (.+)/);
+        const sessionLabel = branch || autoMatch?.[1] || "auto";
+        showMessage(`Created session: ${sessionLabel}`);
         // Auto-switch to the new tmux session
-        const ok = switchToTmuxSession(branch);
+        const ok = switchToTmuxSession(sessionLabel);
         if (ok) {
-          showMessage(`Detached from ${branch}`);
+          showMessage(`Detached from ${sessionLabel}`);
         }
       } catch {
         if (process.stdin.isTTY && process.stdin.setRawMode) {
           process.stdin.setRawMode(true);
         }
         process.stdout.write("\x1b[2J\x1b[H");
-        showMessage(`Failed to create session: ${branch}`);
+        showMessage(`Failed to create session: ${branch || "auto"}`);
       }
       setScreen("list");
     },

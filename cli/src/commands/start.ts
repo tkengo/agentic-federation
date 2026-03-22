@@ -3,7 +3,7 @@ import path from "node:path";
 import os from "node:os";
 import crypto from "node:crypto";
 import { execSync, spawn } from "node:child_process";
-import { CLAUDE_AGENTS_DIR, WORKFLOWS_DIR } from "../lib/paths.js";
+import { ACTIVE_DIR, CLAUDE_AGENTS_DIR, WORKFLOWS_DIR } from "../lib/paths.js";
 import { loadRepoConfig } from "../lib/repo.js";
 import { createSessionDir, linkActiveSession, resolveSession } from "../lib/session.js";
 import * as tmux from "../lib/tmux.js";
@@ -17,6 +17,30 @@ import {
   type WorkflowWindow,
 } from "../lib/workflow.js";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
+
+// Max retries for generating a unique branch name
+const MAX_BRANCH_RETRIES = 10;
+
+function generateBranchCandidate(repoName: string): string {
+  const now = new Date();
+  const hhmm = String(now.getHours()).padStart(2, "0")
+    + String(now.getMinutes()).padStart(2, "0");
+  const hex = crypto.randomBytes(2).toString("hex");
+  return `${repoName}-${hhmm}-${hex}`;
+}
+
+function generateUniqueBranchName(repoName: string): string {
+  for (let i = 0; i < MAX_BRANCH_RETRIES; i++) {
+    const candidate = generateBranchCandidate(repoName);
+    // Check: tmux session does not exist
+    if (tmux.hasSession(candidate)) continue;
+    // Check: active symlink does not exist
+    if (fs.existsSync(path.join(ACTIVE_DIR, candidate))) continue;
+    return candidate;
+  }
+  console.error("Error: failed to generate a unique branch name after retries.");
+  process.exit(1);
+}
 
 export async function startCommand(
   workflowName: string,
@@ -52,8 +76,13 @@ export async function startCommand(
       + String(now.getMinutes()).padStart(2, "0");
     const hex = crypto.randomBytes(2).toString("hex");
     tmuxSession = `${workflowName}-${hhmm}-${hex}`;
+  } else if (branch) {
+    tmuxSession = branch;
   } else {
-    tmuxSession = branch!;
+    // Auto-generate branch name: <repo>-<HHMM>-<4hex>
+    branch = generateUniqueBranchName(repoName!);
+    console.log(`Auto-generated branch: ${branch}`);
+    tmuxSession = branch;
   }
 
   // --- Repo-specific preflight checks (skipped for standalone) ---

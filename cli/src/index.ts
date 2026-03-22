@@ -139,12 +139,6 @@ session
   .option("--session-name <name>", "Custom tmux session name (auto-generated for standalone if omitted)")
   .option("-e, --env <KEY=VALUE...>", "Environment variables to set in all panes (repeatable)")
   .action(async (workflow: string, repo: string | undefined, branch: string | undefined, options: { attach?: boolean; sessionName?: string; env?: string[] }) => {
-    if (repo && !branch) {
-      console.error("Error: branch is required when repo is specified.");
-      console.error("  Usage: fed session start <workflow> <repo> <branch>");
-      console.error("  For standalone (no repo): fed session start <workflow> [--session-name <name>]");
-      process.exit(1);
-    }
     // Parse --env KEY=VALUE pairs into a record
     const envVars: Record<string, string> = {};
     for (const pair of options.env ?? []) {

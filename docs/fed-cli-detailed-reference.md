@@ -96,6 +96,9 @@ fed session start [options] <workflow> [repo] [branch]
 | `--session-name <name>` | Custom tmux session name (auto-generated for standalone if omitted) |
 | `-e, --env <KEY=VALUE...>` | Environment variables to set in all panes (repeatable) |
 
+When `branch` is omitted with a repo, a unique name is auto-generated as `<repo>-<HHMM>-<4hex>`.
+For standalone sessions without `--session-name`, the format is `<workflow>-<HHMM>-<4hex>`.
+
 ### `fed session stop`
 
 Stop a session (current tmux session if not specified).
