@@ -39,12 +39,34 @@ states:
     description: "人間と対話しながら計画を策定する"
     color: blue
     entry_point: true
+    transitions:
+      done: human_plan_review
+
   human_plan_review:
     description: "人間に計画をレビューしてもらう"
     color: yellow
+    wait_human: true
+    transitions:
+      approved: implement
+      feedback: planning
+
   implement:
     description: "計画を元に実装する"
     color: blue
+    transitions:
+      done: human_code_review
+
   human_code_review:
     description: "人間にコードレビューしてもらう"
     color: yellow
+    wait_human: true
+    transitions:
+      approved: completed
+      feedback: implement
+      replanning: planning
+
+  completed:
+    description: "ワークフロー完了"
+    mark: "✓"
+    color: green
+    terminal: true

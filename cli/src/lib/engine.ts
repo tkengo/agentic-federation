@@ -47,22 +47,25 @@ export async function completeTransition(
       return { transitioned: false, error: `Unknown current state: ${state.status}` };
     }
 
-    // Remove this pane from pending_tasks
+    // Remove this pane from pending_tasks (if present)
     const idx = state.pending_tasks.indexOf(paneId);
-    if (idx === -1) {
+    if (idx >= 0) {
+      state.pending_tasks.splice(idx, 1);
+
+      // If tasks still pending, just save and return
+      if (state.pending_tasks.length > 0) {
+        fs.writeFileSync(statePath, JSON.stringify(state, null, 2) + "\n");
+        appendHistory(sessionDir, "task_complete", state.status, `${paneId}: ${resultCode} (waiting for ${state.pending_tasks.length} more)`);
+        return { transitioned: false };
+      }
+    } else if (state.pending_tasks.length > 0) {
+      // Pane is not in pending_tasks, but other tasks are still pending
       return {
         transitioned: false,
         error: `Pane "${paneId}" is not in pending_tasks. Current pending: [${state.pending_tasks.join(", ")}]`,
       };
     }
-    state.pending_tasks.splice(idx, 1);
-
-    // If tasks still pending, just save and return
-    if (state.pending_tasks.length > 0) {
-      fs.writeFileSync(statePath, JSON.stringify(state, null, 2) + "\n");
-      appendHistory(sessionDir, "task_complete", state.status, `${paneId}: ${resultCode} (waiting for ${state.pending_tasks.length} more)`);
-      return { transitioned: false };
-    }
+    // If we reach here: all pending tasks completed OR no tasks were defined
 
     // All tasks done - evaluate transition
     const transitions = currentStateDef.transitions;
