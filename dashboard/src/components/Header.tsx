@@ -49,14 +49,12 @@ export function Header({ cleanableCount, compact }: HeaderProps) {
         paddingX={1}
         justifyContent="flex-end"
       >
-        {cleanableCount > 0 && (
-          <Text
-            color={cleanableCount >= CLEANABLE_WARNING_THRESHOLD ? "red" : undefined}
-            dimColor={cleanableCount < CLEANABLE_WARNING_THRESHOLD}
-          >
-            {cleanableCount} cleanable
-          </Text>
-        )}
+        <Text
+          color={cleanableCount >= CLEANABLE_WARNING_THRESHOLD ? "red" : undefined}
+          dimColor={cleanableCount < CLEANABLE_WARNING_THRESHOLD}
+        >
+          {cleanableCount} cleanable
+        </Text>
       </Box>
     </Box>
   );
