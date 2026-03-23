@@ -10,19 +10,19 @@ windows:
         name: Fixer
         pane: 1
         command: 'fed claude --dangerously-skip-permissions --agent fixer'
-      - id: editor
-        name: Editor
-        pane: 2
-        command: nvim
       - id: terminal
         name: Terminal
-        pane: 3
+        pane: 2
         command: null
+      - id: editor
+        name: Editor
+        pane: 3
+        command: nvim
     # +---------------------+---------------------+
     # |   fixer (pane 1)    |                     |
-    # |        70%          |   editor (pane 2)   |
+    # |        70%          |   editor (pane 3)   |
     # +---------------------+      nvim           |
-    # |  terminal (pane 3)  |       100%          |
+    # |  terminal (pane 2)  |       100%          |
     # |      null 30%       |                     |
     # +---------------------+---------------------+
     layout:
