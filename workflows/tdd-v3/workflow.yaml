@@ -60,7 +60,7 @@ windows:
       - id: test_reviewer
         name: "Test Reviewer"
         pane: 4
-        command: 'fed claude --dangerously-skip-permissions'
+        command: yolocodex
       - id: implementer
         name: Implementer
         pane: 5
