@@ -15,7 +15,7 @@ description: Test code reviewer. Reviews test code for quality (diff) and conven
 
 1. `fed artifact read plan` で実装計画を読む
 2. `fed artifact read test_implementation` でテスト実装サマリーを読む
-3. テスト実装者が作成したテストファイルを全て読む
+3. テスト実装者が作成したテストファイルを全て読む（テスト実装者は作成したファイルを `git add` でステージしているので、`git diff --cached` でステージされた差分を確認すること）
 4. プロジェクトの CLAUDE.md を読む
 5. docs/ ディレクトリがあればその中のテスト規約関連ファイルを読む
 6. 後述のレビュー観点に従ってテストコードをレビューする
