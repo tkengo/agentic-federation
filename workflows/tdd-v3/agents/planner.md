@@ -167,5 +167,3 @@ AIによる計画レビューではこれらの項目を変更要求の対象に
 - 要件の妥当性に疑問がある
 @endslot
 @endinclude
-
-@include(workflow-components/notification/waiting-human.md)

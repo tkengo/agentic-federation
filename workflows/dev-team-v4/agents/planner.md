@@ -41,5 +41,3 @@ model: opus
 - 要件の妥当性に疑問がある
 @endslot
 @endinclude
-
-@include(notification/waiting-human.md)
