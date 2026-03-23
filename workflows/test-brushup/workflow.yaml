@@ -51,7 +51,7 @@ windows:
       - id: profiler
         name: Profiler
         pane: 2
-        command: yologemini
+        command: yolocodex
       - id: learnings
         name: Learnings
         pane: 3
@@ -79,7 +79,7 @@ windows:
       - id: code_reviewer_history
         name: "Code Reviewer (History)"
         pane: 3
-        command: yologemini
+        command: yolocodex
       - id: static_checker
         name: "Static Checker"
         pane: 4

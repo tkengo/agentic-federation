@@ -51,7 +51,7 @@ windows:
       - id: tech_reviewer
         name: "Tech Reviewer"
         pane: 2
-        command: yologemini
+        command: yolocodex
       - id: ux_reviewer
         name: "UX Reviewer"
         pane: 3
@@ -59,7 +59,7 @@ windows:
       - id: trend_researcher
         name: "Trend Researcher"
         pane: 4
-        command: yologemini
+        command: yolocodex
       - id: security_reviewer
         name: "Security Reviewer"
         pane: 5

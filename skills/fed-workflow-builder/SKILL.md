@@ -24,7 +24,7 @@ user_invocable: true
 2. **エージェントロール** - どんな役割が必要か？（例: プランナー、実装者、レビュアー）
 3. **人間の関与** - どこで人間の承認・レビュー・判断が必要か？
 4. **状態マシン** - どんなstatesと遷移があるか？（ユーザーと一緒に設計する）
-5. **エージェントプロバイダー** - 各エージェントにどのモデル/ランナーを使うか？（`yoloclaude --agent <name>`, `yologemini`, `yolocodex`）
+5. **エージェントプロバイダー** - 各エージェントにどのモデル/ランナーを使うか？（`yoloclaude --agent <name>`, `yolocodex`, `yolocodex`）
 6. **tmuxレイアウト** - ウィンドウはいくつ？ ペインの配置は？
 
 ### Phase 2: 既存ワークフローの調査
@@ -110,7 +110,7 @@ windows:
 | パターン | 用途 |
 |---------|------|
 | `'yoloclaude --agent <agent-name>'` | Claude Codeエージェント（agents/<agent-name>.mdから読み込み） |
-| `yologemini` | Geminiエージェント（`fed notify <window.pane>` で指示を送信） |
+| `yolocodex` | Geminiエージェント（`fed notify <window.pane>` で指示を送信） |
 | `yolocodex` | Codexエージェント（`fed notify <window.pane>` で指示を送信） |
 | `nvim` | エディタペイン |
 | `null` | 空ペイン（人間用ターミナル） |
@@ -431,6 +431,6 @@ AIによる計画レビューではこれらの項目を変更要求の対象に
 - `entry_point: true` を持つstateはちょうど1つだけ
 - エージェントの `.md` ファイル名はペインコマンドの `--agent <name>` と一致させる
 - 出力フォーマットのテンプレートはエージェント間の通信プロトコル。変更すると後続エージェントが壊れる
-- `yologemini` や `yolocodex` を使うエージェントには `fed notify <window.pane>` で指示を送信する（起動時に.mdファイルを読まない）
+- `yolocodex` や `yolocodex` を使うエージェントには `fed notify <window.pane>` で指示を送信する（起動時に.mdファイルを読まない）
 - `yoloclaude --agent <name>` を使うエージェントは.mdファイルから自動的にインストラクションを読み込む
 - ワークフローのテストは、各エージェントのフローを1ステップずつ読み進め、すべての artifact write に対応する artifact read が後続に存在するかを検証する

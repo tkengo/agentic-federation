@@ -76,7 +76,7 @@ windows:
       - id: code_reviewer_history
         name: "Code Reviewer (History)"
         pane: 2
-        command: yologemini
+        command: yolocodex
       - id: code_reviewer_impact
         name: "Code Reviewer (Impact)"
         pane: 3
