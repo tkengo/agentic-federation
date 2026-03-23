@@ -6,22 +6,29 @@ focus: planner
 windows:
   - name: dev
     panes:
-      - id: terminal
-        name: Terminal
+      - id: fixer
+        name: Fixer
         pane: 1
-        command: null
+        command: 'fed claude --dangerously-skip-permissions --agent fixer'
       - id: editor
         name: Editor
         pane: 2
         command: nvim
-      - id: dev_server
-        name: Dev Server
+      - id: terminal
+        name: Terminal
         pane: 3
-        command: "{{repo.extra.dev_server}}"
+        command: null
+    # +---------------------+---------------------+
+    # |   fixer (pane 1)    |                     |
+    # |        70%          |   editor (pane 2)   |
+    # +---------------------+      nvim           |
+    # |  terminal (pane 3)  |       100%          |
+    # |      null 30%       |                     |
+    # +---------------------+---------------------+
     layout:
       splits:
-        - { source: 1, direction: v, percent: 10 }
         - { source: 1, direction: h, percent: 50 }
+        - { source: 1, direction: v, percent: 30 }
       focus: 1
 
   - name: planner
@@ -275,6 +282,13 @@ states:
     wait_human: true
     transitions:
       approved: approved
+      fix: fixing
+
+  fixing:
+    description: "人間とfixerエージェントが対話しながらコードを修正"
+    color: yellow
+    transitions:
+      done: approved
 
   approved:
     description: "ワークフロー完了"
