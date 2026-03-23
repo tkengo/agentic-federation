@@ -80,15 +80,21 @@ export function claudeCommand(args: string[], newSession?: boolean, agent?: stri
     console.log(`[fed] Resolved agent: ${agent} → ${resolvedName}`);
   }
 
-  // Get tmux pane identifier: "window_name.pane_index"
+  // Get pane key for per-pane session tracking
   let paneKey = "unknown";
-  try {
-    paneKey = execSync(
-      'tmux display-message -t "$TMUX_PANE" -p \'#{window_name}.#{pane_index}\'',
-      { encoding: "utf-8" }
-    ).trim();
-  } catch {
-    // Not in tmux or tmux query failed
+  const fedWindow = process.env.FED_WINDOW;
+  const fedPane = process.env.FED_PANE;
+  if (fedWindow && fedPane) {
+    paneKey = `${fedWindow}.${fedPane}`;
+  } else {
+    try {
+      paneKey = execSync(
+        'tmux display-message -t "$TMUX_PANE" -p \'#{window_name}.#{pane_index}\'',
+        { encoding: "utf-8" }
+      ).trim();
+    } catch {
+      // Not in tmux or tmux query failed
+    }
   }
 
   const claudeSessionsDir = path.join(sessionDir, "claude-sessions");

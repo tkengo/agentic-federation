@@ -32,7 +32,7 @@ function timestamp(): string {
 function buildContextTag(): string {
   const parts: string[] = [];
   const session = process.env.FED_SESSION;
-  const pane = process.env.TMUX_PANE;
+  const pane = process.env.FED_PANE ?? process.env.TMUX_PANE;
   if (session) parts.push(`session:${session}`);
   if (pane) parts.push(`pane:${pane}`);
   if (parts.length === 0) parts.push("no-session");

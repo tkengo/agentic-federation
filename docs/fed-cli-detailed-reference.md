@@ -515,6 +515,26 @@ fed files dir
 
 ---
 
+## `fed workflow-transition`
+
+Report task completion and trigger workflow state transition.
+
+```
+fed workflow-transition --result <code> [--pane <id>]
+```
+
+| Option | Description |
+|---|---|
+| `--result <code>` | **(required)** Result code (e.g. `done`, `approved`, `request_changes`, `escalate`) |
+| `--pane <id>` | Pane ID. Auto-detected from `FED_PANE` env var or tmux if not specified |
+
+Pane resolution priority:
+1. `--pane` option (explicit)
+2. `FED_PANE` environment variable
+3. tmux query (fallback, requires running inside tmux)
+
+---
+
 ## `fed claude`
 
 Launch Claude Code with automatic session ID tracking.

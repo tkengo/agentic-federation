@@ -411,6 +411,8 @@ export function createWindowLayout(
 
   // Send commands to panes
   for (const pane of win.panes) {
+    // Set per-pane environment variables before running the pane command
+    tmux.sendKeys(`${w}.${pane.pane}`, `export FED_PANE=${pane.id} FED_WINDOW=${win.name}`);
     if (pane.command) {
       tmux.sendKeys(`${w}.${pane.pane}`, pane.command);
     }

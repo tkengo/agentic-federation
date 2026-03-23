@@ -4,10 +4,20 @@ import { loadSessionWorkflow } from "../lib/workflow.js";
 import { completeTransition } from "../lib/engine.js";
 
 /**
- * Resolve the current pane's ID by querying tmux for window name and pane index,
- * then matching against the workflow definition.
+ * Resolve the current pane's ID using a 3-level fallback:
+ *   1. Explicit --pane option
+ *   2. FED_PANE environment variable
+ *   3. Query tmux for window name + pane index, then match against workflow
  */
-function getCurrentPaneId(sessionDir: string): string {
+function getCurrentPaneId(sessionDir: string, paneOption?: string): string {
+  // 1. Explicit --pane option
+  if (paneOption) return paneOption;
+
+  // 2. FED_PANE environment variable
+  const envPane = process.env.FED_PANE;
+  if (envPane) return envPane;
+
+  // 3. Fallback: query tmux
   let tmuxInfo: string;
   try {
     tmuxInfo = execSync(
@@ -15,7 +25,8 @@ function getCurrentPaneId(sessionDir: string): string {
       { encoding: "utf-8" }
     ).trim();
   } catch {
-    console.error("Error: Could not query tmux. Are you running inside a tmux session?");
+    console.error("Error: Could not determine pane ID.");
+    console.error("  Use --pane option or set FED_PANE environment variable.");
     process.exit(1);
   }
 
@@ -44,9 +55,9 @@ function getCurrentPaneId(sessionDir: string): string {
   process.exit(1);
 }
 
-export async function workflowTransitionCommand(result: string): Promise<void> {
+export async function workflowTransitionCommand(result: string, pane?: string): Promise<void> {
   const sessionDir = requireSessionDir();
-  const paneId = getCurrentPaneId(sessionDir);
+  const paneId = getCurrentPaneId(sessionDir, pane);
 
   const outcome = await completeTransition(sessionDir, paneId, result);
 

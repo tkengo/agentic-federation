@@ -109,6 +109,17 @@ Scripts can use these variables directly (e.g., `$FED_REPO_DIR`, `$FED_BRANCH`).
 Scripts are executed via `fed repo-script run <name>` or from the dashboard detail panel.
 Script logs are saved to `<sessionDir>/script-logs/<timestamp>_<id>_<name>.log`.
 
+### Per-Pane Environment Variables
+
+The following environment variables are set in each tmux pane at session start via `export` commands (not via `tmux setenv`):
+
+| Variable | Value | Example |
+|---|---|---|
+| `FED_PANE` | Pane ID from workflow definition | `planner`, `test_implementer` |
+| `FED_WINDOW` | Window name from workflow definition | `planner`, `implement` |
+
+These are available in the shell environment of each pane. Used by `fed workflow-transition` (pane auto-detection), `fed claude` (session tracking), and the logger (context tagging).
+
 ### Template Variables
 
 Template variables (`{{meta.*}}`, `{{repo.*}}`) are used in workflow YAML for pane commands and in agent instruction files. They are expanded at `fed session start` time. They are NOT used in repo script definitions.

@@ -318,6 +318,9 @@ export function restoreCommand(
 
     // Execute pane commands with Claude session restoration
     for (const pane of win.panes) {
+      // Set per-pane environment variables before running the pane command
+      tmux.sendKeys(`${w}.${pane.pane}`, `export FED_PANE=${pane.id} FED_WINDOW=${win.name}`);
+
       if (!pane.command) continue;
 
       // tmux pane_index is 0-based, workflow pane.pane is 1-based

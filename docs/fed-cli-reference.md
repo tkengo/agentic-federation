@@ -26,6 +26,7 @@ For detailed options and usage of each command, see [fed-cli-detailed-reference.
 | `fed conv` | View collected conversations from AI tools |
 | `fed config` | Manage fed configuration (`~/.fed/config.json`) |
 | `fed files` | Manage knowledge base files |
+| `fed workflow-transition` | Report task completion and trigger workflow state transition |
 | `fed claude` | Launch Claude Code with automatic session ID tracking and agent resolution |
 
 ## Subcommands

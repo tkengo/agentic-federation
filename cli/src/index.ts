@@ -385,8 +385,9 @@ program
   .command("workflow-transition")
   .description("Report task completion and trigger workflow state transition")
   .requiredOption("--result <code>", "Result code (e.g. done, approved, request_changes, escalate)")
-  .action(async (options: { result: string }) => {
-    await workflowTransitionCommand(options.result);
+  .option("--pane <id>", "Pane ID (auto-detected from FED_PANE env var or tmux if not specified)")
+  .action(async (options: { result: string; pane?: string }) => {
+    await workflowTransitionCommand(options.result, options.pane);
   });
 
 // --- repo-script ---
