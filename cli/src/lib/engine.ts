@@ -170,7 +170,7 @@ function sendNotify(
   const notifyDir = path.join(sessionDir, "notifications");
   fs.mkdirSync(notifyDir, { recursive: true });
   const ts = Date.now();
-  const notifyFile = path.join(notifyDir, `${ts}.notify`);
+  const notifyFile = path.join(notifyDir, `${ts}_${paneId}.notify`);
   fs.writeFileSync(notifyFile, `${target}\n${message}\n`);
 }
 

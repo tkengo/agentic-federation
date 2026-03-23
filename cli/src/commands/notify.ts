@@ -22,7 +22,8 @@ export function notifyCommand(pane: string, message: string): void {
   fs.mkdirSync(notifyDir, { recursive: true });
 
   const ts = Date.now();
-  const notifyFile = path.join(notifyDir, `${ts}.notify`);
+  const sanitizedPane = pane.replace(/[:/]/g, "_");
+  const notifyFile = path.join(notifyDir, `${ts}_${sanitizedPane}.notify`);
   fs.writeFileSync(notifyFile, `${target}\n${message}\n`);
 
   console.log(`Notification queued for ${target}`);
