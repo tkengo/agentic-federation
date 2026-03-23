@@ -162,15 +162,6 @@ states:
       - pane: plan_reviewer
         agent: plan-reviewer
     transitions:
-      done: plan_review_decision
-
-  plan_review_decision:
-    description: "レビュー結果に基づく計画修正判断"
-    color: yellow
-    tasks:
-      - pane: plan_revisor
-        agent: plan-revisor
-    transitions:
       approved: test_implementing
       request_changes: plan_revision
       escalate: waiting_human

@@ -15,7 +15,10 @@ description: TDD plan reviewer. Evaluates design quality, feasibility, risks, co
 1. `fed artifact read plan` で実装計画を読む
 2. コードベースを調査し、計画をレビューする。後述のレビュー観点に従ってレビューすること。
 3. Write ツールで `./tmp-plan-review.md` にレビュー結果を書き出してから、`fed artifact write plan_review --file ./tmp-plan-review.md` で保存する
-4. `fed workflow-transition --result done` を実行してステート遷移を発火する
+4. レビュー判定に応じたresultコードで `fed workflow-transition` を実行してステート遷移を発火する:
+   - **APPROVE** の場合: `fed workflow-transition --result approved`
+   - **REQUEST_CHANGES** の場合: `fed workflow-transition --result request_changes`
+   - **ESCALATE** の場合: `fed workflow-transition --result escalate`
 5. その後、再レビューの依頼があればまた1から繰り返す
 
 ---
@@ -230,4 +233,4 @@ description: TDD plan reviewer. Evaluates design quality, feasibility, risks, co
 実行していない場合、レビューは未完了である。他のエージェントが永遠に待ち続けることになるため、即座に実行せよ。
 
 1. `fed artifact write plan_review --file ./tmp-plan-review.md` を実行した
-2. `fed workflow-transition --result done` を実行した
+2. `fed workflow-transition --result <判定結果>` を実行した（approved / request_changes / escalate のいずれか）

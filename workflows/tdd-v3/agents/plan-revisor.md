@@ -10,26 +10,6 @@ model: opus
 
 TDDワークフローの計画修正では、擬似コードと振る舞い定義の形式を維持し、実際のコードを導入しないよう注意してください。
 
-## レビュー判定のフロー
-
-レビュー結果を読み取り、判定に基づいて遷移する。
-
-1. `fed artifact read plan` で現在の計画を読む
-2. `fed artifact read plan_review` でレビュー結果を読む
-3. レビュー結果の判定に従って以下のいずれかを実行する:
-
-### レビュアーがAPPROVEの場合
-
-`fed workflow-transition --result approved` を実行する。
-
-### レビュアーがREQUEST_CHANGESの場合
-
-`fed workflow-transition --result request_changes` を実行する。
-
-### レビュアーがESCALATEの場合
-
-`fed workflow-transition --result escalate` を実行する。
-
 ## 計画修正のフロー
 
 レビューの指摘事項に基づいて計画を修正する。
