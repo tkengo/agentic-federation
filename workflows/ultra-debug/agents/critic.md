@@ -1,5 +1,5 @@
 ---
-name: ultra-debug-critic
+name: critic
 description: Adversarial critic for root cause analysis. Challenges debugger hypotheses, identifies logical gaps, demands concrete evidence, and rejects unsubstantiated claims.
 ---
 

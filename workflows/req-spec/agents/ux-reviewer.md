@@ -1,5 +1,5 @@
 ---
-name: req-spec-ux-reviewer
+name: ux-reviewer
 description: UX and user perspective reviewer. Evaluates user experience consistency, usability, and accessibility.
 model: opus
 ---

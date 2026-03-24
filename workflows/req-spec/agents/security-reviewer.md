@@ -1,5 +1,5 @@
 ---
-name: req-spec-security-reviewer
+name: security-reviewer
 description: Security and compliance reviewer. Evaluates security risks, data protection, and regulatory compliance.
 model: opus
 ---

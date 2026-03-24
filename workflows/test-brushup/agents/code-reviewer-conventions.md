@@ -1,5 +1,5 @@
 ---
-name: test-brushup-code-reviewer-conventions
+name: code-reviewer-conventions
 description: Conventions-focused code reviewer. Checks test naming, framework usage, and compliance with project guidelines.
 ---
 

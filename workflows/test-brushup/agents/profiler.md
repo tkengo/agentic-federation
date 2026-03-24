@@ -1,5 +1,5 @@
 ---
-name: test-brushup-profiler
+name: profiler
 description: Profiler agent that collects test metrics including test inventory, execution times, and setup dependencies.
 model: opus
 ---

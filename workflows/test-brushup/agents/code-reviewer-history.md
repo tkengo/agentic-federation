@@ -1,5 +1,5 @@
 ---
-name: test-brushup-code-reviewer-history
+name: code-reviewer-history
 description: History-focused code reviewer. Analyzes git history to detect changes that contradict past design decisions or bug fixes.
 ---
 

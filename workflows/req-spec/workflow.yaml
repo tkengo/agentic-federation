@@ -28,7 +28,7 @@ windows:
       - id: analyst
         name: Analyst
         pane: 1
-        command: 'fed claude --dangerously-skip-permissions --agent req-spec-analyst'
+        command: 'fed claude --dangerously-skip-permissions --agent analyst'
       - id: human
         name: Human
         pane: 2
@@ -47,7 +47,7 @@ windows:
       - id: spec_revisor
         name: "Spec Revisor"
         pane: 1
-        command: 'fed claude --dangerously-skip-permissions --agent req-spec-spec-revisor'
+        command: 'fed claude --dangerously-skip-permissions'
       - id: tech_reviewer
         name: "Tech Reviewer"
         pane: 2
@@ -100,13 +100,13 @@ states:
     color: yellow
     tasks:
       - pane: tech_reviewer
-        agent: req-spec-tech-reviewer
+        agent: tech-reviewer
       - pane: ux_reviewer
-        agent: req-spec-ux-reviewer
+        agent: ux-reviewer
       - pane: trend_researcher
-        agent: req-spec-trend-researcher
+        agent: trend-researcher
       - pane: security_reviewer
-        agent: req-spec-security-reviewer
+        agent: security-reviewer
     transitions:
       done: spec_revision
 
@@ -115,7 +115,7 @@ states:
     color: yellow
     tasks:
       - pane: spec_revisor
-        agent: req-spec-spec-revisor
+        agent: spec-revisor
     transitions:
       approved: human_final_review
       request_changes: spec_review

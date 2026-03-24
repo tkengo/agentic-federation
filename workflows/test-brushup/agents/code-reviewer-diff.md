@@ -1,5 +1,5 @@
 ---
-name: test-brushup-code-reviewer-diff
+name: code-reviewer-diff
 description: Diff-focused code reviewer. Analyzes test refactoring changes for intent preservation, assertion strength, and correctness.
 ---
 

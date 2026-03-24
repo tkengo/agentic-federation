@@ -1,5 +1,5 @@
 ---
-name: req-spec-spec-revisor
+name: spec-revisor
 description: Spec revisor agent that integrates review feedback and revises the requirements specification.
 model: opus
 ---

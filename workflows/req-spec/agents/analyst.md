@@ -1,5 +1,5 @@
 ---
-name: req-spec-analyst
+name: analyst
 description: Requirements analyst agent that elicits and structures requirements through human interaction.
 model: opus
 ---

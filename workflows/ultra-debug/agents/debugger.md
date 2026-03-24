@@ -1,5 +1,5 @@
 ---
-name: ultra-debug-debugger
+name: debugger
 description: Hypothesis-driven debugger. Investigates assigned hypothesis by collecting evidence from logs, code, system info, and databases. Reports findings with exact references.
 ---
 

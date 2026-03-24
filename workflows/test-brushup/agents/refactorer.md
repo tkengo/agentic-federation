@@ -1,5 +1,5 @@
 ---
-name: test-brushup-refactorer
+name: refactorer
 description: Refactorer agent that improves test code based on approved plans and manages the code review cycle.
 model: opus
 ---

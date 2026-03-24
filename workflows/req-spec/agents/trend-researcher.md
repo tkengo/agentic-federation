@@ -1,5 +1,5 @@
 ---
-name: req-spec-trend-researcher
+name: trend-researcher
 description: Trend researcher agent. Investigates similar services, industry best practices, and common patterns.
 model: opus
 ---

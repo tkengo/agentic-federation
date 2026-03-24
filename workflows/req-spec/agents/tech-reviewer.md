@@ -1,5 +1,5 @@
 ---
-name: req-spec-tech-reviewer
+name: tech-reviewer
 description: Technical feasibility reviewer. Evaluates implementation complexity, technology fit, and technical risks.
 model: opus
 ---

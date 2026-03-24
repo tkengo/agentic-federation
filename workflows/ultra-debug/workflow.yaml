@@ -9,7 +9,7 @@ windows:
       - id: orchestrator
         name: Orchestrator
         pane: 1
-        command: 'fed claude --dangerously-skip-permissions --agent ultra-debug-orchestrator'
+        command: 'fed claude --dangerously-skip-permissions --agent orchestrator'
       - id: human
         name: Human
         pane: 2
@@ -28,27 +28,27 @@ windows:
       - id: debugger_1
         name: "Debugger 1"
         pane: 1
-        command: 'fed claude --dangerously-skip-permissions --agent ultra-debug-debugger'
+        command: 'fed claude --dangerously-skip-permissions --agent debugger'
       - id: debugger_2
         name: "Debugger 2"
         pane: 2
-        command: 'fed claude --dangerously-skip-permissions --agent ultra-debug-debugger'
+        command: 'fed claude --dangerously-skip-permissions --agent debugger'
       - id: debugger_3
         name: "Debugger 3"
         pane: 3
-        command: 'fed claude --dangerously-skip-permissions --agent ultra-debug-debugger'
+        command: 'fed claude --dangerously-skip-permissions --agent debugger'
       - id: debugger_4
         name: "Debugger 4"
         pane: 4
-        command: 'fed claude --dangerously-skip-permissions --agent ultra-debug-debugger'
+        command: 'fed claude --dangerously-skip-permissions --agent debugger'
       - id: debugger_5
         name: "Debugger 5"
         pane: 5
-        command: 'fed claude --dangerously-skip-permissions --agent ultra-debug-debugger'
+        command: 'fed claude --dangerously-skip-permissions --agent debugger'
       - id: critic
         name: Critic
         pane: 6
-        command: 'fed claude --dangerously-skip-permissions --agent ultra-debug-critic'
+        command: 'fed claude --dangerously-skip-permissions --agent critic'
     # +----------+----------+----------+
     # |debugger-1|debugger-2|debugger-3|
     # | (pane 1) | (pane 2) | (pane 3) |
@@ -85,17 +85,17 @@ states:
     color: yellow
     tasks:
       - pane: debugger_1
-        agent: ultra-debug-debugger
+        agent: debugger
       - pane: debugger_2
-        agent: ultra-debug-debugger
+        agent: debugger
       - pane: debugger_3
-        agent: ultra-debug-debugger
+        agent: debugger
       - pane: debugger_4
-        agent: ultra-debug-debugger
+        agent: debugger
       - pane: debugger_5
-        agent: ultra-debug-debugger
+        agent: debugger
       - pane: critic
-        agent: ultra-debug-critic
+        agent: critic
     transitions:
       done: synthesize
 
@@ -104,7 +104,7 @@ states:
     color: cyan
     tasks:
       - pane: orchestrator
-        agent: ultra-debug-orchestrator
+        agent: orchestrator
     transitions:
       done: completed
 

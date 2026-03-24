@@ -1,5 +1,5 @@
 ---
-name: ultra-debug-orchestrator
+name: orchestrator
 description: Root cause analysis orchestrator. Gathers problem context, forms hypotheses, and synthesizes the final evidence-backed report.
 ---
 

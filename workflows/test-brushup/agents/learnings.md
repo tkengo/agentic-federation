@@ -1,5 +1,5 @@
 ---
-name: test-brushup-learnings
+name: learnings
 description: Post-processing agent that extracts test improvement learnings from the session and saves them as an artifact.
 model: opus
 ---

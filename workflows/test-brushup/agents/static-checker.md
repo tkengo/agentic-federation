@@ -1,5 +1,5 @@
 ---
-name: test-brushup-static-checker
+name: static-checker
 description: Static checker agent that runs linters and type checkers on refactored test files as a code review step.
 model: opus
 ---

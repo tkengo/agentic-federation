@@ -1,5 +1,5 @@
 ---
-name: test-brushup-code-review-integrator
+name: code-review-integrator
 description: Code review integrator. Aggregates all reviewer findings, applies confidence scoring, resolves conflicts, and produces unified feedback.
 model: opus
 ---

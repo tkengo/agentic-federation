@@ -28,7 +28,7 @@ windows:
       - id: analyzer
         name: Analyzer
         pane: 1
-        command: 'fed claude --dangerously-skip-permissions --agent test-brushup-analyzer'
+        command: 'fed claude --dangerously-skip-permissions --agent analyzer'
       - id: human
         name: Human
         pane: 2
@@ -47,7 +47,7 @@ windows:
       - id: refactorer
         name: Refactorer
         pane: 1
-        command: 'fed claude --dangerously-skip-permissions --agent test-brushup-refactorer'
+        command: 'fed claude --dangerously-skip-permissions --agent refactorer'
       - id: profiler
         name: Profiler
         pane: 2
@@ -55,7 +55,7 @@ windows:
       - id: learnings
         name: Learnings
         pane: 3
-        command: 'fed claude --dangerously-skip-permissions --agent test-brushup-learnings'
+        command: 'fed claude --dangerously-skip-permissions --agent learnings'
     # +-----------+-----------+-----------+
     # | refactorer|  profiler | learnings |
     # |  (pane 1) |  (pane 2) | (pane 3)  |
@@ -87,7 +87,7 @@ windows:
       - id: code_review_integrator
         name: "Code Review Integrator"
         pane: 5
-        command: 'fed claude --dangerously-skip-permissions --agent test-brushup-code-review-integrator'
+        command: 'fed claude --dangerously-skip-permissions --agent code-review-integrator'
     # +------+------+------+--------+
     # | diff | conv | hist | static |
     # | (1)  | (2)  | (3)  |  (4)   |
@@ -110,7 +110,7 @@ states:
     entry_point: true
     tasks:
       - pane: profiler
-        agent: test-brushup-profiler
+        agent: profiler
     transitions:
       done: analysis
 
@@ -119,7 +119,7 @@ states:
     color: blue
     tasks:
       - pane: analyzer
-        agent: test-brushup-analyzer
+        agent: analyzer
     transitions:
       done: human_plan_review
 
@@ -136,7 +136,7 @@ states:
     color: blue
     tasks:
       - pane: refactorer
-        agent: test-brushup-refactorer
+        agent: refactorer
     transitions:
       done: code_review
 
@@ -145,13 +145,13 @@ states:
     color: yellow
     tasks:
       - pane: code_reviewer_diff
-        agent: test-brushup-code-reviewer-diff
+        agent: code-reviewer-diff
       - pane: code_reviewer_conventions
-        agent: test-brushup-code-reviewer-conventions
+        agent: code-reviewer-conventions
       - pane: code_reviewer_history
-        agent: test-brushup-code-reviewer-history
+        agent: code-reviewer-history
       - pane: static_checker
-        agent: test-brushup-static-checker
+        agent: static-checker
     transitions:
       done: code_review_aggregation
 
@@ -160,7 +160,7 @@ states:
     color: yellow
     tasks:
       - pane: code_review_integrator
-        agent: test-brushup-code-review-integrator
+        agent: code-review-integrator
     transitions:
       approved: post_processing
       request_changes: code_revision
@@ -171,7 +171,7 @@ states:
     color: yellow
     tasks:
       - pane: refactorer
-        agent: test-brushup-refactorer
+        agent: refactorer
     transitions:
       done: code_review
 
@@ -180,7 +180,7 @@ states:
     color: cyan
     tasks:
       - pane: learnings
-        agent: test-brushup-learnings
+        agent: learnings
     transitions:
       done: completed
 
