@@ -12,16 +12,6 @@ model: opus
 
 1度統合を実行していたとしても、再統合を依頼される場合があるので、依頼される度に**毎回必ず統合を実行すること**。また、統合を始める際に人間の許可を得る必要はなく、依頼されたタイミングで即座に開始すること。人間に開始の許可を求めてはならない。
 
-### レビュー結果の収集
-
-4つのレビュー完了通知を待つ。通知は以下の形式で届く：
-- `完了: spec_review_tech`
-- `完了: spec_review_ux`
-- `完了: spec_review_trend`
-- `完了: spec_review_security`
-
-**4つすべてが揃うまで統合を開始してはならない。** 一部だけ届いた場合は残りを待つこと。
-
 ### 統合の実行
 
 1. `fed artifact read spec` で現在の要件定義書を読む
@@ -36,23 +26,14 @@ model: opus
 
 ### 統合後のアクション
 
-#### 全レビュアーが APPROVE の場合
-1. `fed state update status human_final_review` を実行
-2. `fed waiting-human set --reason "全レビュアーが承認しました。最終仕様レビューをお願いします" --notify` を実行
+判定に応じて以下を実行する:
 
-#### REQUEST_CHANGES がある場合
-レビュー指摘を仕様に反映した上で：
-1. `fed state update status spec_review` を実行
-2. 4つのレビュアーに再レビューを依頼：
-   - `fed notify reviewers.2 "'fed prompt read req-spec-tech-reviewer' を実行すると作業指示書が出力されます。その指示書の手順に従って作業を開始してください。"`
-   - `fed notify reviewers.3 "'fed prompt read req-spec-ux-reviewer' を実行すると作業指示書が出力されます。その指示書の手順に従って作業を開始してください。"`
-   - `fed notify reviewers.4 "'fed prompt read req-spec-trend-researcher' を実行すると作業指示書が出力されます。その指示書の手順に従って作業を開始してください。"`
-   - `fed notify reviewers.5 "'fed prompt read req-spec-security-reviewer' を実行すると作業指示書が出力されます。その指示書の手順に従って作業を開始してください。"`
+- **全レビュアーが APPROVE の場合**: `fed workflow-transition --result approved`
+- **REQUEST_CHANGES がある場合**: レビュー指摘を仕様に反映した上で `fed workflow-transition --result request_changes`
+- **ESCALATE がある場合**: `fed workflow-transition --result escalate`
 
-#### ESCALATE がある場合
-1. `fed state update status waiting_human` を実行
-2. `fed waiting-human set --reason "レビューでエスカレーション事項があります。確認してください" --notify` を実行
-3. エスカレーション内容を要約して人間に伝える
+統合完了後の **artifact write** と **workflow-transition** は、必ず実行すること。実行しなかった場合はワークフロー全体が停止してしまうため、絶対に実行を忘れてはならない。
+また、完了報告は人間の許可不要で即座に実行すること。
 
 ---
 
@@ -85,5 +66,4 @@ model: opus
 統合を終えたら、以下を確認せよ。実行していない場合、統合は未完了である。
 
 1. `fed artifact write spec --file ./tmp-spec.md` を実行した
-2. 次の状態遷移コマンド（`fed state update status ...`）を実行した
-3. 人間への通知、または再レビュー依頼の notify を実行した
+2. `fed workflow-transition --result <approved|request_changes|escalate>` を実行した

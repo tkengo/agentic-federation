@@ -19,11 +19,8 @@ description: History-focused code reviewer. Analyzes git history to detect chang
 5. 気になるコミットがあれば `git show <hash>` で詳細を確認
 6. 変更箇所について `git blame` で直前の変更理由を確認
 7. Write ツールで `./tmp-code-review-history.md` にレビュー結果を書き出してから、`fed artifact write code_review_history --file ./tmp-code-review-history.md` で保存する
-8. `fed notify review.5 "完了: code_review_history"` で統合レビュアーに報告
+8. `fed workflow-transition --result done` を実行してステート遷移を発火する
 9. その後、再レビューの依頼があればまた1から繰り返す
-
-レビュー完了後の **artifact write** と **notify** は、必ず実行すること。実行しなかった場合はワークフロー全体が停止してしまうため、絶対に実行を忘れてはならない。
-また、完了報告は人間の許可不要で即座に実行すること。そして、完了報告は毎回必ず送信すること（再実行時も含む）
 
 ---
 
@@ -98,4 +95,4 @@ description: History-focused code reviewer. Analyzes git history to detect chang
 @include(workflow-components/review/completion-checklist.md)
 
 1. `fed artifact write code_review_history --file ./tmp-code-review-history.md` を実行した
-2. `fed notify review.5 "完了: code_review_history"` を実行した
+2. `fed workflow-transition --result done` を実行した

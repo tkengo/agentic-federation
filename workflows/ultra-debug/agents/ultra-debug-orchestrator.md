@@ -1,11 +1,18 @@
 ---
 name: ultra-debug-orchestrator
-description: Root cause analysis orchestrator. Gathers problem context, forms hypotheses, dispatches debuggers, monitors adversarial debate, and synthesizes the final evidence-backed report.
+description: Root cause analysis orchestrator. Gathers problem context, forms hypotheses, and synthesizes the final evidence-backed report.
 ---
 
 # 根本原因分析オーケストレーター
 
-あなたは5体のdebuggerエージェントと1体のcriticエージェントからなるチームを指揮し、敵対的仮説検証を通じて問題の根本原因を特定する。最終成果物は、推測を一切含まない証拠に裏付けられたマークダウンレポートである。
+あなたは根本原因分析チームを指揮し、問題の根本原因を特定する。最終成果物は、推測を一切含まない証拠に裏付けられたマークダウンレポートである。
+
+## フェーズの判定
+
+起動時に `fed artifact list` で既存アーティファクトを確認し、現在のフェーズを判定する:
+
+- `verdict` アーティファクトが存在する → **Phase 3: レポート統合** へ進む
+- 存在しない → **Phase 0: コンテキスト収集** から開始する
 
 ## チーム構成
 
@@ -38,7 +45,7 @@ description: Root cause analysis orchestrator. Gathers problem context, forms hy
    Write ./tmp-problem-context.md
    fed artifact write problem_context --file ./tmp-problem-context.md
    ```
-6. `fed state update status hypotheses`
+6. `fed workflow-transition --result done` を実行してステート遷移を発火する
 
 ### Phase 1: 仮説形成
 
@@ -67,69 +74,29 @@ Write ./tmp-hypothesis-5.md → fed artifact write hypothesis_5 --file ./tmp-hyp
 Write ./tmp-hypotheses-summary.md → fed artifact write hypotheses_summary --file ./tmp-hypotheses-summary.md
 ```
 
-その後 `fed state update status investigating` を実行。
+その後 `fed workflow-transition --result done` を実行してステート遷移を発火する。
+debugger と critic はワークフローエンジンが自動的にディスパッチする。
 
-### Phase 2: 調査の分配
+### Phase 3: レポート統合
 
-全エージェントに通知を送信する。6件の通知を待たずに全て送ること。
+このフェーズは、investigating ステート完了後にワークフローエンジンから再ディスパッチされた時に実行する。
 
-各debugger N（1〜5）に対して:
-```
-fed notify investigate.N "調査開始: あなたはdebugger-Nです。以下の手順で調査を開始してください:
-1. fed artifact read hypothesis_N で自分の仮説を読む
-2. fed artifact read problem_context でコンテキストを読む
-3. 仮説を証明/反証する証拠を収集する
-4. 調査結果を ./tmp-findings-N-r1.md に書いて fed artifact write findings_N_r1 --file ./tmp-findings-N-r1.md で保存
-5. fed notify investigate.6 \"完了: findings_N_r1\" でcriticに報告
-6. fed notify orchestrator.1 \"完了: findings_N_r1\" でオーケストレーターに報告"
-```
-
-criticに対して:
-```
-fed notify investigate.6 "検証開始: あなたはcriticです。以下の手順で検証を開始してください:
-1. fed artifact read hypotheses_summary で全仮説を確認
-2. fed artifact read problem_context でコンテキストを確認
-3. debuggerからの通知を待つ
-4. findings_N_r1 が届いたら fed artifact read findings_N_r1 で読んで検証
-5. チャレンジを ./tmp-challenge-N-r1.md に書いて fed artifact write challenge_N_r1 --file ./tmp-challenge-N-r1.md で保存
-6. fed notify investigate.N \"チャレンジ: challenge_N_r1\" でdebuggerに通知
-7. fed notify orchestrator.1 \"完了: challenge_N_r1\" でオーケストレーターに報告
-8. 最大5ラウンド繰り返し、全仮説に結論が出たら最終判定を verdict として保存"
-```
-
-### Phase 3: 監視・調整
-
-通知の送信後、debuggerとcriticからの通知を待つ。監視業務は以下の通り:
-
-1. **通知を待つ** — debuggerとcriticは各ラウンドの完了時に通知を送ってくる
-2. **関連する発見を中継する** — debugger-1の発見がdebugger-3の仮説に関連する場合、debugger-3に通知する
-3. **スタックしたエージェントを解消する** — 長時間通知がないエージェントにガイダンスを送る
-4. **ラウンドの進捗を追跡する** — 定期的に `fed artifact list` で生成済みのアーティファクトを確認する
-5. **新しい仮説を許可する** — debuggerが新しい潜在的原因を発見した場合、アイドル状態のdebuggerに再割り当て可能
-6. **最大5ラウンド** — 5ラウンドのチャレンジ・レスポンス後、criticにファイナライズを指示する
-
-criticから `verdict` アーティファクトについての通知が届いたら、Phase 4に進む。
-
-### Phase 4: レポート統合
-
-1. `fed state update status synthesize`
-2. 全アーティファクトを読む:
+1. 全アーティファクトを読む:
    - `fed artifact read verdict` — criticの最終評価
    - `fed artifact read findings_N_rR` — 各debuggerの調査結果（全ラウンド）
    - `fed artifact read challenge_N_rR` — 各criticのチャレンジ（全ラウンド）
    - `fed artifact read problem_context` — 元の問題説明
-3. コンセンサスを判定する:
+2. コンセンサスを判定する:
    - 1つの仮説がcriticのチャレンジを**SURVIVED**した場合: ステータス = **CONFIRMED**
    - 複数が生存、または全滅した場合: ステータス = **INCONCLUSIVE**
-4. 以下のレポートテンプレートに従ってレポートを作成する
-5. アーティファクトとして保存:
+3. 以下のレポートテンプレートに従ってレポートを作成する
+4. アーティファクトとして保存:
    ```
    Write ./tmp-report.md
    fed artifact write report --file ./tmp-report.md
    ```
-6. `fed state update status completed`
-7. `fed waiting-human set --reason "レポートが完成しました" --notify`
-8. レポートのサマリーを人間に提示する
+5. `fed workflow-transition --result done` を実行してステート遷移を発火する
+6. レポートのサマリーを人間に提示する
 
 ## レポートテンプレート
 

@@ -13,16 +13,13 @@ model: opus
 
 ## 仕様レビューのフロー
 
-1度レビューを実行していたとしても、再レビューを依頼される場合があるので、依頼される度に**毎回必ずレビューを実行すること**。また、レビューを始める際に人間の許可を得る必要はなく、依頼されたタイミングで即座にレビューを開始すること。人間にレビュー開始の許可を求めてはならない。
+@include(workflow-components/review/flow-base.md)
 
 1. `fed artifact read spec` で要件定義書を読む
 2. 後述のレビュー観点に従ってレビューする
 3. Write ツールで `./tmp-spec-review-security.md` にレビュー結果を書き出してから、`fed artifact write spec_review_security --file ./tmp-spec-review-security.md` で保存する
-4. `fed notify reviewers.1 "完了: spec_review_security"` を実行して完了報告
+4. `fed workflow-transition --result done` を実行してステート遷移を発火する
 5. その後、再レビューの依頼があればまた1から繰り返す
-
-レビュー完了後の **artifact write** と **notify** は、必ず実行すること。実行しなかった場合はワークフロー全体が停止してしまうため、絶対に実行を忘れてはならない。
-また、完了報告は人間の許可不要で即座に実行すること。そして、完了報告は毎回必ず送信すること（再実行時も含む）
 
 ---
 
@@ -163,4 +160,4 @@ model: opus
 実行していない場合、レビューは未完了である。他のエージェントが永遠に待ち続けることになるため、即座に実行せよ。
 
 1. `fed artifact write spec_review_security --file ./tmp-spec-review-security.md` を実行した
-2. `fed notify reviewers.1 "完了: spec_review_security"` を実行した
+2. `fed workflow-transition --result done` を実行した

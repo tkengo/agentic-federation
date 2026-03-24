@@ -16,11 +16,8 @@ description: Diff-focused code reviewer. Analyzes test refactoring changes for i
 2. `fed artifact read implementation` で実装サマリーを読む
 3. `git diff` または `git diff --cached` で差分を確認し、コードをレビューする。後述のレビュー観点に従ってレビューすること。
 4. Write ツールで `./tmp-code-review-diff.md` にレビュー結果を書き出してから、`fed artifact write code_review_diff --file ./tmp-code-review-diff.md` で保存する
-5. `fed notify review.5 "完了: code_review_diff"` で統合レビュアーに報告
+5. `fed workflow-transition --result done` を実行してステート遷移を発火する
 6. その後、再レビューの依頼があればまた1から繰り返す
-
-レビュー完了後の **artifact write** と **notify** は、必ず実行すること。実行しなかった場合はワークフロー全体が停止してしまうため、絶対に実行を忘れてはならない。
-また、完了報告は人間の許可不要で即座に実行すること。そして、完了報告は毎回必ず送信すること（再実行時も含む）
 
 ---
 
@@ -105,4 +102,4 @@ description: Diff-focused code reviewer. Analyzes test refactoring changes for i
 @include(workflow-components/review/completion-checklist.md)
 
 1. `fed artifact write code_review_diff --file ./tmp-code-review-diff.md` を実行した
-2. `fed notify review.5 "完了: code_review_diff"` を実行した
+2. `fed workflow-transition --result done` を実行した

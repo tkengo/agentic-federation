@@ -84,24 +84,59 @@ states:
     description: "人間と対話しながら要件を分析・整理する"
     color: blue
     entry_point: true
+    transitions:
+      done: human_draft_review
+
   human_draft_review:
     description: "人間にドラフト仕様レビューをお願いする"
-    color: blue
+    color: yellow
+    wait_human: true
+    transitions:
+      approved: spec_review
+      feedback: analysis
+
   spec_review:
     description: "複数レビュアーによる並列仕様レビュー"
     color: yellow
+    tasks:
+      - pane: tech_reviewer
+        agent: req-spec-tech-reviewer
+      - pane: ux_reviewer
+        agent: req-spec-ux-reviewer
+      - pane: trend_researcher
+        agent: req-spec-trend-researcher
+      - pane: security_reviewer
+        agent: req-spec-security-reviewer
+    transitions:
+      done: spec_revision
+
   spec_revision:
     description: "レビューフィードバックに基づく仕様修正"
     color: yellow
+    tasks:
+      - pane: spec_revisor
+        agent: req-spec-spec-revisor
+    transitions:
+      approved: human_final_review
+      request_changes: spec_review
+      escalate: waiting_human
+
   human_final_review:
     description: "人間に最終仕様レビューをお願いする"
     mark: "✓"
     color: green
+    wait_human: true
+    transitions:
+      approved: completed
+      feedback: analysis
+
   completed:
     description: "要件定義ワークフロー完了"
     mark: "+"
     color: green
     terminal: true
+
   waiting_human:
     description: "エスカレーション - 人間の判断待ち"
     color: magenta
+    terminal: true

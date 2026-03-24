@@ -70,20 +70,52 @@ states:
     description: "人間から問題の説明を聞き、コンテキストを収集する"
     color: blue
     entry_point: true
+    transitions:
+      done: hypotheses
+
   hypotheses:
-    description: "問題から5つの仮説を形成し、調査を分配する"
+    description: "問題から5つの仮説を形成する"
     color: blue
+    # tasks なし: orchestrator が gather_context から継続して仮説を形成
+    transitions:
+      done: investigating
+
   investigating:
     description: "5体のdebuggerが並行調査、criticが敵対的検証を実施"
     color: yellow
+    tasks:
+      - pane: debugger_1
+        agent: ultra-debug-debugger
+      - pane: debugger_2
+        agent: ultra-debug-debugger
+      - pane: debugger_3
+        agent: ultra-debug-debugger
+      - pane: debugger_4
+        agent: ultra-debug-debugger
+      - pane: debugger_5
+        agent: ultra-debug-debugger
+      - pane: critic
+        agent: ultra-debug-critic
+    transitions:
+      done: synthesize
+
   synthesize:
     description: "全調査結果を統合してレポートを生成する"
     color: cyan
+    tasks:
+      - pane: orchestrator
+        agent: ultra-debug-orchestrator
+    transitions:
+      done: completed
+
   completed:
     description: "レポート生成完了"
     mark: "✓"
     color: green
     terminal: true
+    wait_human: true
+
   waiting_human:
     description: "エスカレーション - 人間の判断待ち"
     color: magenta
+    terminal: true

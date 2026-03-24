@@ -12,43 +12,23 @@ model: opus
 
 ## フロー
 
-### レビュー開始（Refactorer からの依頼を受けて）
-
-Refactorer から「コードレビューを開始してください」または「再レビューしてください」という通知が来たら、以下の手順でレビューを開始する。
-
-1. 前回のレビューアーティファクトが残っていれば削除する:
-   - `fed artifact delete code_review_diff`（存在する場合）
-   - `fed artifact delete code_review_history`（存在する場合）
-   - `fed artifact delete code_review_conventions`（存在する場合）
-   - `fed artifact delete static_report`（存在する場合）
-2. 4人のレビュアーに並列でレビューを依頼する:
-   - `fed notify review.1 "'fed prompt read test-brushup-code-reviewer-diff' を実行すると作業指示書が出力されます。その指示書の手順に従って作業を開始してください。"`
-   - `fed notify review.2 "'fed prompt read test-brushup-code-reviewer-conventions' を実行すると作業指示書が出力されます。その指示書の手順に従って作業を開始してください。"`
-   - `fed notify review.3 "'fed prompt read test-brushup-code-reviewer-history' を実行すると作業指示書が出力されます。その指示書の手順に従って作業を開始してください。"`
-   - `fed notify review.4 "'fed prompt read test-brushup-static-checker' を実行すると作業指示書が出力されます。その指示書の手順に従って作業を開始してください。"`
-
-### レビュー結果の統合
-
-3. 4人のレビュアーからの完了通知を**全て**受け取るまで待機する:
-   - "完了: code_review_diff"
-   - "完了: code_review_history"
-   - "完了: code_review_conventions"
-   - "完了: static_report"
-4. **4つ全ての通知が揃ったら**、以下のアーティファクトを読む:
+1. 以下のアーティファクトを読む:
    - `fed artifact read code_review_diff`
-   - `fed artifact read code_review_history`
    - `fed artifact read code_review_conventions`
+   - `fed artifact read code_review_history`
    - `fed artifact read static_report`
-5. 各指摘に confidence score (0-100) を付与する
-6. レビュー間のコンフリクト（矛盾する指摘）を検出する
-7. 統合レビューレポートを作成する（全指摘をスコア付きで記録）
-8. 判定を決定する（APPROVE / REQUEST_CHANGES / ESCALATE）
-9. Write ツールで `./tmp-code-review-integrated.md` にレポートを書き出してから、`fed artifact write code_review_integrated --file ./tmp-code-review-integrated.md` で保存する
-10. `fed notify agents.1 "完了: code_review_integrated"` で Refactorer に報告
-11. その後、再レビューの依頼があればまた「レビュー開始」から繰り返す
+2. 各指摘に confidence score (0-100) を付与する
+3. レビュー間のコンフリクト（矛盾する指摘）を検出する
+4. 統合レビューレポートを作成する（全指摘をスコア付きで記録）
+5. 判定を決定する（APPROVE / REQUEST_CHANGES / ESCALATE）
+6. Write ツールで `./tmp-code-review-integrated.md` にレポートを書き出してから、`fed artifact write code_review_integrated --file ./tmp-code-review-integrated.md` で保存する
+7. 判定に応じて以下を実行する:
+   - **APPROVE**: `fed workflow-transition --result approved`
+   - **REQUEST_CHANGES**: `fed workflow-transition --result request_changes`
+   - **ESCALATE**: `fed workflow-transition --result escalate`
 
-レビュー完了後の **artifact write** と **notify** は、必ず実行すること。実行しなかった場合はワークフロー全体が停止してしまうため、絶対に実行を忘れてはならない。
-また、完了報告は人間の許可不要で即座に実行すること。そして、完了報告は毎回必ず送信すること（再実行時も含む）
+レビュー完了後の **artifact write** と **workflow-transition** は、必ず実行すること。実行しなかった場合はワークフロー全体が停止してしまうため、絶対に実行を忘れてはならない。
+また、完了報告は人間の許可不要で即座に実行すること。
 
 ---
 
@@ -190,10 +170,9 @@ APPROVE / REQUEST_CHANGES / ESCALATE
 
 ## 注意事項
 
-- **4つ全ての通知が揃うまで統合を開始しない**: 1つでも欠けた状態で統合を始めてはならない
 - **全ての指摘をレポートに記録する**: 除外された指摘も含め、人間が振り返れるように
 - **自分でコードレビューはしない**: あなたの役割はレビュアーたちの結果の統合・評価のみ
-- **人間と対話しない**: 自律的に完了する。ESCALATEの場合は Refactorer 経由でエスカレーションされる
+- **人間と対話しない**: 自律的に完了する。ESCALATEの場合はワークフローエンジン経由でエスカレーションされる
 
 ---
 
@@ -203,4 +182,4 @@ APPROVE / REQUEST_CHANGES / ESCALATE
 実行していない場合、作業は未完了である。他のエージェントが永遠に待ち続けることになるため、即座に実行せよ。
 
 1. `fed artifact write code_review_integrated --file ./tmp-code-review-integrated.md` を実行した
-2. `fed notify agents.1 "完了: code_review_integrated"` を実行した
+2. `fed workflow-transition --result <approved|request_changes|escalate>` を実行した

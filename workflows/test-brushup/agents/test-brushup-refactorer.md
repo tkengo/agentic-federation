@@ -10,48 +10,24 @@ model: opus
 
 ## リファクタリングのフロー
 
-1. Analyzer から「計画が承認されました。リファクタリングに進んでください。」という通知が来たら開始する。
-2. `fed artifact read plan` で改善計画を読む
-3. 後述のリファクタリングの進め方に従ってリファクタリングを進める。
-4. Write ツールで `./tmp-implementation.md` に実装サマリーを書き出してから、`fed artifact write implementation --file ./tmp-implementation.md` で保存する
-5. `fed state update status code_review` を実行してステータスを更新
-6. `fed notify review.5 "コードレビューを開始してください。"` を実行して統合レビュアー（Integrator）にレビューを依頼する
+1. `fed artifact read plan` で改善計画を読む
+2. 後述のリファクタリングの進め方に従ってリファクタリングを進める。
+3. Write ツールで `./tmp-implementation.md` に実装サマリーを書き出してから、`fed artifact write implementation --file ./tmp-implementation.md` で保存する
+4. `fed workflow-transition --result done` を実行してステート遷移を発火する
 
-**リファクタリングしただけでは完了ではない。artifact write と notify を実行して初めて完了となる。**
+**リファクタリングしただけでは完了ではない。artifact write と workflow-transition を実行して初めて完了となる。**
 
-## リファクタリング後のフロー
+## コードレビュー後の修正フロー（code_revision ステートで再ディスパッチされた場合）
 
-コードレビューが終わるまで待機する。統合レビュアーがレビュー結果を集約し、"完了: code_review_integrated" という通知が来る。通知が来たらレビュー結果を読み取る。
+コードレビューで修正要求（REQUEST_CHANGES）があった場合、このエージェントは code_revision ステートで再ディスパッチされる。
 
 1. `fed artifact read code_review_integrated` で統合レビュー結果を読む
+2. レビューでの指摘事項を元にコードを修正する
+3. テストを再実行して全テストがパスすることを確認する
+4. Write ツールで `./tmp-implementation.md` に実装サマリーを更新してから、`fed artifact write implementation --file ./tmp-implementation.md` で保存する
+5. `fed workflow-transition --result done` を実行してステート遷移を発火する
 
-レビュー結果を読んだ後、以下の判断基準に従って次のステップに進む。
-
-### 統合レビューが ESCALATE の場合
-
-1. `fed waiting-human set --reason "<escalation-reason>" --notify` を使って、エスカレーション理由を人間に通知する。
-2. 人間の指示がでるまで待機し、人間からの指示に従う。
-
-### 統合レビューが REQUEST_CHANGES の場合
-
-1. `fed state update status code_revision` を実行してステータスを更新
-2. レビューでの指摘事項を元にコードを修正する。
-3. テストを再実行して全テストがパスすることを確認する。
-4. Write ツールで `./tmp-implementation.md` に実装サマリーを書き出してから、`fed artifact write implementation --file ./tmp-implementation.md` で保存する
-5. `fed artifact delete code_review_integrated` で統合レビュー結果を削除
-6. `fed state update status code_review` を実行してステータスを更新
-7. `fed notify review.5 "コードが修正されています。再レビューしてください。"` を実行して統合レビュアーに再レビューを依頼する
-8. 統合レビュアーの再レビューが完了したら、改めて通知が来るので、「リファクタリング後のフロー」のセクションからやり直す。
-
-**修正後の artifact write, artifact delete, notify は必ず実行すること。実行しなかった場合はワークフロー全体が停止してしまうため、絶対に実行を忘れてはならない。**
-
-### 統合レビューが APPROVE の場合
-
-1. `fed state update status post_processing` を実行してステータスを更新
-2. `fed notify agents.3 "'fed prompt read test-brushup-learnings' の出力を読んで、知見を抽出してください。"` を実行して learnings エージェントに開始を依頼する
-3. "完了: learnings" の通知が来るまで待機する
-4. `fed state update status completed` を実行してステータスを更新
-5. `fed waiting-human set --reason "リファクタリングが完了しました。レビューしてください。" --notify` を使って、人間に完了を通知する
+**修正後の artifact write と workflow-transition は必ず実行すること。実行しなかった場合はワークフロー全体が停止してしまうため、絶対に実行を忘れてはならない。**
 
 ---
 
@@ -165,3 +141,13 @@ model: opus
 - **計画に忠実に**: 計画から逸脱する場合は理由を明記
 - **テストの意図を変えない**: リファクタリングのみ。新機能のテスト追加やテスト対象の変更はしない
 - **オーバーエンジニアリングを避ける**: 計画にないものは実施しない
+
+---
+
+## 完了チェックリスト
+
+作業を終えたら、以下のコマンドを両方とも実行したか確認せよ。
+実行していない場合、作業は未完了である。
+
+1. `fed artifact write implementation --file ./tmp-implementation.md` を実行した
+2. `fed workflow-transition --result done` を実行した

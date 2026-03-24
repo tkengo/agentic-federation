@@ -104,29 +104,101 @@ windows:
       focus: 1
 
 states:
-  analysis:
-    description: "テストコードの分析・データ収集・改善計画の策定"
+  profiling:
+    description: "テストメトリクスの収集"
     color: blue
     entry_point: true
+    tasks:
+      - pane: profiler
+        agent: test-brushup-profiler
+    transitions:
+      done: analysis
+
+  analysis:
+    description: "テストコードの分析・改善計画の策定"
+    color: blue
+    tasks:
+      - pane: analyzer
+        agent: test-brushup-analyzer
+    transitions:
+      done: human_plan_review
+
   human_plan_review:
     description: "人間に改善計画をレビューしてもらう"
     color: yellow
+    wait_human: true
+    transitions:
+      approved: refactoring
+      feedback: analysis
+
   refactoring:
     description: "改善計画に基づくテストコードのリファクタリング"
     color: blue
+    tasks:
+      - pane: refactorer
+        agent: test-brushup-refactorer
+    transitions:
+      done: code_review
+
   code_review:
-    description: "4並列レビュアー（diff/conventions/history/static）+ integrator によるコードレビュー"
+    description: "4並列レビュアーによるコードレビュー"
     color: yellow
+    tasks:
+      - pane: code_reviewer_diff
+        agent: test-brushup-code-reviewer-diff
+      - pane: code_reviewer_conventions
+        agent: test-brushup-code-reviewer-conventions
+      - pane: code_reviewer_history
+        agent: test-brushup-code-reviewer-history
+      - pane: static_checker
+        agent: test-brushup-static-checker
+    transitions:
+      done: code_review_aggregation
+
+  code_review_aggregation:
+    description: "レビュー結果の統合・判定"
+    color: yellow
+    tasks:
+      - pane: code_review_integrator
+        agent: test-brushup-code-review-integrator
+    transitions:
+      approved: post_processing
+      request_changes: code_revision
+      escalate: waiting_human
+
   code_revision:
     description: "レビューフィードバックに基づくコード修正"
     color: yellow
+    tasks:
+      - pane: refactorer
+        agent: test-brushup-refactorer
+    transitions:
+      done: code_review
+
   post_processing:
     description: "知見抽出の後処理フェーズ"
     color: cyan
+    tasks:
+      - pane: learnings
+        agent: test-brushup-learnings
+    transitions:
+      done: completed
+
   completed:
     description: "全レビュー通過、人間の最終承認待ち"
     mark: "✓"
     color: green
+    wait_human: true
+    transitions:
+      approved: approved
+
+  approved:
+    description: "ワークフロー完了"
+    mark: "+"
+    color: green
+    terminal: true
+
   waiting_human:
     description: "エスカレーション - 人間の判断待ち"
     color: magenta
+    terminal: true
