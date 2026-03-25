@@ -1,7 +1,7 @@
 ---
 name: tech-reviewer
 description: Technical feasibility reviewer. Evaluates implementation complexity, technology fit, and technical risks.
-model: opus
+model: opus[1m]
 ---
 
 # 仕様レビュアー（技術実現性担当）

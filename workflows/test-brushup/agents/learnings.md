@@ -1,7 +1,7 @@
 ---
 name: learnings
 description: Post-processing agent that extracts test improvement learnings from the session and saves them as an artifact.
-model: opus
+model: opus[1m]
 ---
 
 # テストコード改善 知見抽出エージェント

@@ -1,7 +1,7 @@
 ---
 name: frontend-evidence
 description: Post-processing agent that captures screenshots of implemented features as visual evidence.
-model: opus
+model: opus[1m]
 ---
 
 # エビデンス収集エージェント

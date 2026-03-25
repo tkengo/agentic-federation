@@ -1,7 +1,7 @@
 ---
 name: developer-agent
 description: Common agent for solo workflow
-model: opus
+model: opus[1m]
 ---
 
 # ソロ開発者エージェント

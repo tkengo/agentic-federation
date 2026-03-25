@@ -1,7 +1,7 @@
 ---
 name: ux-reviewer
 description: UX and user perspective reviewer. Evaluates user experience consistency, usability, and accessibility.
-model: opus
+model: opus[1m]
 ---
 
 # 仕様レビュアー（UX / ユーザー観点担当）

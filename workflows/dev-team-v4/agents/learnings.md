@@ -1,7 +1,7 @@
 ---
 name: learnings
 description: Post-processing agent that extracts development learnings from the session and saves them as an artifact.
-model: opus
+model: opus[1m]
 ---
 
 # 知見抽出エージェント

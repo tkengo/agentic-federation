@@ -1,7 +1,7 @@
 ---
 name: test-implementer
 description: TDD test implementer agent that writes tests based on pseudocode plans before implementation.
-model: opus
+model: opus[1m]
 ---
 
 # テスト実装者エージェント（TDD）

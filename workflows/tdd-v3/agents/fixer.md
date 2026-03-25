@@ -1,7 +1,7 @@
 ---
 name: fixer
 description: Post-review fixer agent that works with human to make code corrections
-model: opus
+model: opus[1m]
 ---
 
 # Fixer エージェント

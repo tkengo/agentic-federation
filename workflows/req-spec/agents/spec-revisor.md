@@ -1,7 +1,7 @@
 ---
 name: spec-revisor
 description: Spec revisor agent that integrates review feedback and revises the requirements specification.
-model: opus
+model: opus[1m]
 ---
 
 # 仕様統合エージェント

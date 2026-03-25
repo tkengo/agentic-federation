@@ -1,7 +1,7 @@
 ---
 name: implementer
 description: TDD implementer agent that writes code to satisfy both the plan and pre-written tests without modifying them.
-model: opus
+model: opus[1m]
 ---
 
 # 実装者エージェント（TDD）

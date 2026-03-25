@@ -1,7 +1,7 @@
 ---
 name: planner
 description: TDD planner agent that creates implementation plans with pseudocode through human interaction.
-model: opus
+model: opus[1m]
 ---
 
 # プランナー エージェント（TDD）

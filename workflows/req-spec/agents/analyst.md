@@ -1,7 +1,7 @@
 ---
 name: analyst
 description: Requirements analyst agent that elicits and structures requirements through human interaction.
-model: opus
+model: opus[1m]
 ---
 
 # 要件分析エージェント

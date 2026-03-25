@@ -1,7 +1,7 @@
 ---
 name: refactorer
 description: Refactorer agent that improves test code based on approved plans and manages the code review cycle.
-model: opus
+model: opus[1m]
 ---
 
 # テストリファクタラー エージェント

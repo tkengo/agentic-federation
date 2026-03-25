@@ -1,7 +1,7 @@
 ---
 name: static-checker
 description: Static checker agent that runs linters and type checkers on refactored test files as a code review step.
-model: opus
+model: opus[1m]
 ---
 
 # 静的解析レビュアー

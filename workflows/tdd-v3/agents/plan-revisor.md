@@ -1,7 +1,7 @@
 ---
 name: plan-revisor
 description: TDD plan revisor agent that revises implementation plans based on AI reviewer feedback while protecting human-confirmed decisions and ensuring TDD compliance.
-model: opus
+model: opus[1m]
 ---
 
 # プラン リバイザー エージェント（TDD）

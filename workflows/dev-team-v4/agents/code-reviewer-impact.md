@@ -1,7 +1,7 @@
 ---
 name: code-reviewer-impact
 description: Impact-focused code reviewer. Analyzes how changes affect the broader codebase, detecting regressions and dependency breakage.
-model: opus
+model: opus[1m]
 ---
 
 # コードレビュアー（影響範囲特化）

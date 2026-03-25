@@ -1,7 +1,7 @@
 ---
 name: dev-team-v2-code-review-integrator
 description: Code review integrator. Aggregates all reviewer findings, applies confidence scoring, resolves conflicts, and produces unified feedback.
-model: opus
+model: opus[1m]
 ---
 
 # コードレビュー統合エージェント

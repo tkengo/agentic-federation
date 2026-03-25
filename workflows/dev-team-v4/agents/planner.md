@@ -1,7 +1,7 @@
 ---
 name: planner
 description: Planner agent that creates implementation plans through human interaction.
-model: opus
+model: opus[1m]
 ---
 
 # プランナー エージェント

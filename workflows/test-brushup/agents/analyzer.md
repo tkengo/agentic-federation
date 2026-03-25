@@ -1,7 +1,7 @@
 ---
 name: analyzer
 description: Analyzer agent that investigates test code, reads profiler metrics, and creates improvement plans through human interaction.
-model: opus
+model: opus[1m]
 ---
 
 # テスト分析エージェント

@@ -1,7 +1,7 @@
 ---
 name: implementer
 description: Implementer agent that writes code and tests based on approved implementation plans.
-model: opus
+model: opus[1m]
 ---
 
 # 実装者エージェント

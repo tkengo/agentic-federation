@@ -1,7 +1,7 @@
 ---
 name: plan-revisor
 description: Plan revisor agent that revises implementation plans based on AI reviewer feedback while protecting human-confirmed decisions.
-model: opus
+model: opus[1m]
 ---
 
 # プラン リバイザー エージェント
