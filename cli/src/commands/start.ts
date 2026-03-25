@@ -222,7 +222,6 @@ function startStandalone(
     if (i === 0) {
       console.log(`Creating tmux session (window: ${win.name})...`);
       tmux.newSession(tmuxSession, cwd, win.name);
-      tmux.setEnvironment(tmuxSession, "FED_SESSION", tmuxSession);
       // Apply CLI --env variables (standalone has no repo config env)
       applyEnvironmentVars(tmuxSession, {}, cliEnvVars);
     } else {
@@ -320,11 +319,6 @@ function startWithRepo(
       // First window: create tmux session
       console.log(`Creating tmux session (window: ${win.name})...`);
       tmux.newSession(tmuxSession, worktreePath, win.name);
-
-      // Set FED_SESSION before any pane commands run.
-      // Agents like Codex that cannot access the tmux socket rely on this
-      // environment variable to identify the session.
-      tmux.setEnvironment(tmuxSession, "FED_SESSION", tmuxSession);
       // Apply repo config env + CLI --env variables
       applyEnvironmentVars(tmuxSession, config.env, cliEnvVars);
     } else {
@@ -412,7 +406,7 @@ export function createWindowLayout(
   // Send commands to panes
   for (const pane of win.panes) {
     // Set per-pane environment variables before running the pane command
-    tmux.sendKeys(`${w}.${pane.pane}`, `export FED_PANE=${pane.id} FED_WINDOW=${win.name}`);
+    tmux.sendKeys(`${w}.${pane.pane}`, `export FED_PANE=${pane.id} FED_WINDOW=${win.name} FED_SESSION=${session}`);
     if (pane.command) {
       tmux.sendKeys(`${w}.${pane.pane}`, pane.command);
     }
