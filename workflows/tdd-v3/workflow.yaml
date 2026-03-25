@@ -107,7 +107,7 @@ windows:
       - id: code_reviewer_conventions
         name: "Code Reviewer (Conventions)"
         pane: 4
-        command: yolocodex
+        command: 'fed claude --dangerously-skip-permissions'
       - id: code_review_integrator
         name: "Code Review Integrator"
         pane: 5
