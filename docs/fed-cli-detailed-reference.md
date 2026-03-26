@@ -535,6 +535,29 @@ Pane resolution priority:
 
 ---
 
+## `fed workflow-goto`
+
+Force-transition to an arbitrary workflow state. Used by humans to recover from stuck states (e.g., `waiting_human` terminal state) or to manually control workflow progression.
+
+```
+fed workflow-goto <state>
+```
+
+| Argument | Description |
+|---|---|
+| `<state>` | **(required)** Target state name to transition to |
+
+Behavior:
+- Resets `pending_tasks` to empty
+- Dispatches tasks defined on the target state (if any)
+- Clears `waiting_human.json` if transitioning to a non-wait state
+- Records `forced_transition` event in `history.jsonl`
+- Works from any current state (no restrictions)
+
+> **Note**: This command bypasses normal state machine transition rules. Use it for recovery or manual workflow control.
+
+---
+
 ## `fed claude`
 
 Launch Claude Code with automatic session ID tracking.

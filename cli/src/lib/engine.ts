@@ -17,6 +17,14 @@ export interface TransitionResult {
   error?: string;
 }
 
+export interface GotoResult {
+  success: boolean;
+  previousState: string;
+  newState: string;
+  notifiedPanes?: string[];
+  error?: string;
+}
+
 /**
  * Complete a task in the current state and optionally trigger a transition.
  *
@@ -209,4 +217,97 @@ function appendHistory(
     detail,
   };
   fs.appendFileSync(historyPath, JSON.stringify(entry) + "\n");
+}
+
+/**
+ * Clear waiting_human.json if it exists and is currently waiting.
+ */
+function clearWaitingHumanIfSet(sessionDir: string): void {
+  const filePath = path.join(sessionDir, "waiting_human.json");
+  if (!fs.existsSync(filePath)) return;
+
+  const data = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+  if (data.waiting) {
+    const cleared = {
+      waiting: false,
+      reason: null,
+      ts: new Date().toISOString(),
+    };
+    fs.writeFileSync(filePath, JSON.stringify(cleared, null, 2) + "\n");
+  }
+}
+
+/**
+ * Force-transition to an arbitrary state, bypassing normal transition rules.
+ * Used by humans to recover from stuck states (e.g., waiting_human).
+ *
+ * 1. Validate target state exists in the workflow
+ * 2. Reset pending_tasks
+ * 3. Update status to target state
+ * 4. Dispatch tasks for the new state (if any)
+ * 5. Clear or set waiting_human.json as appropriate
+ * 6. Record forced_transition in history
+ */
+export async function forceGoto(
+  sessionDir: string,
+  targetState: string,
+): Promise<GotoResult> {
+  const statePath = path.join(sessionDir, "state.json");
+  const release = await acquireLock(statePath);
+
+  try {
+    const state = JSON.parse(
+      fs.readFileSync(statePath, "utf-8"),
+    ) as StateJson;
+    const workflow = loadSessionWorkflow(sessionDir);
+    if (!workflow) {
+      return {
+        success: false,
+        previousState: state.status,
+        newState: targetState,
+        error: "No workflow.yaml found in session directory",
+      };
+    }
+
+    // Validate target state exists
+    const targetStateDef = workflow.states[targetState];
+    if (!targetStateDef) {
+      const validStates = Object.keys(workflow.states).join(", ");
+      return {
+        success: false,
+        previousState: state.status,
+        newState: targetState,
+        error: `Unknown state: "${targetState}". Valid states: ${validStates}`,
+      };
+    }
+
+    const prevStatus = state.status;
+
+    // Reset pending_tasks and update status
+    state.pending_tasks = [];
+    state.status = targetState;
+
+    // Dispatch tasks for the new state
+    const notifiedPanes = dispatchTasks(sessionDir, workflow, targetState, state);
+
+    // Save updated state
+    fs.writeFileSync(statePath, JSON.stringify(state, null, 2) + "\n");
+    appendHistory(sessionDir, "forced_transition", targetState, `${prevStatus} -> ${targetState} (workflow-goto)`);
+
+    // Handle wait_human on the new state
+    if (targetStateDef.wait_human) {
+      setWaitingHuman(sessionDir, targetStateDef);
+    } else {
+      clearWaitingHumanIfSet(sessionDir);
+    }
+
+    return {
+      success: true,
+      previousState: prevStatus,
+      newState: targetState,
+      notifiedPanes,
+    };
+  } finally {
+    release();
+  }
 }

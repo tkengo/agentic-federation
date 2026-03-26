@@ -49,6 +49,7 @@ import {
 } from "./commands/repo-script.js";
 import { claudeCommand } from "./commands/claude.js";
 import { workflowTransitionCommand } from "./commands/workflow-transition.js";
+import { workflowGotoCommand } from "./commands/workflow-goto.js";
 import { restoreCommand } from "./commands/restore.js";
 import { convListCommand, convShowCommand } from "./commands/conv.js";
 import { configGetCommand, configSetCommand, configShowCommand } from "./commands/config.js";
@@ -388,6 +389,15 @@ program
   .option("--pane <id>", "Pane ID (auto-detected from FED_PANE env var or tmux if not specified)")
   .action(async (options: { result: string; pane?: string }) => {
     await workflowTransitionCommand(options.result, options.pane);
+  });
+
+// --- workflow-goto ---
+program
+  .command("workflow-goto")
+  .description("Force-transition to an arbitrary workflow state (human recovery tool)")
+  .argument("<state>", "Target state name to transition to")
+  .action(async (state: string) => {
+    await workflowGotoCommand(state);
   });
 
 // --- repo-script ---
