@@ -7,6 +7,7 @@ import { findCleanTargets } from "./clean.js";
 import { findRestorableSessions } from "./restore.js";
 
 type Row = {
+  repoBranch: string;
   session: string;
   workflow: string;
   status: string;
@@ -67,11 +68,11 @@ function collectActiveSessions(): Row[] {
     if (!sessionDir) continue;
     const meta = readMeta(sessionDir);
     if (!meta) continue;
-    const session = meta.repo
-      ? `${meta.repo}/${meta.branch}`
-      : meta.tmux_session;
     rows.push({
-      session,
+      repoBranch: meta.repo
+        ? `${meta.repo}/${meta.branch}`
+        : meta.tmux_session,
+      session: entry,
       workflow: meta.workflow ?? "solo",
       status: readStatus(sessionDir),
       age: formatAge(meta.created_at),
@@ -94,11 +95,11 @@ function collectArchiveSessions(): Row[] {
       if (!fs.statSync(sessDir).isDirectory()) continue;
       const meta = readMeta(sessDir);
       if (!meta) continue;
-      const session = meta.repo
-        ? `${meta.repo}/${meta.branch}`
-        : meta.tmux_session;
       rows.push({
-        session,
+        repoBranch: meta.repo
+          ? `${meta.repo}/${meta.branch}`
+          : meta.tmux_session,
+        session: meta.tmux_session,
         workflow: meta.workflow ?? "solo",
         status: readStatus(sessDir),
         age: formatAge(meta.created_at),
@@ -113,7 +114,8 @@ function collectArchiveSessions(): Row[] {
 // Collect restorable sessions (active symlink exists but tmux is dead)
 function collectRestorableSessions(): Row[] {
   return findRestorableSessions().map((s) => ({
-    session: s.repo ? `${s.repo}/${s.branch}` : s.name,
+    repoBranch: s.repo ? `${s.repo}/${s.branch}` : s.name,
+    session: s.name,
     workflow: s.workflow,
     status: s.status,
     age: s.age,
@@ -125,6 +127,7 @@ function collectRestorableSessions(): Row[] {
 // Print a formatted table of session rows
 function printTable(rows: Row[], showSource: boolean): void {
   const headers = {
+    repoBranch: "REPO/BRANCH",
     session: "SESSION",
     workflow: "WORKFLOW",
     status: "STATUS",
@@ -132,6 +135,7 @@ function printTable(rows: Row[], showSource: boolean): void {
     age: "AGE",
   };
   const widths = {
+    repoBranch: Math.max(headers.repoBranch.length, ...rows.map((r) => r.repoBranch.length)),
     session: Math.max(headers.session.length, ...rows.map((r) => r.session.length)),
     workflow: Math.max(headers.workflow.length, ...rows.map((r) => r.workflow.length)),
     status: Math.max(headers.status.length, ...rows.map((r) => r.status.length)),
@@ -140,7 +144,8 @@ function printTable(rows: Row[], showSource: boolean): void {
   };
 
   let header =
-    `  ${headers.session.padEnd(widths.session)}  ` +
+    `  ${headers.repoBranch.padEnd(widths.repoBranch)}  ` +
+    `${headers.session.padEnd(widths.session)}  ` +
     `${headers.workflow.padEnd(widths.workflow)}  ` +
     `${headers.status.padEnd(widths.status)}`;
   if (showSource) header += `  ${headers.source.padEnd(widths.source)}`;
@@ -149,7 +154,8 @@ function printTable(rows: Row[], showSource: boolean): void {
 
   for (const row of rows) {
     let line =
-      `  ${row.session.padEnd(widths.session)}  ` +
+      `  ${row.repoBranch.padEnd(widths.repoBranch)}  ` +
+      `${row.session.padEnd(widths.session)}  ` +
       `${row.workflow.padEnd(widths.workflow)}  ` +
       `${row.status.padEnd(widths.status)}`;
     if (showSource) line += `  ${row.source.padEnd(widths.source)}`;
