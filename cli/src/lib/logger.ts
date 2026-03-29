@@ -69,3 +69,8 @@ export function initLogger(argv: string[]): void {
 export function log(message: string): void {
   writeLog(`[${timestamp()}] ${message}`);
 }
+
+// Get the current log file path (for display in error messages)
+export function currentLogFile(): string {
+  return getLogFilePath();
+}

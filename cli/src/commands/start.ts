@@ -4,6 +4,7 @@ import os from "node:os";
 import crypto from "node:crypto";
 import { execSync, spawn } from "node:child_process";
 import { ACTIVE_DIR, WORKFLOWS_DIR, CLAUDE_AGENTS_DIR } from "../lib/paths.js";
+import { currentLogFile } from "../lib/logger.js";
 import { loadRepoConfig } from "../lib/repo.js";
 import { createSessionDir, linkActiveSession, resolveSession } from "../lib/session.js";
 import * as tmux from "../lib/tmux.js";
@@ -164,10 +165,15 @@ export async function startCommand(
   // Load workflow source (for validation)
   loadWorkflowByName(workflowName);
 
-  if (isStandalone) {
-    startStandalone(workflowName, tmuxSession, noAttach, cliEnvVars);
-  } else {
-    startWithRepo(workflowName, repoName!, branch!, config!, worktreePath, tmuxSession, noAttach, cliEnvVars);
+  try {
+    if (isStandalone) {
+      startStandalone(workflowName, tmuxSession, noAttach, cliEnvVars);
+    } else {
+      startWithRepo(workflowName, repoName!, branch!, config!, worktreePath, tmuxSession, noAttach, cliEnvVars);
+    }
+  } catch {
+    console.error(`\nSession start failed. See logs: ${currentLogFile()}`);
+    process.exit(1);
   }
 }
 
@@ -465,7 +471,18 @@ function setupWorktree(
   // Run setup scripts
   for (const script of config.setup_scripts) {
     console.log(`Running setup: ${script}`);
-    execSync(script, { cwd: worktreePath, stdio: "inherit" });
+    try {
+      const result = execSync(script, { cwd: worktreePath, stdio: "pipe", encoding: "utf-8" });
+      if (result) {
+        console.log(result);
+      }
+    } catch (err: unknown) {
+      const e = err as { stdout?: string; stderr?: string };
+      console.error(`Setup script failed: ${script}`);
+      if (e.stdout) console.error(`[stdout]\n${e.stdout}`);
+      if (e.stderr) console.error(`[stderr]\n${e.stderr}`);
+      throw err;
+    }
   }
 }
 
