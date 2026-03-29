@@ -8,7 +8,6 @@ import { loadRepoConfig } from "../lib/repo.js";
 import * as tmux from "../lib/tmux.js";
 import type { StateJson } from "../lib/types.js";
 import type { WorkflowDefinition } from "../lib/workflow.js";
-import { loadSessionsJson, type SessionsJson } from "./claude.js";
 import {
   applyEnvironmentVars,
   startNotificationWatcher,
@@ -180,29 +179,6 @@ function cleanupStalePidFiles(sessionDir: string): void {
   }
 }
 
-// Build the command to send to a pane during restore.
-// For Claude panes with saved session IDs, replace "fed claude" with "claude --resume <uuid>".
-// For all other panes, return the original command as-is.
-function buildRestoreCommand(
-  originalCommand: string,
-  paneKey: string,
-  sessionsJson: SessionsJson | null
-): string {
-  if (!sessionsJson) return originalCommand;
-
-  const entry = sessionsJson[paneKey];
-  if (!entry || entry.tool !== "claude") return originalCommand;
-
-  // Match "fed claude" at the start of the command
-  const match = originalCommand.match(/^fed\s+claude\s*(.*)/);
-  if (!match) return originalCommand;
-
-  const restArgs = match[1] || "";
-  const resumed = `claude --resume '${entry.session_id}' ${restArgs}`.trim();
-  console.log(`  Restoring Claude session: ${entry.session_id} (pane: ${paneKey})`);
-  return resumed;
-}
-
 export function restoreCommand(
   sessionName: string,
   noAttach?: boolean
@@ -277,10 +253,7 @@ export function restoreCommand(
     process.exit(1);
   }
 
-  // 6. Load sessions.json for Claude session restoration
-  const sessionsJson = loadSessionsJson(sessionDir);
-
-  // 7. Recreate tmux session + windows + panes
+  // 6. Recreate tmux session + windows + panes
   for (let i = 0; i < workflow.windows.length; i++) {
     const win = workflow.windows[i]!;
     if (i === 0) {
@@ -316,21 +289,13 @@ export function restoreCommand(
     }
     tmux.selectPane(`${w}.${win.layout.focus}`);
 
-    // Execute pane commands with Claude session restoration
+    // Execute pane commands
     for (const pane of win.panes) {
       // Set per-pane environment variables before running the pane command
       tmux.sendKeys(`${w}.${pane.pane}`, `export FED_PANE=${pane.id} FED_WINDOW=${win.name}`);
 
       if (!pane.command) continue;
-
-      // tmux pane_index is 0-based, workflow pane.pane is 1-based
-      const paneKey = `${win.name}.${pane.pane - 1}`;
-      const restoredCommand = buildRestoreCommand(
-        pane.command,
-        paneKey,
-        sessionsJson
-      );
-      tmux.sendKeys(`${w}.${pane.pane}`, restoredCommand);
+      tmux.sendKeys(`${w}.${pane.pane}`, pane.command);
     }
   }
 

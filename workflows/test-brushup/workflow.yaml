@@ -28,7 +28,7 @@ windows:
       - id: analyzer
         name: Analyzer
         pane: 1
-        command: 'fed claude --dangerously-skip-permissions --agent analyzer'
+        command: 'yoloclaude --agent __fed-{{meta.workflow}}-{{meta.tmux_session}}-analyzer'
       - id: human
         name: Human
         pane: 2
@@ -47,7 +47,7 @@ windows:
       - id: refactorer
         name: Refactorer
         pane: 1
-        command: 'fed claude --dangerously-skip-permissions --agent refactorer'
+        command: 'yoloclaude --agent __fed-{{meta.workflow}}-{{meta.tmux_session}}-refactorer'
       - id: profiler
         name: Profiler
         pane: 2
@@ -55,7 +55,7 @@ windows:
       - id: learnings
         name: Learnings
         pane: 3
-        command: 'fed claude --dangerously-skip-permissions --agent learnings'
+        command: 'yoloclaude --agent __fed-{{meta.workflow}}-{{meta.tmux_session}}-learnings'
     # +-----------+-----------+-----------+
     # | refactorer|  profiler | learnings |
     # |  (pane 1) |  (pane 2) | (pane 3)  |
@@ -87,7 +87,7 @@ windows:
       - id: code_review_integrator
         name: "Code Review Integrator"
         pane: 5
-        command: 'fed claude --dangerously-skip-permissions --agent code-review-integrator'
+        command: 'yoloclaude --agent __fed-{{meta.workflow}}-{{meta.tmux_session}}-code-review-integrator'
     # +------+------+------+--------+
     # | diff | conv | hist | static |
     # | (1)  | (2)  | (3)  |  (4)   |

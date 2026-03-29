@@ -29,7 +29,7 @@ windows:
       - id: planner
         name: Planner
         pane: 1
-        command: 'fed claude --dangerously-skip-permissions --agent dev-team-v2-planner'
+        command: 'yoloclaude --agent __fed-{{meta.workflow}}-{{meta.tmux_session}}-dev-team-v2-planner'
       - id: human
         name: Human
         pane: 2
@@ -48,7 +48,7 @@ windows:
       - id: plan_revisor
         name: "Plan Revisor"
         pane: 1
-        command: 'fed claude --dangerously-skip-permissions --agent dev-team-v2-plan-revisor'
+        command: 'yoloclaude --agent __fed-{{meta.workflow}}-{{meta.tmux_session}}-dev-team-v2-plan-revisor'
       - id: plan_reviewer
         name: "Plan Reviewer"
         pane: 2
@@ -56,7 +56,7 @@ windows:
       - id: implementer
         name: Implementer
         pane: 3
-        command: 'fed claude --dangerously-skip-permissions --agent dev-team-v2-implementer'
+        command: 'yoloclaude --agent __fed-{{meta.workflow}}-{{meta.tmux_session}}-dev-team-v2-implementer'
     # +-------------+-------------+-------------+
     # | plan_revisor| plan_reviewer| implementer |
     # |   (pane 1)  |   (pane 2)  |   (pane 3)  |
@@ -80,7 +80,7 @@ windows:
       - id: code_reviewer_impact
         name: "Code Reviewer (Impact)"
         pane: 3
-        command: 'fed claude --dangerously-skip-permissions --agent dev-team-v2-code-reviewer-impact'
+        command: 'yoloclaude --agent __fed-{{meta.workflow}}-{{meta.tmux_session}}-dev-team-v2-code-reviewer-impact'
       - id: code_reviewer_conventions
         name: "Code Reviewer (Conventions)"
         pane: 4
@@ -88,7 +88,7 @@ windows:
       - id: code_review_integrator
         name: "Code Review Integrator"
         pane: 5
-        command: 'fed claude --dangerously-skip-permissions --agent dev-team-v2-code-review-integrator'
+        command: 'yoloclaude --agent __fed-{{meta.workflow}}-{{meta.tmux_session}}-dev-team-v2-code-review-integrator'
     # +------+------+------+------+
     # |  A   |  B   |  C   |  D   |
     # | (1)  | (2)  | (3)  | (4)  |
@@ -109,11 +109,11 @@ windows:
       - id: learnings
         name: "Learnings"
         pane: 1
-        command: 'fed claude --dangerously-skip-permissions --agent dev-team-v2-learnings'
+        command: 'yoloclaude --agent __fed-{{meta.workflow}}-{{meta.tmux_session}}-dev-team-v2-learnings'
       - id: evidence
         name: "Evidence"
         pane: 2
-        command: 'fed claude --dangerously-skip-permissions --agent dev-team-v2-frontend-evidence'
+        command: 'yoloclaude --agent __fed-{{meta.workflow}}-{{meta.tmux_session}}-dev-team-v2-frontend-evidence'
     # +---------------------+---------------------+
     # |     learnings       |      evidence       |
     # |      (pane 1)       |      (pane 2)       |

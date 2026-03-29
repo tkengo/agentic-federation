@@ -118,7 +118,7 @@ export function collectConversations(sessionDir: string): void {
 
   // Claude Code
   try {
-    const results = collectClaude(sessionDir);
+    const results = collectClaude(sessionDir, meta);
     for (const r of results) {
       writeConversationFile(convDir, r);
       totalFiles++;

@@ -47,7 +47,6 @@ import {
   repoScriptShowCommand,
   repoScriptRunCommand,
 } from "./commands/repo-script.js";
-import { claudeCommand } from "./commands/claude.js";
 import { workflowTransitionCommand } from "./commands/workflow-transition.js";
 import { workflowGotoCommand } from "./commands/workflow-goto.js";
 import { restoreCommand } from "./commands/restore.js";
@@ -536,18 +535,6 @@ worktree
   .description("Remove worktree cleanup protection")
   .action((repo: string, branch: string) => {
     worktreeUnprotectCommand(repo, branch);
-  });
-
-// --- claude ---
-program
-  .command("claude")
-  .description("Launch Claude Code with automatic session ID tracking")
-  .option("--new", "Force create a new session instead of resuming existing one")
-  .option("--agent <name>", "Specify agent name to use (resolves short name to full composed name)")
-  .allowUnknownOption()
-  .allowExcessArguments()
-  .action((options: { new?: boolean; agent?: string }, cmd: Command) => {
-    claudeCommand(cmd.args, options.new, options.agent);
   });
 
 program.parse();

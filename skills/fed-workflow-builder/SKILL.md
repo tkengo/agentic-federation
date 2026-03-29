@@ -94,7 +94,7 @@ windows:
       - id: terminal       # グローバルに一意な識別子
         name: Terminal      # 表示名
         pane: 1             # ペイン番号（1始まり）
-        command: 'yoloclaude --agent my-planner'  # null で空ペイン
+        command: 'yoloclaude --agent __fed-{{meta.workflow}}-{{meta.tmux_session}}-my-planner'  # null で空ペイン
       - id: editor
         name: Editor
         pane: 2
@@ -109,7 +109,7 @@ windows:
 
 | パターン | 用途 |
 |---------|------|
-| `'yoloclaude --agent <agent-name>'` | Claude Codeエージェント（agents/<agent-name>.mdから読み込み） |
+| `'yoloclaude --agent __fed-{{meta.workflow}}-{{meta.tmux_session}}-<agent-name>'` | Claude Codeエージェント（agents/<agent-name>.mdから合成・展開） |
 | `yolocodex` | Geminiエージェント（`fed notify <window.pane>` で指示を送信） |
 | `yolocodex` | Codexエージェント（`fed notify <window.pane>` で指示を送信） |
 | `nvim` | エディタペイン |
@@ -429,8 +429,8 @@ AIによる計画レビューではこれらの項目を変更要求の対象に
 
 - ペイン `id` はワークフロー内の全ウィンドウを通じてグローバルに一意でなければならない
 - `entry_point: true` を持つstateはちょうど1つだけ
-- エージェントの `.md` ファイル名はペインコマンドの `--agent <name>` と一致させる
+- エージェントの `.md` ファイル名は `agents/` ディレクトリ内のファイル名と一致させる。ペインコマンドでは `__fed-{{meta.workflow}}-{{meta.tmux_session}}-<name>` の形式で指定する
 - 出力フォーマットのテンプレートはエージェント間の通信プロトコル。変更すると後続エージェントが壊れる
 - `yolocodex` や `yolocodex` を使うエージェントには `fed notify <window.pane>` で指示を送信する（起動時に.mdファイルを読まない）
-- `yoloclaude --agent <name>` を使うエージェントは.mdファイルから自動的にインストラクションを読み込む
+- `yoloclaude --agent __fed-{{meta.workflow}}-{{meta.tmux_session}}-<name>` を使うエージェントは.mdファイルから自動的にインストラクションを読み込む
 - ワークフローのテストは、各エージェントのフローを1ステップずつ読み進め、すべての artifact write に対応する artifact read が後続に存在するかを検証する

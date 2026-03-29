@@ -9,7 +9,7 @@ windows:
       - id: orchestrator
         name: Orchestrator
         pane: 1
-        command: 'fed claude --dangerously-skip-permissions --agent orchestrator'
+        command: 'yoloclaude --agent __fed-{{meta.workflow}}-{{meta.tmux_session}}-orchestrator'
       - id: human
         name: Human
         pane: 2
@@ -28,27 +28,27 @@ windows:
       - id: debugger_1
         name: "Debugger 1"
         pane: 1
-        command: 'fed claude --dangerously-skip-permissions --agent debugger'
+        command: 'yoloclaude --agent __fed-{{meta.workflow}}-{{meta.tmux_session}}-debugger'
       - id: debugger_2
         name: "Debugger 2"
         pane: 2
-        command: 'fed claude --dangerously-skip-permissions --agent debugger'
+        command: 'yoloclaude --agent __fed-{{meta.workflow}}-{{meta.tmux_session}}-debugger'
       - id: debugger_3
         name: "Debugger 3"
         pane: 3
-        command: 'fed claude --dangerously-skip-permissions --agent debugger'
+        command: 'yoloclaude --agent __fed-{{meta.workflow}}-{{meta.tmux_session}}-debugger'
       - id: debugger_4
         name: "Debugger 4"
         pane: 4
-        command: 'fed claude --dangerously-skip-permissions --agent debugger'
+        command: 'yoloclaude --agent __fed-{{meta.workflow}}-{{meta.tmux_session}}-debugger'
       - id: debugger_5
         name: "Debugger 5"
         pane: 5
-        command: 'fed claude --dangerously-skip-permissions --agent debugger'
+        command: 'yoloclaude --agent __fed-{{meta.workflow}}-{{meta.tmux_session}}-debugger'
       - id: critic
         name: Critic
         pane: 6
-        command: 'fed claude --dangerously-skip-permissions --agent critic'
+        command: 'yoloclaude --agent __fed-{{meta.workflow}}-{{meta.tmux_session}}-critic'
     # +----------+----------+----------+
     # |debugger-1|debugger-2|debugger-3|
     # | (pane 1) | (pane 2) | (pane 3) |

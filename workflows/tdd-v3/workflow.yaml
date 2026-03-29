@@ -9,7 +9,7 @@ windows:
       - id: fixer
         name: Fixer
         pane: 1
-        command: 'fed claude --dangerously-skip-permissions --agent fixer'
+        command: 'yoloclaude --agent __fed-{{meta.workflow}}-{{meta.tmux_session}}-fixer'
       - id: terminal
         name: Terminal
         pane: 2
@@ -36,7 +36,7 @@ windows:
       - id: planner
         name: Planner
         pane: 1
-        command: 'fed claude --dangerously-skip-permissions --agent planner'
+        command: 'yoloclaude --agent __fed-{{meta.workflow}}-{{meta.tmux_session}}-planner'
       - id: human
         name: Human
         pane: 2
@@ -55,7 +55,7 @@ windows:
       - id: plan_revisor
         name: "Plan Revisor"
         pane: 1
-        command: 'fed claude --dangerously-skip-permissions'
+        command: yoloclaude
       - id: plan_reviewer
         name: "Plan Reviewer"
         pane: 2
@@ -63,7 +63,7 @@ windows:
       - id: test_implementer
         name: "Test Implementer"
         pane: 3
-        command: 'fed claude --dangerously-skip-permissions'
+        command: yoloclaude
       - id: test_reviewer
         name: "Test Reviewer"
         pane: 4
@@ -71,7 +71,7 @@ windows:
       - id: implementer
         name: Implementer
         pane: 5
-        command: 'fed claude --dangerously-skip-permissions'
+        command: yoloclaude
     # +------------------------+------------------------+
     # |     plan_revisor       |                        |
     # |       (pane 1)         |   test_implementer     |
@@ -103,15 +103,15 @@ windows:
       - id: code_reviewer_impact
         name: "Code Reviewer (Impact)"
         pane: 3
-        command: 'fed claude --dangerously-skip-permissions'
+        command: yoloclaude
       - id: code_reviewer_conventions
         name: "Code Reviewer (Conventions)"
         pane: 4
-        command: 'fed claude --dangerously-skip-permissions'
+        command: yoloclaude
       - id: code_review_integrator
         name: "Code Review Integrator"
         pane: 5
-        command: 'fed claude --dangerously-skip-permissions'
+        command: yoloclaude
     # +------+------+------+------+
     # |  A   |  B   |  C   |  D   |
     # | (1)  | (2)  | (3)  | (4)  |
@@ -132,11 +132,11 @@ windows:
       - id: learnings
         name: "Learnings"
         pane: 1
-        command: 'fed claude --dangerously-skip-permissions'
+        command: yoloclaude
       - id: evidence
         name: "Evidence"
         pane: 2
-        command: 'fed claude --dangerously-skip-permissions'
+        command: yoloclaude
     # +---------------------+---------------------+
     # |     learnings       |      evidence       |
     # |      (pane 1)       |      (pane 2)       |

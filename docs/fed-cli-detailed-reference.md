@@ -558,16 +558,3 @@ Behavior:
 
 ---
 
-## `fed claude`
-
-Launch Claude Code with automatic session ID tracking.
-
-If a session file already exists for the current tmux pane (`claude-sessions/<pane>.json`), it resumes the existing session using `claude --resume <id>` instead of creating a new one.
-
-```
-fed claude [options] [-- claude-args...]
-```
-
-| Option | Description |
-|---|---|
-| `--new` | Force create a new session instead of resuming existing one |

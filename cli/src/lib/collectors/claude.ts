@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { CLAUDE_PROJECTS_DIR, truncate } from "../conv-store.js";
 import type { CollectorResult, ConvTurn, ConvToolCall } from "../conv-store.js";
+import type { MetaJson } from "../types.js";
 
 // ---------------------------------------------------------------------------
 // Claude Code transcript JSONL line types (subset we care about)
@@ -35,22 +36,90 @@ type ClaudeContentBlock =
   | { type: "tool_result"; tool_use_id: string; content: unknown };
 
 // ---------------------------------------------------------------------------
-// Session ID -> transcript path resolution
+// Project directory resolution
 // ---------------------------------------------------------------------------
 
 /**
- * Search ~/.claude/projects/ for a transcript JSONL file matching the given
- * session ID.  The filename is `<session-id>.jsonl`.
+ * Compute the Claude projects directory name from a project path.
+ * Claude Code encodes paths by replacing "/" with "-".
+ * e.g., "/Users/foo/bar" -> "-Users-foo-bar"
  */
-function findTranscriptPath(sessionId: string): string | null {
+function computeProjectDirName(projectPath: string): string {
+  return projectPath.replace(/\//g, "-");
+}
+
+/**
+ * Find the Claude projects directory for a given worktree path.
+ * Returns the directory path if found, null otherwise.
+ */
+function findProjectDir(worktreePath: string): string | null {
   if (!fs.existsSync(CLAUDE_PROJECTS_DIR)) return null;
 
-  const target = `${sessionId}.jsonl`;
-  for (const projectDir of fs.readdirSync(CLAUDE_PROJECTS_DIR)) {
-    const candidate = path.join(CLAUDE_PROJECTS_DIR, projectDir, target);
-    if (fs.existsSync(candidate)) return candidate;
-  }
+  const dirName = computeProjectDirName(worktreePath);
+  const candidate = path.join(CLAUDE_PROJECTS_DIR, dirName);
+  if (fs.existsSync(candidate)) return candidate;
+
   return null;
+}
+
+// ---------------------------------------------------------------------------
+// Find Claude sessions matching a fed session
+// ---------------------------------------------------------------------------
+
+interface FoundSession {
+  sessionId: string;
+  filePath: string;
+  startedAt: string;
+}
+
+/**
+ * Find Claude Code transcript files that belong to a fed session.
+ * Matches by worktree path (project directory) and session start time.
+ */
+function findClaudeSessions(meta: MetaJson): FoundSession[] {
+  const worktree = meta.worktree;
+  if (!worktree) return [];
+
+  const projectDir = findProjectDir(worktree);
+  if (!projectDir) return [];
+
+  const sessionStart = new Date(meta.created_at).getTime();
+  const results: FoundSession[] = [];
+
+  for (const file of fs.readdirSync(projectDir)) {
+    if (!file.endsWith(".jsonl")) continue;
+
+    const filePath = path.join(projectDir, file);
+    const sessionId = file.replace(/\.jsonl$/, "");
+
+    // Read first line to check timestamp
+    let firstTimestamp: string | null = null;
+    try {
+      const content = fs.readFileSync(filePath, "utf-8");
+      const firstNewline = content.indexOf("\n");
+      const firstLine = firstNewline >= 0 ? content.slice(0, firstNewline) : content;
+      if (!firstLine.trim()) continue;
+
+      const entry = JSON.parse(firstLine) as Record<string, unknown>;
+      firstTimestamp = (entry.timestamp as string) ?? null;
+    } catch {
+      continue;
+    }
+
+    if (!firstTimestamp) continue;
+
+    // Filter: session must have started after fed session creation
+    const entryTime = new Date(firstTimestamp).getTime();
+    if (isNaN(entryTime) || entryTime < sessionStart) continue;
+
+    results.push({
+      sessionId,
+      filePath,
+      startedAt: firstTimestamp,
+    });
+  }
+
+  return results;
 }
 
 // ---------------------------------------------------------------------------
@@ -97,7 +166,7 @@ function parseTranscript(filePath: string, sessionId: string): ConvTurn[] {
       const blocks = a.message?.content;
       if (!Array.isArray(blocks)) continue;
 
-      // Extract text content (skip thinking blocks for content, but we could include them)
+      // Extract text content (skip thinking blocks for content)
       const textParts: string[] = [];
       const toolCalls: ConvToolCall[] = [];
 
@@ -142,53 +211,32 @@ function parseTranscript(filePath: string, sessionId: string): ConvTurn[] {
 // Public collector
 // ---------------------------------------------------------------------------
 
-interface ClaudeSessionEntry {
-  tool: string;
-  session_id: string;
-  args: string[];
-  started_at: string;
-}
-
 /**
  * Collect Claude Code conversations for a fed session.
  *
- * Reads `<sessionDir>/claude-sessions/*.json` to discover which Claude Code
- * sessions were launched, then finds and parses their transcripts.
+ * Searches ~/.claude/projects/ for transcript files matching the session's
+ * worktree path and created after the session start time.
  */
-export function collectClaude(sessionDir: string): CollectorResult[] {
-  const claudeSessionsDir = path.join(sessionDir, "claude-sessions");
-  if (!fs.existsSync(claudeSessionsDir)) return [];
+export function collectClaude(sessionDir: string, meta: MetaJson): CollectorResult[] {
+  const sessions = findClaudeSessions(meta);
+  if (sessions.length === 0) return [];
 
   const results: CollectorResult[] = [];
 
-  for (const file of fs.readdirSync(claudeSessionsDir)) {
-    if (!file.endsWith(".json")) continue;
-
-    const pane = file.replace(/\.json$/, "");
-    let entry: ClaudeSessionEntry;
-    try {
-      entry = JSON.parse(
-        fs.readFileSync(path.join(claudeSessionsDir, file), "utf-8")
-      );
-    } catch {
-      continue;
-    }
-
-    const transcriptPath = findTranscriptPath(entry.session_id);
-    if (!transcriptPath) {
-      console.error(`    Warning: Claude transcript not found for session ${entry.session_id} (pane: ${pane})`);
-      continue;
-    }
-
-    const turns = parseTranscript(transcriptPath, entry.session_id);
+  for (let i = 0; i < sessions.length; i++) {
+    const session = sessions[i];
+    const turns = parseTranscript(session.filePath, session.sessionId);
     if (turns.length === 0) continue;
+
+    // Use index-based pane naming since we no longer track per-pane sessions
+    const pane = `claude-${i}`;
 
     results.push({
       tool: "claude",
       pane,
-      sessionId: entry.session_id,
-      startedAt: entry.started_at,
-      sourcePath: transcriptPath,
+      sessionId: session.sessionId,
+      startedAt: session.startedAt,
+      sourcePath: session.filePath,
       turns,
     });
   }

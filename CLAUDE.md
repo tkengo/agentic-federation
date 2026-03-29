@@ -118,7 +118,7 @@ The following environment variables are set in each tmux pane at session start v
 | `FED_PANE` | Pane ID from workflow definition | `planner`, `test_implementer` |
 | `FED_WINDOW` | Window name from workflow definition | `planner`, `implement` |
 
-These are available in the shell environment of each pane. Used by `fed workflow-transition` (pane auto-detection), `fed claude` (session tracking), and the logger (context tagging).
+These are available in the shell environment of each pane. Used by `fed workflow-transition` (pane auto-detection) and the logger (context tagging).
 
 ### Template Variables
 

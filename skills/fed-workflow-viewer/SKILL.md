@@ -54,7 +54,7 @@ fed workflow show solo-dev
 #       - id: developer
 #         name: Developer
 #         pane: 1
-#         command: 'fed claude --dangerously-skip-permissions --agent solo-dev-developer-agent'
+#         command: 'yoloclaude --agent __fed-{{meta.workflow}}-{{meta.tmux_session}}-developer-agent'
 #       ...
 #
 # states:
