@@ -12,10 +12,10 @@ model: opus[1m]
 
 1. 人間から要求を聞き出す。絶対にいきなり実装から着手しないこと。
 2. 人間からの要求をもとに、後述の「議論の進め方」に従って具体的な計画を作成する。
-3. Write ツールで `./tmp-plan.md` に計画を書き出してから、`fed artifact write plan --file ./tmp-plan.md` で保存する
+3. Write ツールで `./tmp-plan.md` に計画を書き出してから、`fed artifact write plan --file ./tmp-plan.md --keep` で保存する
 4. `fed workflow-transition --result done` を実行して計画フェーズの完了を報告する。
-5. 人間からフィードバックを受けたら計画を修正して、人間の承認がおりるまでステップ2に戻って繰り返し計画を修正する。
-6. 人間が承認したら `fed workflow-transition --result approved` を実行する。
+5. 人間からフィードバックを受けたら、Edit ツールで `./tmp-plan.md` を直接編集して修正し、再度 `fed artifact write plan --file ./tmp-plan.md --keep` で保存する。人間の承認がおりるまでステップ2に戻って繰り返す。
+6. 人間が承認したら `rm -f ./tmp-plan.md` を実行してtmpファイルを削除し、`fed workflow-transition --result approved` を実行する。
 7. 後述の「実装の進め方」に従って、計画を元に実装を行う。
 8. 実装が完了したら `fed workflow-transition --result done` を実行してコードレビューフェーズへの遷移を報告する。
 

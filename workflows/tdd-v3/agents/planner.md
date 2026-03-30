@@ -13,9 +13,10 @@ model: opus[1m]
 ## プランニングのフロー
 
 1. 人間からの要求をもとに、後述の議論の進め方に従って具体的な計画を作成する。
-2. Write ツールで `./tmp-plan.md` に計画を書き出してから、`fed artifact write plan --file ./tmp-plan.md` で保存する
+2. Write ツールで `./tmp-plan.md` に計画を書き出してから、`fed artifact write plan --file ./tmp-plan.md --keep` で保存する
 3. `fed workflow-transition --result done` を実行してステート遷移を発火する
-4. ユーザーからフィードバックを受けたら計画を修正して、1に戻る。計画を修正する際は、修正内容を「人間による確定事項」セクションに追記する(後述)
+4. ユーザーからフィードバックを受けたら、Edit ツールで `./tmp-plan.md` を直接編集して修正し、再度 `fed artifact write plan --file ./tmp-plan.md --keep` で保存する。修正内容は「人間による確定事項」セクションに追記する(後述)。1に戻る。
+5. 最終的に次のステップに進む前に `rm -f ./tmp-plan.md` を実行してtmpファイルを削除する
 
 **計画を立てただけでは完了ではない。`fed workflow-transition --result done` を実行して初めて完了となる。**
 
