@@ -5,15 +5,34 @@
 // Workflow YAML schema
 // ---------------------------------------------------------------------------
 
-/** Pane definition for the human tmux window */
+/** Pane definition within a tmux window */
 export interface V2Pane {
   id: string;
+  name: string;
+  pane: number;
   command: string | null;
 }
 
-/** Human window definition */
+/** Layout split definition */
+export interface V2LayoutSplit {
+  source: number;
+  direction: "h" | "v";
+  percent: number;
+}
+
+/** Window definition (same structure as v1) */
 export interface V2Window {
+  name: string;
   panes: V2Pane[];
+  layout: {
+    splits: V2LayoutSplit[];
+    focus: number;
+  };
+}
+
+/** Legacy single-window shorthand (deprecated, for backward compatibility) */
+export interface V2LegacyWindow {
+  panes: { id: string; command: string | null }[];
 }
 
 /** Step result declaration (valid values for respond) */
@@ -67,7 +86,10 @@ export interface V2ParallelBranch {
 export interface V2Workflow {
   name: string;
   description?: string;
-  window?: V2Window;
+  focus?: string;
+  windows?: V2Window[];
+  /** @deprecated Use `windows` instead. Kept for backward compatibility. */
+  window?: V2LegacyWindow;
   steps: V2Step[];
 }
 

@@ -13,6 +13,7 @@ import {
 } from "../lib/workflow.js";
 import { syncCommands, syncAgents, linkAgents, cleanupStaleAgentLinks } from "./start.js";
 import { loadV2Workflow } from "../lib/engine-v2/workflow-loader.js";
+import type { V2Window } from "../lib/engine-v2/types.js";
 import { initV2State } from "../lib/engine-v2/state.js";
 import { stringify as stringifyYaml } from "yaml";
 
@@ -184,32 +185,19 @@ export async function workflowRunCommand(
   const engineScript = path.resolve(import.meta.dirname, "..", "lib", "engine-v2", "engine.js");
   tmux.sendKeys(`${tmuxSession}:engine.1`, `node ${engineScript} ${sessionPath}`);
 
-  // Create [human] window
-  tmux.newWindow(tmuxSession, "human", cwd);
-
-  // Set up human window panes from workflow definition
+  // Create user-defined windows from workflow definition
   const v2Workflow = loadV2Workflow(path.join(sessionPath, "workflow-v2.yaml"));
-  if (v2Workflow.window?.panes) {
-    const panes = v2Workflow.window.panes;
-    // First pane already exists as pane 1
-    for (let i = 1; i < panes.length; i++) {
-      tmux.splitWindow(`${tmuxSession}:human.1`, "h", 50, cwd);
-    }
-    // Send commands to panes
-    for (let i = 0; i < panes.length; i++) {
-      const pane = panes[i];
-      tmux.sendKeys(
-        `${tmuxSession}:human.${i + 1}`,
-        `export FED_SESSION=${tmuxSession} FED_SESSION_DIR=${sessionPath} FED_REPO_DIR=${cwd}`
-      );
-      if (pane.command) {
-        tmux.sendKeys(`${tmuxSession}:human.${i + 1}`, pane.command);
-      }
-    }
+  const windows = v2Workflow.windows ?? [];
+
+  for (const win of windows) {
+    console.log(`Creating window: ${win.name}...`);
+    tmux.newWindow(tmuxSession, win.name, cwd);
+    createV2WindowLayout(tmuxSession, win, cwd, sessionPath);
   }
 
-  // Focus human window
-  tmux.selectWindow(`${tmuxSession}:human`);
+  // Focus the specified window (default to first user window, or engine)
+  const focusWindow = v2Workflow.focus ?? windows[0]?.name ?? "engine";
+  tmux.selectWindow(`${tmuxSession}:${focusWindow}`);
 
   // Customize tmux status bar
   tmux.setOption(tmuxSession, "status-style", "bg=colour22,fg=white");
@@ -222,7 +210,11 @@ export async function workflowRunCommand(
   console.log("=== Engine v2 Ready ===");
   console.log("Windows:");
   console.log("  1. engine (workflow engine)");
-  console.log("  2. human (your workspace)");
+  for (let i = 0; i < windows.length; i++) {
+    const win = windows[i];
+    const paneIds = win.panes.map(p => p.id).join(", ");
+    console.log(`  ${i + 2}. ${win.name} (${paneIds})`);
+  }
   console.log("");
 
   if (noAttach) {
@@ -230,5 +222,35 @@ export async function workflowRunCommand(
   } else {
     console.log("Attaching to tmux session...");
     execSync(`tmux attach -t '${tmuxSession}'`, { stdio: "inherit" });
+  }
+}
+
+/**
+ * Create tmux pane layout for a v2 window definition.
+ * Same pattern as v1's createWindowLayout in start.ts.
+ */
+function createV2WindowLayout(
+  session: string,
+  win: V2Window,
+  cwd: string,
+  sessionPath: string,
+): void {
+  const w = `${session}:${win.name}`;
+
+  // Execute layout splits
+  for (const split of win.layout.splits) {
+    tmux.splitWindow(`${w}.${split.source}`, split.direction, split.percent, cwd);
+  }
+  tmux.selectPane(`${w}.${win.layout.focus}`);
+
+  // Send commands to panes
+  for (const pane of win.panes) {
+    tmux.sendKeys(
+      `${w}.${pane.pane}`,
+      `export FED_PANE=${pane.id} FED_WINDOW=${win.name} FED_SESSION=${session} FED_SESSION_DIR=${sessionPath} FED_REPO_DIR=${cwd}`
+    );
+    if (pane.command) {
+      tmux.sendKeys(`${w}.${pane.pane}`, pane.command);
+    }
   }
 }

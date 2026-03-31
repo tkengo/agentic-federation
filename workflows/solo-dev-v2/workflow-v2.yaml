@@ -1,0 +1,71 @@
+name: solo-dev-v2
+description: "ソロ開発用（v2エンジン）"
+
+focus: solo-dev
+
+windows:
+  - name: review
+    panes:
+      - id: terminal
+        name: Terminal
+        pane: 1
+        command: null
+      - id: editor
+        name: Editor
+        pane: 2
+        command: nvim
+    layout:
+      splits:
+        - { source: 1, direction: h, percent: 50 }
+      focus: 1
+
+  - name: solo-dev
+    panes:
+      - id: developer
+        name: Developer
+        pane: 1
+        command: "yoloclaude --agent __fed-solo-dev-v2-$FED_SESSION-planner"
+      - id: human
+        name: Human
+        pane: 2
+        command: "cd $FED_SESSION_DIR && nvim"
+    layout:
+      splits:
+        - { source: 1, direction: h, percent: 50 }
+      focus: 1
+
+steps:
+  # ============================================================
+  # Phase 1: Planning (human-interactive)
+  # ============================================================
+  - id: planning
+    type: human
+    agent: planner
+    description: "人間と対話しながら計画を策定・レビュー・承認まで"
+    prompt: "developerペインで計画を策定してください。人間が承認したらplannerが自動でワークフローを進めます。"
+
+  # ============================================================
+  # Phase 2: Implementation + Code Review Loop
+  # ============================================================
+  - id: impl_review_cycle
+    type: loop
+    max: 10
+    until: ${{ steps.code_review.result == "approved" }}
+    steps:
+      - id: implement
+        type: claude
+        agent: implementer
+        description: "計画に基づいて実装"
+
+      - id: code_review
+        type: human
+        prompt: "実装が完了しました。コードを確認してください。approved / feedback で応答してください。"
+        description: "人間によるコードレビュー"
+        result:
+          values: [approved, feedback]
+
+      - id: review_branch
+        type: branch
+        cases:
+          - if: ${{ steps.code_review.result == "approved" }}
+            break: true
