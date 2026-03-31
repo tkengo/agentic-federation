@@ -43,8 +43,10 @@ export function EngineApp({ emitter, initialSteps, workflowName }: EngineAppProp
   // Keyboard input
   useInput((input, key) => {
     if (viewMode === "steps") {
-      if (key.upArrow) moveSelection(-1);
-      if (key.downArrow) moveSelection(1);
+      const isUp = key.upArrow || input === "k" || (key.ctrl && input === "p");
+      const isDown = key.downArrow || input === "j" || (key.ctrl && input === "n");
+      if (isUp) moveSelection(-1);
+      if (isDown) moveSelection(1);
       if (input === " ") {
         // Open log view only for action steps
         const selected = steps[selectedIndex];
