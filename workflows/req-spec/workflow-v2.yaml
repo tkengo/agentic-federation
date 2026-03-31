@@ -1,0 +1,150 @@
+name: req-spec
+description: "要件定義ワークフロー: 要件分析 → 並列レビュー → 統合 → 要件定義書"
+
+focus: analyst
+
+windows:
+  - name: review
+    panes:
+      - id: terminal
+        name: Terminal
+        pane: 1
+        command: null
+      - id: editor
+        name: Editor
+        pane: 2
+        command: nvim
+    layout:
+      splits:
+        - { source: 1, direction: h, percent: 50 }
+      focus: 1
+
+  - name: analyst
+    panes:
+      - id: analyst
+        name: Analyst
+        pane: 1
+        command: "yoloclaude --agent __fed-req-spec-$FED_SESSION-analyst"
+      - id: human
+        name: Human
+        pane: 2
+        command: "cd $FED_SESSION_DIR && nvim"
+    layout:
+      splits:
+        - { source: 1, direction: h, percent: 50 }
+      focus: 1
+
+  - name: reviewers
+    panes:
+      - id: spec_revisor
+        name: "Spec Revisor"
+        pane: 1
+        command: yoloclaude
+      - id: tech_reviewer
+        name: "Tech Reviewer"
+        pane: 2
+        command: yolocodex
+      - id: ux_reviewer
+        name: "UX Reviewer"
+        pane: 3
+        command: yolocodex
+      - id: trend_researcher
+        name: "Trend Researcher"
+        pane: 4
+        command: yolocodex
+      - id: security_reviewer
+        name: "Security Reviewer"
+        pane: 5
+        command: yolocodex
+    layout:
+      splits:
+        - { source: 1, direction: v, percent: 50 }
+        - { source: 1, direction: h, percent: 66 }
+        - { source: 2, direction: h, percent: 50 }
+        - { source: 4, direction: h, percent: 50 }
+      focus: 1
+
+steps:
+  # ============================================================
+  # Main loop: restart from top on human_final_review feedback
+  # ============================================================
+  - id: main_cycle
+    type: loop
+    max: 10
+    until: ${{ steps.human_final_review.result == "approved" }}
+    steps:
+      # ============================================================
+      # Phase 1: Analysis (human-interactive)
+      # ============================================================
+      - id: analysis
+        type: human
+        agent: analyst
+        notify: false
+        description: "人間と対話しながら要件を分析・整理し、ドラフト仕様を作成"
+        prompt: "analystペインで要件分析を行ってください。人間がドラフトを承認したらanalystが自動でワークフローを進めます。"
+
+      # ============================================================
+      # Phase 2: Spec Review + Revision Loop
+      # ============================================================
+      - id: spec_review_cycle
+        type: loop
+        max: 5
+        until: ${{ steps.spec_revision.result == "approved" }}
+        steps:
+          # Parallel spec review by 4 reviewers
+          - id: spec_review
+            type: parallel
+            description: "4観点の並列仕様レビュー"
+            branches:
+              - id: tech_review
+                type: codex
+                agent: tech-reviewer
+                description: "技術実現性レビュー"
+              - id: ux_review
+                type: codex
+                agent: ux-reviewer
+                description: "UX・ユーザー観点レビュー"
+              - id: trend_review
+                type: codex
+                agent: trend-researcher
+                description: "トレンド・ベストプラクティス調査"
+              - id: security_review
+                type: codex
+                agent: security-reviewer
+                description: "セキュリティ・コンプライアンスレビュー"
+
+          # Spec revision (integrate review feedback)
+          - id: spec_revision
+            type: claude
+            agent: spec-revisor
+            description: "レビューフィードバックに基づく仕様修正・統合"
+            result:
+              values: [approved, request_changes, escalate]
+
+          # Branch on revision result
+          - id: revision_branch
+            type: branch
+            cases:
+              - if: ${{ steps.spec_revision.result == "approved" }}
+                break: true
+              - if: ${{ steps.spec_revision.result == "escalate" }}
+                steps:
+                  - id: review_escalation
+                    type: human
+                    prompt: "仕様レビューでエスカレーション。spec関連アーティファクトを確認してください。"
+
+      # ============================================================
+      # Phase 3: Human Final Review
+      # ============================================================
+      - id: human_final_review
+        type: human
+        prompt: "仕様レビューが完了しました。最終仕様を確認してください。approved / feedback で応答してください。"
+        description: "人間の最終承認"
+        result:
+          values: [approved, feedback]
+
+      - id: final_review_branch
+        type: branch
+        cases:
+          - if: ${{ steps.human_final_review.result == "approved" }}
+            break: true

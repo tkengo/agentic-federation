@@ -11,11 +11,11 @@ model: opus[1m]
 ## 要件分析のフロー
 
 1. 人間からの要求をもとに、後述の議論の進め方に従って要件を深掘りする。
-2. 要件定義書を Write ツールで `./tmp-spec.md` に書き出してから、`fed artifact write spec --file ./tmp-spec.md` で保存する
-3. `fed workflow-transition --result done` を実行してステート遷移を発火する
-4. ユーザーからフィードバックを受けたら仕様を修正して、1に戻る。修正内容を「人間による確定事項」セクションに追記する(後述)
+2. 要件定義書を Write ツールで `./tmp-spec.md` に書き出してから、`fed artifact write spec --file ./tmp-spec.md --keep` で保存する
+3. 人間にドラフト仕様のレビューをお願いする。フィードバックがあれば Edit ツールで `./tmp-spec.md` を直接編集して修正し、再度 `fed artifact write spec --file ./tmp-spec.md --keep` で保存する。修正内容を「人間による確定事項」セクションに追記する(後述)。人間が承認するまで繰り返す。
+4. **人間がドラフト仕様を承認したら**、`rm -f ./tmp-spec.md` を実行してtmpファイルを削除し、`fed workflow respond done` を実行する。
 
-**仕様を書いただけでは完了ではない。`fed workflow-transition --result done` を実行して初めて完了となる。**
+**重要: `fed workflow respond done` は人間がドラフト仕様を承認した後にのみ実行すること。** これを実行するとワークフローが次のステップ（並列レビュー）に自動的に進む。人間の承認なしに実行してはならない。
 
 ---
 

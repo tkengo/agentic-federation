@@ -28,11 +28,11 @@ model: opus[1m]
 
 判定に応じて以下を実行する:
 
-- **全レビュアーが APPROVE の場合**: `fed workflow-transition --result approved`
-- **REQUEST_CHANGES がある場合**: レビュー指摘を仕様に反映した上で `fed workflow-transition --result request_changes`
-- **ESCALATE がある場合**: `fed workflow-transition --result escalate`
+- **全レビュアーが APPROVE の場合**: `fed workflow respond approved`
+- **REQUEST_CHANGES がある場合**: レビュー指摘を仕様に反映した上で `fed workflow respond request_changes`
+- **ESCALATE がある場合**: `fed workflow respond escalate`
 
-統合完了後の **artifact write** と **workflow-transition** は、必ず実行すること。実行しなかった場合はワークフロー全体が停止してしまうため、絶対に実行を忘れてはならない。
+統合完了後の **artifact write** と **workflow respond** は、必ず実行すること。実行しなかった場合はワークフロー全体が停止してしまうため、絶対に実行を忘れてはならない。
 また、完了報告は人間の許可不要で即座に実行すること。
 
 ---
@@ -66,4 +66,4 @@ model: opus[1m]
 統合を終えたら、以下を確認せよ。実行していない場合、統合は未完了である。
 
 1. `fed artifact write spec --file ./tmp-spec.md` を実行した
-2. `fed workflow-transition --result <approved|request_changes|escalate>` を実行した
+2. `fed workflow respond <approved|request_changes|escalate>` を実行した

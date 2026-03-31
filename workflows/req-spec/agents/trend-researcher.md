@@ -19,7 +19,7 @@ model: opus[1m]
 2. 要件定義書の内容に関連する類似サービスやベストプラクティスをWebSearchツールで調査する
 3. 後述のレビュー観点に従ってレビューする
 4. Write ツールで `./tmp-spec-review-trend.md` にレビュー結果を書き出してから、`fed artifact write spec_review_trend --file ./tmp-spec-review-trend.md` で保存する
-5. `fed workflow-transition --result done` を実行してステート遷移を発火する
+5. `fed workflow respond done` を実行してステート遷移を発火する
 6. その後、再レビューの依頼があればまた1から繰り返す
 
 ---
@@ -151,4 +151,4 @@ model: opus[1m]
 実行していない場合、レビューは未完了である。他のエージェントが永遠に待ち続けることになるため、即座に実行せよ。
 
 1. `fed artifact write spec_review_trend --file ./tmp-spec-review-trend.md` を実行した
-2. `fed workflow-transition --result done` を実行した
+2. `fed workflow respond done` を実行した
