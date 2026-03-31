@@ -125,12 +125,12 @@ function AppInner() {
         .filter((d) => {
           const dirPath = path.join(workflowsDir, d);
           return fs.statSync(dirPath).isDirectory()
-            && fs.existsSync(path.join(dirPath, "workflow.yaml"));
+            && fs.existsSync(path.join(dirPath, "workflow-v2.yaml"));
         })
         .map((d) => {
           let description = "";
           try {
-            const content = fs.readFileSync(path.join(workflowsDir, d, "workflow.yaml"), "utf-8");
+            const content = fs.readFileSync(path.join(workflowsDir, d, "workflow-v2.yaml"), "utf-8");
             const match = content.match(/^description:\s*"?([^"\n]+)"?\s*$/m);
             if (match) description = match[1]!.trim();
           } catch { /* ignore */ }

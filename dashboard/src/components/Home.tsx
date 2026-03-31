@@ -6,7 +6,6 @@ import { SessionList } from "./SessionList.js";
 import { RestorableList } from "./RestorableList.js";
 import { ProtectedList } from "./ProtectedList.js";
 import { RepoList } from "./RepoList.js";
-import { WorkflowList } from "./WorkflowList.js";
 import { TabBar, type TabId } from "./TabBar.js";
 import { BOTTOM_PANEL_HEIGHT } from "./BottomPanel.js";
 import { HEADER_HEIGHT_FULL } from "./Header.js";
@@ -70,7 +69,7 @@ export function Home({
 
   // --- Dynamic tab order (hide empty optional tabs) ---
   const TAB_ORDER: TabId[] = React.useMemo(() => {
-    const tabs: TabId[] = ["sessions", "repos", "workflows"];
+    const tabs: TabId[] = ["sessions", "repos"];
     if (restorableSessions.length > 0) tabs.push("restorable");
     if (protectedWorktrees.length > 0) tabs.push("protected");
     return tabs;
@@ -465,7 +464,6 @@ export function Home({
         tabs={[
           { id: "sessions", label: "Sessions", count: sessions.length },
           { id: "repos", label: "Repositories", count: repos.length },
-          { id: "workflows", label: "Workflows", count: workflows.length },
           ...(restorableSessions.length > 0
             ? [{ id: "restorable" as TabId, label: "Restorable", count: restorableSessions.length }]
             : []),
@@ -493,15 +491,6 @@ export function Home({
           selectedIndex={!active ? undefined : repoSelectedIndex}
           maxVisible={maxVisible}
           scrollOffset={repoScrollOffset}
-        />
-      )}
-
-      {activeTab === "workflows" && (
-        <WorkflowList
-          workflows={workflows}
-          dimmed={!active}
-          maxVisible={maxVisible}
-          scrollOffset={0}
         />
       )}
 
