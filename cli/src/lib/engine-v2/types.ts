@@ -60,6 +60,9 @@ export interface V2Step {
   // Parallel fields
   branches?: V2ParallelBranch[];
 
+  // Notification control
+  notify?: boolean; // Suppress OS notification for human steps (default: true)
+
   // Control flow
   break?: boolean; // Exit parent loop
 }
@@ -80,6 +83,7 @@ export interface V2ParallelBranch {
   description?: string;
   prompt?: string;
   result?: V2ResultDeclaration;
+  notify?: boolean; // Suppress OS notification for human steps (default: true)
 }
 
 /** Top-level v2 workflow document */

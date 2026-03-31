@@ -41,6 +41,7 @@ steps:
   - id: planning
     type: human
     agent: planner
+    notify: false
     description: "人間と対話しながら計画を策定・レビュー・承認まで"
     prompt: "developerペインで計画を策定してください。人間が承認したらplannerが自動でワークフローを進めます。"
 

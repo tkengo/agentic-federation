@@ -35,7 +35,9 @@ export function runHumanStep(options: HumanRunnerOptions): Promise<string> {
     // Notify human (OS notification only, no console output — dashboard owns stdout)
     const desc = step.description ?? stepPath;
     const prompt = step.prompt ?? desc;
-    sendOsNotification("ACTION REQUIRED", prompt);
+    if (step.notify !== false) {
+      sendOsNotification("ACTION REQUIRED", prompt);
+    }
     logger.waiting(`Human respond needed: ${prompt}`);
 
     // Check if respond file already exists (race condition guard)
