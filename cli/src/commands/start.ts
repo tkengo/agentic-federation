@@ -710,7 +710,7 @@ export function syncAgents(
 }
 
 // --- Link composed agent files to ~/.claude/agents/ ---
-function linkAgents(composedFiles: string[]): void {
+export function linkAgents(composedFiles: string[]): void {
   if (composedFiles.length === 0) return;
   fs.mkdirSync(CLAUDE_AGENTS_DIR, { recursive: true });
 
@@ -724,7 +724,7 @@ function linkAgents(composedFiles: string[]): void {
 
 // --- Cleanup stale agent symlinks in ~/.claude/agents/ ---
 // Removes symlinks that are broken OR point to non-active sessions.
-function cleanupStaleAgentLinks(): void {
+export function cleanupStaleAgentLinks(): void {
   if (!fs.existsSync(CLAUDE_AGENTS_DIR)) return;
 
   // Collect active session directories from ~/.fed/active/ symlinks

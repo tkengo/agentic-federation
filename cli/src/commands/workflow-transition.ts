@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import { execSync } from "node:child_process";
 import { requireSessionDir } from "../lib/session.js";
 import { loadSessionWorkflow } from "../lib/workflow.js";
@@ -57,6 +59,12 @@ function getCurrentPaneId(sessionDir: string, paneOption?: string): string {
 
 export async function workflowTransitionCommand(result: string, pane?: string): Promise<void> {
   const sessionDir = requireSessionDir();
+
+  // In v2 engine sessions, state.json does not exist. Exit silently.
+  if (!fs.existsSync(path.join(sessionDir, "state.json"))) {
+    return;
+  }
+
   const paneId = getCurrentPaneId(sessionDir, pane);
 
   const outcome = await completeTransition(sessionDir, paneId, result);

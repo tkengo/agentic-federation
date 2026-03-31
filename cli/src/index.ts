@@ -50,6 +50,8 @@ import {
   repoScriptRunCommand,
 } from "./commands/repo-script.js";
 import { workflowTransitionCommand } from "./commands/workflow-transition.js";
+import { workflowRunCommand } from "./commands/workflow-run.js";
+import { workflowRespondCommand } from "./commands/workflow-respond.js";
 import { workflowGotoCommand } from "./commands/workflow-goto.js";
 import { restoreCommand } from "./commands/restore.js";
 import { convListCommand, convShowCommand } from "./commands/conv.js";
@@ -395,6 +397,22 @@ workflow
   .description("Validate a workflow definition")
   .action((name: string) => {
     workflowValidateCommand(name);
+  });
+
+workflow
+  .command("run <workflow-name> [repo] [branch]")
+  .description("Run a v2 engine-driven workflow")
+  .option("--no-attach", "Skip tmux attach after creation")
+  .action(async (workflowName: string, repo: string | undefined, branch: string | undefined, options: { attach?: boolean }) => {
+    await workflowRunCommand(workflowName, repo, branch, options.attach === false);
+  });
+
+workflow
+  .command("respond [value]")
+  .description("Report step result to the v2 engine")
+  .option("--step <path>", "Step path (auto-detected from FED_STEP)")
+  .action(async (value: string | undefined, options: { step?: string }) => {
+    await workflowRespondCommand(value, options.step);
   });
 
 // --- workflow-transition ---

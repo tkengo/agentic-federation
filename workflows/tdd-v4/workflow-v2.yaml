@@ -1,0 +1,216 @@
+name: tdd-v4
+description: "TDD development pipeline (engine v2)"
+
+window:
+  panes:
+    - id: planner
+      command: "yoloclaude --agent __fed-tdd-v4-$FED_SESSION-planner"
+    - id: escalation
+      command: "yoloclaude --agent __fed-tdd-v4-$FED_SESSION-escalation-handler"
+    - id: editor
+      command: "cd $FED_SESSION_DIR && nvim"
+
+steps:
+  # ============================================================
+  # Phase 1: Planning (human-interactive)
+  # ============================================================
+  # Planning + human review in one step.
+  # Planner and human interact in Claude Code CLI until human approves.
+  # Planner calls `fed workflow respond done` when human gives approval.
+  - id: planning
+    type: human
+    agent: planner
+    description: "人間と対話しながら計画を策定・レビュー・承認まで"
+    prompt: "plannerペインで計画を策定してください。人間が承認したらplannerが自動でワークフローを進めます。"
+
+  # ============================================================
+  # Phase 2: AI Plan Review
+  # ============================================================
+  - id: plan_review_cycle
+    type: loop
+    max: 5
+    until: ${{ steps.plan_review.result == "approved" }}
+    steps:
+      - id: plan_review
+        type: codex
+        agent: plan-reviewer
+        description: "計画レビュー（TDD適合性を含む）"
+        result:
+          values: [approved, request_changes, escalate]
+
+      - id: plan_review_branch
+        type: branch
+        cases:
+          - if: ${{ steps.plan_review.result == "approved" }}
+            break: true
+          - if: ${{ steps.plan_review.result == "escalate" }}
+            steps:
+              - id: plan_review_escalation
+                type: human
+                prompt: "計画レビューでエスカレーション。plan_reviewアーティファクトを確認してください。"
+          - else:
+            steps:
+              - id: plan_revision
+                type: claude
+                agent: plan-revisor
+                description: "レビューFBに基づく計画修正"
+
+  # ============================================================
+  # Phase 3: Test Implementation & Review
+  # ============================================================
+  - id: test_phase
+    type: loop
+    max: 5
+    until: ${{ steps.test_acceptance.result == "accepted" }}
+    steps:
+      - id: test_impl
+        type: claude
+        agent: test-implementer
+        description: "計画の擬似コードに基づくテスト実装"
+
+      - id: test_review_cycle
+        type: loop
+        max: 5
+        until: ${{ steps.test_review.result == "approved" }}
+        steps:
+          - id: test_review
+            type: codex
+            agent: test-reviewer
+            description: "テストコードの品質レビュー"
+            result:
+              values: [approved, request_changes, escalate]
+
+          - id: test_review_branch
+            type: branch
+            cases:
+              - if: ${{ steps.test_review.result == "approved" }}
+                break: true
+              - if: ${{ steps.test_review.result == "escalate" }}
+                steps:
+                  - id: test_review_escalation
+                    type: human
+                    prompt: "テストレビューでエスカレーション。"
+              - else:
+                steps:
+                  - id: test_revision
+                    type: claude
+                    agent: test-implementer
+                    description: "フィードバックに基づくテスト修正"
+
+      - id: test_acceptance
+        type: claude
+        agent: test-acceptor
+        description: "テスト受入判断"
+        result:
+          values: [accepted, rejected, escalate]
+
+      - id: test_acceptance_branch
+        type: branch
+        cases:
+          - if: ${{ steps.test_acceptance.result == "accepted" }}
+            break: true
+          - if: ${{ steps.test_acceptance.result == "escalate" }}
+            steps:
+              - id: test_acceptance_escalation
+                type: human
+                prompt: "テスト受入でエスカレーション。"
+
+  # ============================================================
+  # Phase 4: Implementation + Quality Check
+  # ============================================================
+  - id: implementation
+    type: claude
+    agent: implementer
+    description: "テストを満たす本実装"
+
+  # ============================================================
+  # Phase 5: Code Review
+  # ============================================================
+  - id: code_review_cycle
+    type: loop
+    max: 5
+    until: ${{ steps.code_review_integrate.result == "approved" }}
+    steps:
+      - id: code_review_parallel
+        type: parallel
+        description: "4観点の並列コードレビュー"
+        branches:
+          - id: review_diff
+            type: codex
+            agent: code-reviewer-diff
+            description: "差分特化レビュー"
+          - id: review_history
+            type: codex
+            agent: code-reviewer-history
+            description: "変更履歴・コミット観点レビュー"
+          - id: review_impact
+            type: claude
+            agent: code-reviewer-impact
+            description: "影響範囲・リスク観点レビュー"
+          - id: review_conventions
+            type: claude
+            agent: code-reviewer-conventions
+            description: "規約・一貫性観点レビュー"
+
+      - id: code_review_integrate
+        type: claude
+        agent: code-review-integrator
+        description: "レビュー結果の統合・判定"
+        result:
+          values: [approved, request_changes, escalate]
+
+      - id: code_review_branch
+        type: branch
+        cases:
+          - if: ${{ steps.code_review_integrate.result == "approved" }}
+            break: true
+          - if: ${{ steps.code_review_integrate.result == "escalate" }}
+            steps:
+              - id: code_review_escalation
+                type: human
+                prompt: "コードレビューでエスカレーション。"
+          - else:
+            steps:
+              - id: code_revision
+                type: claude
+                agent: implementer
+                description: "レビューFBに基づくコード修正"
+
+  # ============================================================
+  # Phase 6: Post-processing
+  # ============================================================
+  - id: post_processing
+    type: parallel
+    description: "知見抽出・エビデンス収集"
+    branches:
+      - id: learnings
+        type: claude
+        agent: learnings
+        description: "知見抽出"
+      - id: evidence
+        type: claude
+        agent: frontend-evidence
+        description: "エビデンス収集"
+
+  # ============================================================
+  # Phase 7: Human Final Review
+  # ============================================================
+  - id: final_review
+    type: human
+    prompt: "全工程が完了しました。成果物を確認してください。approved / fix で応答してください。"
+    description: "人間の最終承認"
+    result:
+      values: [approved, fix]
+
+  - id: final_review_branch
+    type: branch
+    cases:
+      - if: ${{ steps.final_review.result == "approved" }}
+        steps: []
+      - if: ${{ steps.final_review.result == "fix" }}
+        steps:
+          - id: fixing
+            type: human
+            agent: fixer
+            prompt: "人間とfixerが対話しながら修正。完了したら: fed workflow respond done"
+            description: "人間とfixerエージェントが対話しながらコード修正"
