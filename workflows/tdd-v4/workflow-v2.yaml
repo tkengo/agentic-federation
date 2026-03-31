@@ -1,28 +1,38 @@
 name: tdd-v4
 description: "TDD development pipeline (engine v2)"
 
-focus: human
+focus: plan
 
 windows:
-  - name: human
+  - name: review
+    panes:
+      - id: terminal
+        name: Terminal
+        pane: 1
+        command: null
+      - id: editor
+        name: Editor
+        pane: 2
+        command: nvim
+    layout:
+      splits:
+        - { source: 1, direction: h, percent: 50 }
+      focus: 1
+
+  - name: plan
     panes:
       - id: planner
         name: Planner
         pane: 1
         command: "yoloclaude --agent __fed-tdd-v4-$FED_SESSION-planner"
-      - id: escalation
-        name: Escalation Handler
+      - id: human
+        name: Human
         pane: 2
-        command: "yoloclaude --agent __fed-tdd-v4-$FED_SESSION-escalation-handler"
-      - id: editor
-        name: Editor
-        pane: 3
         command: "cd $FED_SESSION_DIR && nvim"
     layout:
       splits:
-        - { source: 1, direction: h, percent: 66 }
-        - { source: 2, direction: h, percent: 50 }
-      focus: 3
+        - { source: 1, direction: h, percent: 50 }
+      focus: 1
 
 steps:
   # ============================================================
