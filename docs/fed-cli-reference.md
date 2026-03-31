@@ -46,7 +46,7 @@ For detailed options and usage of each command, see [fed-cli-detailed-reference.
 
 | Subcommand | Description |
 |---|---|
-| `fed session start <workflow> [repo] [branch]` | Start a development session with a workflow |
+| `fed session start <workflow> [repo] [branch]` | Start a v2 engine-driven development session |
 | `fed session stop [session-name]` | Stop a session |
 | `fed session list` | List sessions |
 | `fed session show [session-name]` | Show detailed session information |
