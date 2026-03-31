@@ -2,9 +2,11 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { execSync } from "node:child_process";
-import { REPOS_DIR, DEFAULT_BASE_PATH } from "../lib/paths.js";
+import { REPOS_DIR, SESSIONS_DIR, ARCHIVE_DIR, DEFAULT_BASE_PATH } from "../lib/paths.js";
 import { loadRepoConfig, listRepoConfigs, saveNewRepoConfig, parseCloneUrl } from "../lib/repo.js";
-import type { NewRepoConfig } from "../lib/types.js";
+import { findActiveSessionsByRepo } from "../lib/session.js";
+import { confirm } from "../lib/prompt.js";
+import type { NewRepoConfig, MetaJson } from "../lib/types.js";
 
 export function repoAddCommand(cloneUrl: string, basePath?: string, baseBranch?: string): void {
   const repoName = parseCloneUrl(cloneUrl);
@@ -182,4 +184,146 @@ export function repoEditCommand(name: string): void {
   }
   const editor = process.env.EDITOR || "vim";
   execSync(`${editor} ${configPath}`, { stdio: "inherit" });
+}
+
+export async function repoDeleteCommand(name: string, force: boolean): Promise<void> {
+  // Check config exists
+  const configPath = path.join(REPOS_DIR, `${name}.json`);
+  if (!fs.existsSync(configPath)) {
+    console.error(`Repository '${name}' not found.`);
+    process.exit(1);
+  }
+
+  // Check active sessions
+  const activeSessions = findActiveSessionsByRepo(name);
+  if (activeSessions.length > 0) {
+    console.error(`Cannot delete '${name}': ${activeSessions.length} active session(s):`);
+    for (const s of activeSessions) {
+      console.error(`  - ${s.tmux_session} (${s.branch})`);
+    }
+    process.exit(1);
+  }
+
+  // Load config to get workspace path
+  const config = loadRepoConfig(name);
+
+  // Confirmation prompt
+  if (!force) {
+    console.log("This will delete:");
+    console.log(`  Config:    ${configPath}`);
+    if (fs.existsSync(config.worktree_base)) {
+      console.log(`  Workspace: ${config.worktree_base}`);
+    }
+    const ok = await confirm(`Delete repository '${name}'?`);
+    if (!ok) {
+      console.log("Aborted.");
+      process.exit(0);
+    }
+  }
+
+  // Delete config file
+  fs.unlinkSync(configPath);
+  console.log(`Deleted: ${configPath}`);
+
+  // Delete workspace directory
+  if (fs.existsSync(config.worktree_base)) {
+    fs.rmSync(config.worktree_base, { recursive: true, force: true });
+    console.log(`Deleted: ${config.worktree_base}`);
+  }
+
+  console.log(`Repository '${name}' deleted.`);
+}
+
+// Update meta.json files and rename a repo subdirectory under parentDir
+function renameDirAndUpdateMeta(
+  parentDir: string,
+  oldName: string,
+  newName: string,
+  oldWorkspace: string,
+  newWorkspace: string,
+): void {
+  const oldDir = path.join(parentDir, oldName);
+  const newDir = path.join(parentDir, newName);
+
+  if (!fs.existsSync(oldDir)) return;
+
+  // Update meta.json in each session subdirectory
+  for (const entry of fs.readdirSync(oldDir)) {
+    const metaPath = path.join(oldDir, entry, "meta.json");
+    if (!fs.existsSync(metaPath)) continue;
+
+    const meta = JSON.parse(fs.readFileSync(metaPath, "utf-8")) as MetaJson;
+    meta.repo = newName;
+    if (meta.session_dir) {
+      meta.session_dir = meta.session_dir.replace(
+        path.join(parentDir, oldName),
+        path.join(parentDir, newName),
+      );
+    }
+    if (meta.worktree) {
+      meta.worktree = meta.worktree.replace(oldWorkspace, newWorkspace);
+    }
+    fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2) + "\n");
+  }
+
+  // Rename the directory (merge if newDir already exists)
+  if (fs.existsSync(newDir)) {
+    for (const entry of fs.readdirSync(oldDir)) {
+      fs.renameSync(path.join(oldDir, entry), path.join(newDir, entry));
+    }
+    fs.rmdirSync(oldDir);
+  } else {
+    fs.renameSync(oldDir, newDir);
+  }
+}
+
+export function repoRenameCommand(oldName: string, newName: string): void {
+  // Validate old config exists
+  const oldConfigPath = path.join(REPOS_DIR, `${oldName}.json`);
+  if (!fs.existsSync(oldConfigPath)) {
+    console.error(`Repository '${oldName}' not found.`);
+    process.exit(1);
+  }
+
+  // Validate new name doesn't conflict
+  const newConfigPath = path.join(REPOS_DIR, `${newName}.json`);
+  if (fs.existsSync(newConfigPath)) {
+    console.error(`Repository '${newName}' already exists.`);
+    process.exit(1);
+  }
+
+  // Check active sessions
+  const activeSessions = findActiveSessionsByRepo(oldName);
+  if (activeSessions.length > 0) {
+    console.error(`Cannot rename '${oldName}': ${activeSessions.length} active session(s):`);
+    for (const s of activeSessions) {
+      console.error(`  - ${s.tmux_session} (${s.branch})`);
+    }
+    process.exit(1);
+  }
+
+  // Load raw config
+  const raw = JSON.parse(fs.readFileSync(oldConfigPath, "utf-8")) as NewRepoConfig;
+  const oldWorkspace = path.join(raw.base_path, `${oldName}-workspace`);
+  const newWorkspace = path.join(raw.base_path, `${newName}-workspace`);
+
+  // Rename config file + update repo_name
+  raw.repo_name = newName;
+  fs.writeFileSync(newConfigPath, JSON.stringify(raw, null, 2) + "\n");
+  fs.unlinkSync(oldConfigPath);
+  console.log(`Renamed config: ${oldName}.json -> ${newName}.json`);
+
+  // Rename workspace directory
+  if (fs.existsSync(oldWorkspace)) {
+    fs.renameSync(oldWorkspace, newWorkspace);
+    console.log(`Renamed workspace: ${oldWorkspace} -> ${newWorkspace}`);
+  }
+
+  // Rename session directory + update meta.json files
+  renameDirAndUpdateMeta(SESSIONS_DIR, oldName, newName, oldWorkspace, newWorkspace);
+
+  // Rename archive directory + update meta.json files
+  renameDirAndUpdateMeta(ARCHIVE_DIR, oldName, newName, oldWorkspace, newWorkspace);
+
+  console.log(`Repository renamed: ${oldName} -> ${newName}`);
 }

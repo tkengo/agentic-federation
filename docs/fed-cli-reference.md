@@ -39,6 +39,8 @@ For detailed options and usage of each command, see [fed-cli-detailed-reference.
 | `fed repo list` | List all repository definitions |
 | `fed repo show <name>` | Show repository definition details |
 | `fed repo edit <name>` | Edit repository definition with `$EDITOR` |
+| `fed repo rename <old-name> <new-name>` | Rename a repository (config, workspace, sessions, archives) |
+| `fed repo delete <name>` | Delete a repository and its workspace |
 
 ### `fed session`
 

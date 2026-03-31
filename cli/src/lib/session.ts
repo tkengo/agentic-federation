@@ -119,6 +119,21 @@ export function requireSessionDir(): string {
   return sessionDir;
 }
 
+// Find all active sessions using a given repo
+export function findActiveSessionsByRepo(repoName: string): MetaJson[] {
+  const sessions: MetaJson[] = [];
+  if (!fs.existsSync(ACTIVE_DIR)) return sessions;
+  for (const entry of fs.readdirSync(ACTIVE_DIR)) {
+    const sessionDir = resolveSession(entry);
+    if (!sessionDir) continue;
+    const meta = readMeta(sessionDir);
+    if (meta?.repo === repoName) {
+      sessions.push(meta);
+    }
+  }
+  return sessions;
+}
+
 // Read meta.json from a session directory
 // Normalizes old format (mode) to new format (workflow)
 export function readMeta(sessionPath: string): MetaJson | null {

@@ -12,6 +12,8 @@ import {
   repoListCommand,
   repoShowCommand,
   repoEditCommand,
+  repoDeleteCommand,
+  repoRenameCommand,
 } from "./commands/repo.js";
 import { setSessionOverride } from "./lib/session.js";
 import { startCommand } from "./commands/start.js";
@@ -126,6 +128,21 @@ repo
   .description("Edit repository definition with $EDITOR")
   .action((name: string) => {
     repoEditCommand(name);
+  });
+
+repo
+  .command("rename <old-name> <new-name>")
+  .description("Rename a repository")
+  .action((oldName: string, newName: string) => {
+    repoRenameCommand(oldName, newName);
+  });
+
+repo
+  .command("delete <name>")
+  .description("Delete a repository and its workspace")
+  .option("--force", "Skip confirmation prompt")
+  .action(async (name: string, opts: { force?: boolean }) => {
+    await repoDeleteCommand(name, opts.force ?? false);
   });
 
 // --- session ---
