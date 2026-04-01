@@ -40,8 +40,8 @@ export function statusDisplayWidth(status: string, currentStep?: string | null, 
 
   const waitingWidth = waiting ? 4 : 0; // " [!]" = 4 chars
 
-  // "▶ label(elapsed) [!]" → mark(1) + space(1) + label + elapsed + waiting
-  return 2 + label.length + elapsed.length + waitingWidth;
+  // "▶ label(elapsed) [!]" → mark(1) + space(1) + label + elapsed + waiting + buffer(2)
+  return 2 + label.length + elapsed.length + waitingWidth + 2;
 }
 
 export function StatusBadge({ status, currentStep, stale, stateMtimeMs }: StatusBadgeProps) {
