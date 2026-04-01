@@ -17,7 +17,10 @@ if (!chalk.level) {
 // Enter alternate screen buffer for fullscreen mode
 process.stdout.write("\x1b[?1049h");
 
-const instance = render(<App />, { exitOnCtrlC: false });
+const instance = render(<App />, {
+  exitOnCtrlC: false,
+  incrementalRendering: true,
+});
 instance.waitUntilExit().then(() => {
   // Leave alternate screen buffer and clear the terminal
   process.stdout.write("\x1b[?1049l\x1b[2J\x1b[H");
