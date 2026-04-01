@@ -29,8 +29,8 @@ export function SessionList({ sessions, dimmed, selectedIndex, maxVisible, scrol
   const colWidths = useMemo(() => {
     const staleExtra = anyStale ? 6 : 0;
     return {
-      repoBranch: Math.max(11, ...sessions.map((s) =>
-        s.meta.repo ? `${s.meta.repo}/${s.meta.branch}`.length : s.name.length
+      repo: Math.max(4, ...sessions.map((s) =>
+        s.meta.repo ? s.meta.repo.length : s.name.length
       )),
       session: Math.max(7, ...sessions.map((s) => s.name.length)),
       workflow: Math.max(8, ...sessions.map((s) => (s.workflow ?? "solo").length)),
@@ -53,7 +53,7 @@ export function SessionList({ sessions, dimmed, selectedIndex, maxVisible, scrol
       {/* Column header */}
       <Box>
         <Text dimColor>
-          {`    ${"REPO/BRANCH".padEnd(colWidths.repoBranch)}  ${"SESSION".padEnd(colWidths.session)}  ${"WORKFLOW".padEnd(colWidths.workflow)}  ${"STATUS".padEnd(colWidths.status + 2)}       AGE`}
+          {`    ${"REPO".padEnd(colWidths.repo)}  ${"SESSION".padEnd(colWidths.session)}  ${"WORKFLOW".padEnd(colWidths.workflow)}  ${"STATUS".padEnd(colWidths.status + 2)}       AGE`}
         </Text>
       </Box>
 
