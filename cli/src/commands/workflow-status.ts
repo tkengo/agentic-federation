@@ -9,6 +9,7 @@ import { loadV2Workflow } from "../lib/engine-v2/workflow-loader.js";
 import { buildStepTree } from "../lib/engine-v2/dashboard/build-step-tree.js";
 import type { StepNode, StepStatus } from "../lib/engine-v2/dashboard/types.js";
 import type { V2State } from "../lib/engine-v2/types.js";
+import { color } from "../lib/engine-v2/dashboard/renderer.js";
 
 // Status icons for step display
 const STATUS_ICONS: Record<StepStatus, string> = {
@@ -18,6 +19,16 @@ const STATUS_ICONS: Record<StepStatus, string> = {
   failed: "✗",
   skipped: "─",
   not_started: "◌",
+};
+
+// Color function per status
+const STATUS_COLORS: Record<StepStatus, (s: string) => string> = {
+  completed: color.green,
+  running: color.boldCyan,
+  waiting_human: color.yellow,
+  failed: color.red,
+  skipped: color.dim,
+  not_started: color.dim,
 };
 
 // Apply state results and current_step to the step tree nodes
@@ -53,13 +64,12 @@ function printStatus(workflowName: string, state: V2State, nodes: StepNode[]): v
 
   for (const node of nodes) {
     const indent = "  ".repeat(node.depth + 1);
-    const icon = STATUS_ICONS[node.status];
+    const icon = STATUS_COLORS[node.status](STATUS_ICONS[node.status]);
     const typeBadge = `[${node.stepType}]`;
-    const current = state.current_step === node.stepPath ? "  ← current" : "";
     const conditionLabel = node.condition ? ` (${node.condition})` : "";
     const resultLabel = node.result ? ` → ${node.result}` : "";
 
-    console.log(`${indent}${icon} ${node.label.padEnd(30 - node.depth * 2)} ${typeBadge}${conditionLabel}${resultLabel}${current}`);
+    console.log(`${indent}${icon} ${node.label.padEnd(30 - node.depth * 2)} ${typeBadge}${conditionLabel}${resultLabel}`);
   }
 }
 
