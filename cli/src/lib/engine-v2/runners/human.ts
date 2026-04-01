@@ -12,6 +12,26 @@ export interface HumanRunnerOptions {
   logger: EngineLogger;
 }
 
+function setWaitingHuman(sessionDir: string, reason: string): void {
+  const filePath = path.join(sessionDir, "waiting_human.json");
+  const data = {
+    waiting: true,
+    reason,
+    ts: new Date().toISOString(),
+  };
+  fs.writeFileSync(filePath, JSON.stringify(data, null, 2) + "\n");
+}
+
+function clearWaitingHuman(sessionDir: string): void {
+  const filePath = path.join(sessionDir, "waiting_human.json");
+  const data = {
+    waiting: false,
+    reason: null,
+    ts: new Date().toISOString(),
+  };
+  fs.writeFileSync(filePath, JSON.stringify(data, null, 2) + "\n");
+}
+
 /**
  * Wait for human to respond via `fed workflow respond`.
  * Watches for a .respond file in <sessionDir>/respond/.
@@ -32,9 +52,12 @@ export function runHumanStep(options: HumanRunnerOptions): Promise<string> {
       fs.unlinkSync(respondFile);
     }
 
-    // Notify human (OS notification only, no console output — dashboard owns stdout)
+    // Set waiting_human.json for dashboard [!] indicator
     const desc = step.description ?? stepPath;
     const prompt = step.prompt ?? desc;
+    setWaitingHuman(sessionDir, prompt);
+
+    // Notify human (OS notification only, no console output — dashboard owns stdout)
     if (step.notify !== false) {
       sendOsNotification("ACTION REQUIRED", prompt);
     }
@@ -43,6 +66,7 @@ export function runHumanStep(options: HumanRunnerOptions): Promise<string> {
     // Check if respond file already exists (race condition guard)
     if (fs.existsSync(respondFile)) {
       const value = fs.readFileSync(respondFile, "utf-8").trim();
+      clearWaitingHuman(sessionDir);
       resolve(value);
       return;
     }
@@ -55,6 +79,7 @@ export function runHumanStep(options: HumanRunnerOptions): Promise<string> {
 
     const cleanup = () => {
       watcher.close().catch(() => {});
+      clearWaitingHuman(sessionDir);
     };
 
     watcher.on("add", (filePath: string) => {

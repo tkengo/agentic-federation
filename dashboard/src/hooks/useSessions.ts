@@ -27,6 +27,22 @@ function readState(sessionDir: string): StateJson | null {
   }
 }
 
+interface V2StateCompat {
+  status: string;
+  current_step: string | null;
+}
+
+function readV2State(sessionDir: string): V2StateCompat | null {
+  try {
+    const data = JSON.parse(
+      fs.readFileSync(path.join(sessionDir, "state-v2.json"), "utf-8")
+    ) as V2StateCompat;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
 function resolveSession(name: string): string | null {
   const linkPath = path.join(ACTIVE_DIR, name);
   try {
@@ -60,8 +76,11 @@ function readDescription(sessionDir: string): string | undefined {
 
 function readStatusConfig(sessionDir: string): Record<string, StatusConfig> | undefined {
   try {
-    const wfPath = path.join(sessionDir, "workflow.yaml");
-    if (!fs.existsSync(wfPath)) return undefined;
+    let wfPath = path.join(sessionDir, "workflow.yaml");
+    if (!fs.existsSync(wfPath)) {
+      wfPath = path.join(sessionDir, "workflow-v2.yaml");
+      if (!fs.existsSync(wfPath)) return undefined;
+    }
     const raw = fs.readFileSync(wfPath, "utf-8");
     const wf = parseYaml(raw) as { states?: Record<string, { mark?: string; color?: string }> };
     if (!wf.states) return undefined;
@@ -77,6 +96,14 @@ function readStatusConfig(sessionDir: string): Record<string, StatusConfig> | un
   }
 }
 
+// Default status config for v2 engine statuses
+const V2_DEFAULT_STATUS_CONFIG: Record<string, StatusConfig> = {
+  running: { mark: "▶", color: "cyan" },
+  waiting_human: { mark: "◌", color: "yellow" },
+  completed: { mark: "✓", color: "green" },
+  failed: { mark: "✗", color: "red" },
+};
+
 function loadSessions(): SessionData[] {
   if (!fs.existsSync(ACTIVE_DIR)) return [];
 
@@ -91,20 +118,32 @@ function loadSessions(): SessionData[] {
     if (!meta) continue;
 
     const state = readState(sessionDir);
+    const v2State = readV2State(sessionDir);
 
-    // Read state.json mtime for staleness detection
+    // Determine status: v1 state.json takes precedence, then v2 state-v2.json
+    const statusValue = state?.status ?? v2State?.status ?? "";
+
+    // Read state file mtime for staleness detection
     // Skip staleness tracking when status is empty (stateless workflows)
     let stateMtimeMs: number | undefined;
-    const statusValue = state?.status ?? "";
     if (statusValue) {
+      // Use v2 state file when v2 session, otherwise v1
+      const stateFile = v2State
+        ? path.join(sessionDir, "state-v2.json")
+        : path.join(sessionDir, "state.json");
       try {
-        const stateFile = path.join(sessionDir, "state.json");
         const stat = fs.statSync(stateFile);
         stateMtimeMs = stat.mtimeMs;
       } catch {
-        // state.json may not exist
+        // state file may not exist
       }
     }
+
+    // For v2 sessions, merge default v2 status config with any workflow-defined config
+    const workflowStatusConfig = readStatusConfig(sessionDir);
+    const statusConfigMap = v2State
+      ? { ...V2_DEFAULT_STATUS_CONFIG, ...workflowStatusConfig }
+      : workflowStatusConfig;
 
     sessions.push({
       name: entry,
@@ -117,7 +156,7 @@ function loadSessions(): SessionData[] {
       waitingHuman: readWaitingHuman(sessionDir),
       description: readDescription(sessionDir),
       stateMtimeMs,
-      statusConfigMap: readStatusConfig(sessionDir),
+      statusConfigMap,
     });
   }
 
