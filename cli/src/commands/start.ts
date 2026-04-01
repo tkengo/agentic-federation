@@ -205,8 +205,7 @@ export async function startCommand(
   tmux.sendKeys(`${tmuxSession}:engine.1`, `export FED_SESSION=${tmuxSession} FED_SESSION_DIR=${sessionPath}`);
 
   // Start engine process in the engine pane
-  const engineScript = path.resolve(import.meta.dirname, "..", "lib", "engine-v2", "engine.js");
-  tmux.sendKeys(`${tmuxSession}:engine.1`, `node ${engineScript} ${sessionPath}`);
+  tmux.sendKeys(`${tmuxSession}:engine.1`, `fed workflow engine ${tmuxSession}`);
 
   // Create user-defined windows from workflow definition
   const v2Workflow = loadV2Workflow(path.join(sessionPath, "workflow-v2.yaml"));
