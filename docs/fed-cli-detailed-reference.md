@@ -142,20 +142,6 @@ Archive a specific session.
 fed session archive <session-name>
 ```
 
-### `fed session restore`
-
-Restore a session after tmux loss.
-
-```
-fed session restore [options] <session-name>
-```
-
-| Option | Description |
-|---|---|
-| `--no-attach` | Skip tmux attach after restore |
-
----
-
 ## `fed state`
 
 Read/update workflow state (`state.json`).

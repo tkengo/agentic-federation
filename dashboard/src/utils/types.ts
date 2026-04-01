@@ -53,16 +53,6 @@ export interface RepoInfo {
   tmuxAlive: boolean;
 }
 
-// Restorable session data (dead tmux session with active symlink)
-export interface RestorableSessionData {
-  name: string;
-  sessionDir: string;
-  meta: MetaJson;
-  status: string;
-  workflow?: string;
-  age: string;
-}
-
 // Protected worktree data for dashboard display
 export interface ProtectedWorktreeData {
   repo: string;
@@ -78,9 +68,7 @@ export type FooterOverride =
   | { type: "confirmKill"; name: string }
   | { type: "confirmScript"; name: string }
   | { type: "confirmDeleteSession"; name: string }
-  | { type: "confirmRestore"; name: string }
   | { type: "confirmUnprotect"; name: string }
-  | { type: "restoring" }
   | { type: "creating" };
 
 // Workflow info for dashboard display

@@ -3,7 +3,6 @@ import { Box, useInput } from "ink";
 import fs from "node:fs";
 import { execSync, spawn } from "node:child_process";
 import { SessionList } from "./SessionList.js";
-import { RestorableList } from "./RestorableList.js";
 import { ProtectedList } from "./ProtectedList.js";
 import { RepoList } from "./RepoList.js";
 import { TabBar, type TabId } from "./TabBar.js";
@@ -13,14 +12,13 @@ import { computeScrollOffset } from "../utils/scroll.js";
 import { useKeyboard } from "../hooks/useKeyboard.js";
 import { useFooter } from "../contexts/FooterContext.js";
 import { switchToTmuxSession, createOrAttachRepoSession } from "../utils/tmux.js";
-import type { SessionData, RestorableSessionData, ProtectedWorktreeData, RepoInfo, WorkflowInfo } from "../utils/types.js";
+import type { SessionData, ProtectedWorktreeData, RepoInfo, WorkflowInfo } from "../utils/types.js";
 
 const TAB_BAR_HEIGHT = 2;
 const FOOTER_HEIGHT = 2;
 
 interface HomeProps {
   sessions: SessionData[];
-  restorableSessions: RestorableSessionData[];
   protectedWorktrees: ProtectedWorktreeData[];
   repos: RepoInfo[];
   workflows: WorkflowInfo[];
@@ -29,7 +27,6 @@ interface HomeProps {
   columns: number;
   rows: number;
   refresh: () => void;
-  refreshRestorable: () => void;
   refreshProtected: () => void;
   refreshRepos: () => void;
   onNavigate: (target: "create" | "palette" | "add-repo") => void;
@@ -44,7 +41,6 @@ interface HomeProps {
 
 export function Home({
   sessions,
-  restorableSessions,
   protectedWorktrees,
   repos,
   workflows,
@@ -53,7 +49,6 @@ export function Home({
   columns,
   rows,
   refresh,
-  refreshRestorable,
   refreshProtected,
   refreshRepos,
   onNavigate,
@@ -70,10 +65,9 @@ export function Home({
   // --- Dynamic tab order (hide empty optional tabs) ---
   const TAB_ORDER: TabId[] = React.useMemo(() => {
     const tabs: TabId[] = ["sessions", "repos"];
-    if (restorableSessions.length > 0) tabs.push("restorable");
     if (protectedWorktrees.length > 0) tabs.push("protected");
     return tabs;
-  }, [restorableSessions.length, protectedWorktrees.length]);
+  }, [protectedWorktrees.length]);
 
   // --- Tab state ---
   const [activeTab, setActiveTab] = useState<TabId>("sessions");
@@ -88,17 +82,14 @@ export function Home({
   // Per-tab selection indices
   const [sessionSelectedIndex, setSessionSelectedIndex] = useState(0);
   const [repoSelectedIndex, setRepoSelectedIndex] = useState(0);
-  const [restorableSelectedIndex, setRestorableSelectedIndex] = useState(0);
   const [protectedSelectedIndex, setProtectedSelectedIndex] = useState(0);
 
   // Confirmation / async states
   const [confirmingKill, setConfirmingKill] = useState(false);
   const [confirmingClean, setConfirmingClean] = useState(false);
-  const [confirmingRestore, setConfirmingRestore] = useState(false);
   const [confirmingDeleteSession, setConfirmingDeleteSession] = useState(false);
   const [confirmingUnprotect, setConfirmingUnprotect] = useState(false);
   const [cleaning, setCleaning] = useState(false);
-  const [restoring, setRestoring] = useState(false);
 
   // --- Tab switching ---
   const goNextTab = useCallback(() => {
@@ -121,7 +112,6 @@ export function Home({
   // --- Per-tab max indices ---
   const sessionMaxIndex = Math.max(0, sessions.length - 1);
   const repoMaxIndex = Math.max(0, repos.length - 1);
-  const restorableMaxIndex = Math.max(0, restorableSessions.length - 1);
   const protectedMaxIndex = Math.max(0, protectedWorktrees.length - 1);
 
   // Clamp indices
@@ -130,9 +120,6 @@ export function Home({
   }
   if (repoSelectedIndex > repoMaxIndex && repoMaxIndex >= 0) {
     setRepoSelectedIndex(repoMaxIndex);
-  }
-  if (restorableSelectedIndex > restorableMaxIndex && restorableMaxIndex >= 0) {
-    setRestorableSelectedIndex(restorableMaxIndex);
   }
   if (protectedSelectedIndex > protectedMaxIndex && protectedMaxIndex >= 0) {
     setProtectedSelectedIndex(protectedMaxIndex);
@@ -155,11 +142,6 @@ export function Home({
       ? sessions[sessionSelectedIndex]
       : undefined;
 
-  const selectedRestorable: RestorableSessionData | undefined =
-    activeTab === "restorable" && restorableSelectedIndex < restorableSessions.length
-      ? restorableSessions[restorableSelectedIndex]
-      : undefined;
-
   const selectedProtected: ProtectedWorktreeData | undefined =
     activeTab === "protected" && protectedSelectedIndex < protectedWorktrees.length
       ? protectedWorktrees[protectedSelectedIndex]
@@ -168,7 +150,6 @@ export function Home({
   // --- Scroll offsets ---
   const sessionScrollOffset = computeScrollOffset(sessionSelectedIndex, sessions.length, maxVisible - 1);
   const repoScrollOffset = computeScrollOffset(repoSelectedIndex, repos.length, maxVisible);
-  const restorableScrollOffset = computeScrollOffset(restorableSelectedIndex, restorableSessions.length, maxVisible - 1);
   const protectedScrollOffset = computeScrollOffset(protectedSelectedIndex, protectedWorktrees.length, maxVisible - 1);
 
   // --- Report selected session to parent ---
@@ -178,14 +159,10 @@ export function Home({
 
   // --- Footer overrides ---
   useEffect(() => {
-    if (restoring) {
-      setOverride({ type: "restoring" });
-    } else if (cleaning) {
+    if (cleaning) {
       setOverride({ type: "cleaning" });
     } else if (confirmingUnprotect && selectedProtected) {
       setOverride({ type: "confirmUnprotect", name: `${selectedProtected.repo}/${selectedProtected.branch}` });
-    } else if (confirmingRestore && selectedRestorable) {
-      setOverride({ type: "confirmRestore", name: selectedRestorable.name });
     } else if (confirmingClean) {
       setOverride({ type: "confirmClean", count: cleanableCount });
     } else if (confirmingKill && selectedSession) {
@@ -193,7 +170,7 @@ export function Home({
     } else {
       clearOverride();
     }
-  }, [restoring, cleaning, confirmingUnprotect, confirmingRestore, confirmingClean, confirmingKill, cleanableCount, selectedSession, selectedRestorable, selectedProtected, setOverride, clearOverride]);
+  }, [cleaning, confirmingUnprotect, confirmingClean, confirmingKill, cleanableCount, selectedSession, selectedProtected, setOverride, clearOverride]);
 
   useEffect(() => {
     return () => { clearOverride(); };
@@ -232,33 +209,6 @@ export function Home({
       showMessage(`Failed to archive ${selectedSession.name}`);
     }
   }, [selectedSession, showMessage, refresh]);
-
-  const restoreSession = useCallback(() => {
-    if (!selectedRestorable) return;
-    const name = selectedRestorable.name;
-    setRestoring(true);
-    const proc = spawn("fed", ["session", "restore", name, "--no-attach"], {
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-    let stderr = "";
-    proc.stderr?.on("data", (data: Buffer) => { stderr += data.toString(); });
-    proc.on("close", (code) => {
-      setRestoring(false);
-      clearOverride();
-      if (code === 0) {
-        showMessage(`Restored: ${name}`);
-        refresh();
-        refreshRestorable();
-      } else {
-        showError(stderr.trim() || `Failed to restore ${name}`);
-      }
-    });
-    proc.on("error", () => {
-      setRestoring(false);
-      clearOverride();
-      showError(`Failed to restore ${name}`);
-    });
-  }, [selectedRestorable, refresh, refreshRestorable, showMessage, showError, clearOverride]);
 
   const runClean = useCallback((force?: boolean) => {
     setCleaning(true);
@@ -337,8 +287,6 @@ export function Home({
           setSessionSelectedIndex((i) => (i <= 0 ? sessionMaxIndex : i - 1));
         } else if (activeTab === "repos") {
           setRepoSelectedIndex((i) => (i <= 0 ? repoMaxIndex : i - 1));
-        } else if (activeTab === "restorable") {
-          setRestorableSelectedIndex((i) => (i <= 0 ? restorableMaxIndex : i - 1));
         } else if (activeTab === "protected") {
           setProtectedSelectedIndex((i) => (i <= 0 ? protectedMaxIndex : i - 1));
         }
@@ -348,8 +296,6 @@ export function Home({
           setSessionSelectedIndex((i) => (i >= sessionMaxIndex ? 0 : i + 1));
         } else if (activeTab === "repos") {
           setRepoSelectedIndex((i) => (i >= repoMaxIndex ? 0 : i + 1));
-        } else if (activeTab === "restorable") {
-          setRestorableSelectedIndex((i) => (i >= restorableMaxIndex ? 0 : i + 1));
         } else if (activeTab === "protected") {
           setProtectedSelectedIndex((i) => (i >= protectedMaxIndex ? 0 : i + 1));
         }
@@ -359,8 +305,6 @@ export function Home({
           switchToSession();
         } else if (activeTab === "repos") {
           openRepoTmuxSession(repoSelectedIndex);
-        } else if (activeTab === "restorable" && selectedRestorable) {
-          setConfirmingRestore(true);
         }
       },
       onStop: () => {
@@ -392,7 +336,7 @@ export function Home({
         }
       },
     },
-    active && !confirmingKill && !confirmingClean && !confirmingRestore && !confirmingUnprotect
+    active && !confirmingKill && !confirmingClean && !confirmingUnprotect
   );
 
   // Kill confirmation handler
@@ -406,19 +350,6 @@ export function Home({
       }
     },
     { isActive: active && confirmingKill }
-  );
-
-  // Restore confirmation handler
-  useInput(
-    (_input) => {
-      if (_input === "y" || _input === "Y") {
-        restoreSession();
-        setConfirmingRestore(false);
-      } else {
-        setConfirmingRestore(false);
-      }
-    },
-    { isActive: active && confirmingRestore }
   );
 
   // Clean confirmation handler
@@ -464,9 +395,6 @@ export function Home({
         tabs={[
           { id: "sessions", label: "Sessions", count: sessions.length },
           { id: "repos", label: "Repositories", count: repos.length },
-          ...(restorableSessions.length > 0
-            ? [{ id: "restorable" as TabId, label: "Restorable", count: restorableSessions.length }]
-            : []),
           ...(protectedWorktrees.length > 0
             ? [{ id: "protected" as TabId, label: "Protected", count: protectedWorktrees.length }]
             : []),
@@ -491,16 +419,6 @@ export function Home({
           selectedIndex={!active ? undefined : repoSelectedIndex}
           maxVisible={maxVisible}
           scrollOffset={repoScrollOffset}
-        />
-      )}
-
-      {activeTab === "restorable" && (
-        <RestorableList
-          sessions={restorableSessions}
-          dimmed={!active}
-          selectedIndex={!active ? undefined : restorableSelectedIndex}
-          maxVisible={maxVisible}
-          scrollOffset={restorableScrollOffset}
         />
       )}
 

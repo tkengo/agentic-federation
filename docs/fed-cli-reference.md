@@ -51,7 +51,6 @@ For detailed options and usage of each command, see [fed-cli-detailed-reference.
 | `fed session list` | List sessions |
 | `fed session show [session-name]` | Show workflow status for a session (v2 engine) |
 | `fed session archive <session-name>` | Archive a specific session |
-| `fed session restore <session-name>` | Restore a session after tmux loss |
 
 ### `fed state`
 

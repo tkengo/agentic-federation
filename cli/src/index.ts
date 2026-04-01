@@ -52,7 +52,6 @@ import {
 import { workflowTransitionCommand } from "./commands/workflow-transition.js";
 import { workflowRespondCommand } from "./commands/workflow-respond.js";
 import { workflowGotoCommand } from "./commands/workflow-goto.js";
-import { restoreCommand } from "./commands/restore.js";
 import { convListCommand, convShowCommand } from "./commands/conv.js";
 import { configGetCommand, configSetCommand, configShowCommand } from "./commands/config.js";
 import {
@@ -186,9 +185,8 @@ session
   .option("--no-active", "Hide active sessions")
   .option("--archive", "Show archived sessions")
   .option("--no-archive", "Hide archived sessions (default)")
-  .option("--restorable", "Show only restorable sessions (tmux dead)")
   .option("--limit <n>", "Max sessions to show (default: 20)", parseInt)
-  .action((options: { active?: boolean; archive?: boolean; restorable?: boolean; limit?: number }) => {
+  .action((options: { active?: boolean; archive?: boolean; limit?: number }) => {
     listCommand(options);
   });
 
@@ -204,14 +202,6 @@ session
   .description("Archive a specific session")
   .action((sessionName: string) => {
     archiveCommand(sessionName);
-  });
-
-session
-  .command("restore <session-name>")
-  .description("Restore a session after tmux loss")
-  .option("--no-attach", "Skip tmux attach after restore")
-  .action((sessionName: string, options: { attach?: boolean }) => {
-    restoreCommand(sessionName, options.attach === false);
   });
 
 // --- state ---

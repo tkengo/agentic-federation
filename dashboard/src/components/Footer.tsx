@@ -39,22 +39,10 @@ export function Footer() {
         Delete session &quot;{override.name}&quot;? [y]Yes  [any key]Cancel
       </Text>
     );
-  } else if (override?.type === "confirmRestore") {
-    content = (
-      <Text color="yellow">
-        Restore session &quot;{override.name}&quot;? [y]Yes  [any key]Cancel
-      </Text>
-    );
   } else if (override?.type === "confirmUnprotect") {
     content = (
       <Text color="yellow">
         Unprotect &quot;{override.name}&quot;? [y]Yes  [any key]Cancel
-      </Text>
-    );
-  } else if (override?.type === "restoring") {
-    content = (
-      <Text color="yellow">
-        <Spinner /> Restoring session...
       </Text>
     );
   } else if (override?.type === "creating") {

@@ -4,7 +4,6 @@ import { ACTIVE_DIR, ARCHIVE_DIR } from "../lib/paths.js";
 import { resolveSession, readMeta } from "../lib/session.js";
 import type { StateJson } from "../lib/types.js";
 import { findCleanTargets } from "./clean.js";
-import { findRestorableSessions } from "./restore.js";
 
 type Row = {
   repoBranch: string;
@@ -13,7 +12,7 @@ type Row = {
   status: string;
   age: string;
   createdAt: string;
-  source: "active" | "archive" | "restorable";
+  source: "active" | "archive";
 };
 
 // Format elapsed time as human-readable string
@@ -111,19 +110,6 @@ function collectArchiveSessions(): Row[] {
   return rows;
 }
 
-// Collect restorable sessions (active symlink exists but tmux is dead)
-function collectRestorableSessions(): Row[] {
-  return findRestorableSessions().map((s) => ({
-    repoBranch: s.repo ? `${s.repo}/${s.branch}` : s.name,
-    session: s.name,
-    workflow: s.workflow,
-    status: s.status,
-    age: s.age,
-    createdAt: "",
-    source: "restorable" as const,
-  }));
-}
-
 // Print a formatted table of session rows
 function printTable(rows: Row[], showSource: boolean): void {
   const headers = {
@@ -167,21 +153,8 @@ function printTable(rows: Row[], showSource: boolean): void {
 export function listCommand(options?: {
   active?: boolean;
   archive?: boolean;
-  restorable?: boolean;
   limit?: number;
 }): void {
-  // --restorable mode (exclusive)
-  if (options?.restorable) {
-    const rows = collectRestorableSessions();
-    if (rows.length === 0) {
-      console.log("No restorable sessions found.");
-      return;
-    }
-    printTable(rows, false);
-    return;
-  }
-
-  // Normal mode
   const showActive = options?.active ?? true;
   const showArchive = options?.archive ?? false;
   const limit = options?.limit ?? 20;
