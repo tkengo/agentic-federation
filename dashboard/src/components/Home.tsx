@@ -179,6 +179,19 @@ export function Home({
   // --- Actions ---
   const switchToSession = useCallback(() => {
     if (!selectedSession) return;
+
+    // Recover disconnected session before attaching
+    if (!selectedSession.tmuxAlive) {
+      try {
+        execSync(`fed session recover '${selectedSession.name}' --no-attach`, { stdio: "ignore" });
+        showMessage(`Recovered: ${selectedSession.name}`);
+        refresh();
+      } catch {
+        showMessage(`Failed to recover ${selectedSession.name}`);
+        return;
+      }
+    }
+
     const target = selectedSession.meta.tmux_session;
     const ok = switchToTmuxSession(target);
     if (ok) {
@@ -186,7 +199,7 @@ export function Home({
     } else {
       showMessage(`Failed to switch to ${selectedSession.name}`);
     }
-  }, [selectedSession, showMessage]);
+  }, [selectedSession, showMessage, refresh]);
 
   const killSession = useCallback(() => {
     if (!selectedSession) return;
