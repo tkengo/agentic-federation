@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React from "react";
 import { Box, Text } from "ink";
 import { SessionRow } from "./SessionRow.js";
 import { ScrollableRows } from "./ScrollableRows.js";
@@ -19,19 +19,17 @@ export function SessionList({ sessions, dimmed, selectedIndex, maxVisible, scrol
   const anyWaiting = sessions.some((s) => s.waitingHuman.waiting);
   const blinkOn = useBlink(500, anyWaiting);
 
-  const colWidths = useMemo(() => {
-    return {
-      repo: Math.max(4, ...sessions.map((s) =>
-        s.meta.repo ? s.meta.repo.length : s.name.length
-      )),
-      session: Math.max(7, ...sessions.map((s) => s.name.length)),
-      workflow: Math.max(8, ...sessions.map((s) => (s.workflow ?? "solo").length)),
-      status: Math.max(6, ...sessions.map((s) => {
-        const stale = s.stateMtimeMs != null && (Date.now() - s.stateMtimeMs) / 1000 >= STALE_THRESHOLD_SEC;
-        return statusDisplayWidth(s.status, s.currentStep, stale, s.stateMtimeMs);
-      })),
-    };
-  }, [sessions]);
+  const colWidths = {
+    repo: Math.max(4, ...sessions.map((s) =>
+      s.meta.repo ? s.meta.repo.length : s.name.length
+    )),
+    session: Math.max(7, ...sessions.map((s) => s.name.length)),
+    workflow: Math.max(8, ...sessions.map((s) => (s.workflow ?? "solo").length)),
+    status: Math.max(6, ...sessions.map((s) => {
+      const stale = s.stateMtimeMs != null && (Date.now() - s.stateMtimeMs) / 1000 >= STALE_THRESHOLD_SEC;
+      return statusDisplayWidth(s.status, s.currentStep, stale, s.stateMtimeMs, s.waitingHuman.waiting);
+    })),
+  };
 
   if (sessions.length === 0) {
     return (

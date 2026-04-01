@@ -25,7 +25,7 @@ const TERMINAL_STATUSES = new Set(["completed", "failed", "waiting_human"]);
  * Compute the display width of the status label (icon + space + label + elapsed).
  * Used by SessionList to calculate column width.
  */
-export function statusDisplayWidth(status: string, currentStep?: string | null, stale?: boolean, stateMtimeMs?: number): number {
+export function statusDisplayWidth(status: string, currentStep?: string | null, stale?: boolean, stateMtimeMs?: number, waiting?: boolean): number {
   const label = (status === "completed" || status === "failed")
     ? status
     : (currentStep ? currentStep.split(".").pop()! : status);
@@ -38,8 +38,10 @@ export function statusDisplayWidth(status: string, currentStep?: string | null, 
     elapsed = minutes < 60 ? ` (${minutes}m)` : ` (${Math.floor(minutes / 60)}h)`;
   }
 
-  // "▶ label(elapsed)" → mark(1) + space(1) + label + elapsed
-  return 2 + label.length + elapsed.length;
+  const waitingWidth = waiting ? 4 : 0; // " [!]" = 4 chars
+
+  // "▶ label(elapsed) [!]" → mark(1) + space(1) + label + elapsed + waiting
+  return 2 + label.length + elapsed.length + waitingWidth;
 }
 
 export function StatusBadge({ status, currentStep, stale, stateMtimeMs }: StatusBadgeProps) {
