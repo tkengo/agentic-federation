@@ -36,7 +36,7 @@ import { listCommand } from "./commands/list.js";
 import { stopCommand } from "./commands/stop.js";
 import { archiveCommand } from "./commands/archive.js";
 import { cleanCommand } from "./commands/clean.js";
-import { infoCommand } from "./commands/info.js";
+import { workflowStatusCommand } from "./commands/workflow-status.js";
 import { dashCommand } from "./commands/dash.js";
 import { describeSetCommand, describeShowCommand } from "./commands/describe.js";
 import {
@@ -194,9 +194,9 @@ session
 
 session
   .command("show [session-name]")
-  .description("Show detailed session information")
+  .description("Show workflow status for a session (v2 engine)")
   .action((sessionName?: string) => {
-    infoCommand(sessionName);
+    workflowStatusCommand(sessionName);
   });
 
 session
@@ -404,6 +404,13 @@ workflow
   .option("--step <path>", "Step path (auto-detected from FED_STEP)")
   .action(async (value: string | undefined, options: { step?: string }) => {
     await workflowRespondCommand(value, options.step);
+  });
+
+workflow
+  .command("status [session-name]")
+  .description("Show current workflow step status (v2 engine)")
+  .action((sessionName?: string) => {
+    workflowStatusCommand(sessionName);
   });
 
 // --- workflow-transition ---

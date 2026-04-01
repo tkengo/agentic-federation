@@ -128,7 +128,7 @@ Aliases: `fed session ls`
 
 ### `fed session show`
 
-Show detailed session information.
+Show workflow status for a session (v2 engine). Displays the step tree with completion status.
 
 ```
 fed session show [session-name]
@@ -385,6 +385,14 @@ Validate a workflow definition.
 
 ```
 fed workflow validate <name>
+```
+
+### `fed workflow status`
+
+Show current workflow step status (v2 engine). Displays the step tree with completion status, current step, and engine status.
+
+```
+fed workflow status [session-name]
 ```
 
 ---
