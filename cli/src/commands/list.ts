@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { ACTIVE_DIR, ARCHIVE_DIR } from "../lib/paths.js";
 import { resolveSession, readMeta } from "../lib/session.js";
-import type { StateJson } from "../lib/types.js";
+
 import { findCleanTargets } from "./clean.js";
 
 type Row = {
@@ -33,14 +33,14 @@ function formatAge(createdAt: string): string {
   return `${days}d`;
 }
 
-// Read status from state.json in a session directory
+// Read status from state-v2.json in a session directory
 function readStatus(sessionDir: string): string {
-  const statePath = path.join(sessionDir, "state.json");
+  const statePath = path.join(sessionDir, "state-v2.json");
   if (!fs.existsSync(statePath)) return "unknown";
   try {
     const state = JSON.parse(
       fs.readFileSync(statePath, "utf-8")
-    ) as StateJson;
+    ) as { status?: string };
     return state.status || "unknown";
   } catch {
     return "unknown";
