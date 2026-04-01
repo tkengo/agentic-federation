@@ -13,7 +13,7 @@ model: opus[1m]
 1. `fed artifact read plan` で改善計画を読む
 2. 後述のリファクタリングの進め方に従ってリファクタリングを進める。
 3. Write ツールで `./tmp-implementation.md` に実装サマリーを書き出してから、`fed artifact write implementation --file ./tmp-implementation.md` で保存する
-4. `fed workflow-transition --result done` を実行してステート遷移を発火する
+4. `fed workflow respond done` を実行してステート遷移を発火する
 
 **リファクタリングしただけでは完了ではない。artifact write と workflow-transition を実行して初めて完了となる。**
 
@@ -25,7 +25,7 @@ model: opus[1m]
 2. レビューでの指摘事項を元にコードを修正する
 3. テストを再実行して全テストがパスすることを確認する
 4. Write ツールで `./tmp-implementation.md` に実装サマリーを更新してから、`fed artifact write implementation --file ./tmp-implementation.md` で保存する
-5. `fed workflow-transition --result done` を実行してステート遷移を発火する
+5. `fed workflow respond done` を実行してステート遷移を発火する
 
 **修正後の artifact write と workflow-transition は必ず実行すること。実行しなかった場合はワークフロー全体が停止してしまうため、絶対に実行を忘れてはならない。**
 
@@ -150,4 +150,4 @@ model: opus[1m]
 実行していない場合、作業は未完了である。
 
 1. `fed artifact write implementation --file ./tmp-implementation.md` を実行した
-2. `fed workflow-transition --result done` を実行した
+2. `fed workflow respond done` を実行した

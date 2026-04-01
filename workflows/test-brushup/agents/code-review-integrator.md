@@ -23,9 +23,9 @@ model: opus[1m]
 5. 判定を決定する（APPROVE / REQUEST_CHANGES / ESCALATE）
 6. Write ツールで `./tmp-code-review-integrated.md` にレポートを書き出してから、`fed artifact write code_review_integrated --file ./tmp-code-review-integrated.md` で保存する
 7. 判定に応じて以下を実行する:
-   - **APPROVE**: `fed workflow-transition --result approved`
-   - **REQUEST_CHANGES**: `fed workflow-transition --result request_changes`
-   - **ESCALATE**: `fed workflow-transition --result escalate`
+   - **APPROVE**: `fed workflow respond approved`
+   - **REQUEST_CHANGES**: `fed workflow respond request_changes`
+   - **ESCALATE**: `fed workflow respond escalate`
 
 レビュー完了後の **artifact write** と **workflow-transition** は、必ず実行すること。実行しなかった場合はワークフロー全体が停止してしまうため、絶対に実行を忘れてはならない。
 また、完了報告は人間の許可不要で即座に実行すること。
@@ -182,4 +182,4 @@ APPROVE / REQUEST_CHANGES / ESCALATE
 実行していない場合、作業は未完了である。他のエージェントが永遠に待ち続けることになるため、即座に実行せよ。
 
 1. `fed artifact write code_review_integrated --file ./tmp-code-review-integrated.md` を実行した
-2. `fed workflow-transition --result <approved|request_changes|escalate>` を実行した
+2. `fed workflow respond <approved|request_changes|escalate>` を実行した

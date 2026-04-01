@@ -1,0 +1,177 @@
+name: test-brushup
+description: "テストコードブラッシュアップ: データ収集・分析 → 改善計画策定 → リファクタリング → コードレビュー"
+
+focus: analyzer
+
+windows:
+  - name: dev
+    panes:
+      - id: terminal
+        name: Terminal
+        pane: 1
+        command: null
+      - id: editor
+        name: Editor
+        pane: 2
+        command: nvim
+    layout:
+      splits:
+        - { source: 1, direction: h, percent: 50 }
+      focus: 1
+
+  - name: analyzer
+    panes:
+      - id: analyzer
+        name: Analyzer
+        pane: 1
+        command: "yoloclaude --agent __fed-test-brushup-$FED_SESSION-analyzer"
+      - id: human
+        name: Human
+        pane: 2
+        command: "cd $FED_SESSION_DIR && nvim"
+    layout:
+      splits:
+        - { source: 1, direction: h, percent: 50 }
+      focus: 1
+
+  - name: agents
+    panes:
+      - id: refactorer
+        name: Refactorer
+        pane: 1
+        command: "yoloclaude --agent __fed-test-brushup-$FED_SESSION-refactorer"
+      - id: profiler
+        name: Profiler
+        pane: 2
+        command: yolocodex
+      - id: learnings
+        name: Learnings
+        pane: 3
+        command: "yoloclaude --agent __fed-test-brushup-$FED_SESSION-learnings"
+    layout:
+      splits:
+        - { source: 1, direction: h, percent: 66 }
+        - { source: 2, direction: h, percent: 50 }
+      focus: 1
+
+  - name: review
+    panes:
+      - id: code_reviewer_diff
+        name: "Code Reviewer (Diff)"
+        pane: 1
+        command: yolocodex
+      - id: code_reviewer_conventions
+        name: "Code Reviewer (Conventions)"
+        pane: 2
+        command: yolocodex
+      - id: code_reviewer_history
+        name: "Code Reviewer (History)"
+        pane: 3
+        command: yolocodex
+      - id: static_checker
+        name: "Static Checker"
+        pane: 4
+        command: yolocodex
+      - id: code_review_integrator
+        name: "Code Review Integrator"
+        pane: 5
+        command: "yoloclaude --agent __fed-test-brushup-$FED_SESSION-code-review-integrator"
+    layout:
+      splits:
+        - { source: 1, direction: v, percent: 50 }
+        - { source: 1, direction: h, percent: 75 }
+        - { source: 2, direction: h, percent: 66 }
+        - { source: 3, direction: h, percent: 50 }
+      focus: 1
+
+steps:
+  # ============================================================
+  # Phase 1: Profiling (automated)
+  # ============================================================
+  - id: profiling
+    type: codex
+    agent: profiler
+    description: "テストメトリクスの収集"
+
+  # ============================================================
+  # Phase 2: Analysis + Human Plan Review (interactive)
+  # ============================================================
+  # Analyzer and human interact in Claude Code CLI until human approves.
+  # Analyzer calls `fed workflow respond done` when human gives approval.
+  - id: analysis
+    type: human
+    agent: analyzer
+    notify: false
+    description: "テストコードの分析・改善計画の策定・人間によるレビュー"
+    prompt: "analyzerペインで改善計画を策定してください。人間が承認したらanalyzerが自動でワークフローを進めます。"
+
+  # ============================================================
+  # Phase 3: Refactoring + Code Review Loop
+  # ============================================================
+  - id: refactor_review_cycle
+    type: loop
+    max: 5
+    until: ${{ steps.code_review_integrate.result == "approved" }}
+    steps:
+      - id: refactoring
+        type: claude
+        agent: refactorer
+        description: "改善計画に基づくテストコードのリファクタリング"
+
+      - id: code_review_parallel
+        type: parallel
+        description: "4並列レビュアーによるコードレビュー"
+        branches:
+          - id: review_diff
+            type: codex
+            agent: code-reviewer-diff
+            description: "差分特化レビュー"
+          - id: review_conventions
+            type: codex
+            agent: code-reviewer-conventions
+            description: "規約・一貫性観点レビュー"
+          - id: review_history
+            type: codex
+            agent: code-reviewer-history
+            description: "変更履歴・コミット観点レビュー"
+          - id: static_check
+            type: codex
+            agent: static-checker
+            description: "静的解析チェック"
+
+      - id: code_review_integrate
+        type: claude
+        agent: code-review-integrator
+        description: "レビュー結果の統合・判定"
+        result:
+          values: [approved, request_changes, escalate]
+
+      - id: review_branch
+        type: branch
+        cases:
+          - if: ${{ steps.code_review_integrate.result == "approved" }}
+            break: true
+          - if: ${{ steps.code_review_integrate.result == "escalate" }}
+            steps:
+              - id: review_escalation
+                type: human
+                prompt: "コードレビューでエスカレーション。code_review_integratedアーティファクトを確認してください。"
+          # else: request_changes → loop continues (refactorer re-dispatched)
+
+  # ============================================================
+  # Phase 4: Post-processing
+  # ============================================================
+  - id: post_processing
+    type: claude
+    agent: learnings
+    description: "知見抽出の後処理"
+
+  # ============================================================
+  # Phase 5: Human Final Review
+  # ============================================================
+  - id: final_review
+    type: human
+    prompt: "全工程が完了しました。成果物を確認してください。approved で応答してください。"
+    description: "人間の最終承認"
+    result:
+      values: [approved]

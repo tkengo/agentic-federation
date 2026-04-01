@@ -18,7 +18,7 @@ description: Conventions-focused code reviewer. Checks test naming, framework us
 4. `fed artifact read implementation` で実装サマリーを読む
 5. `git diff` または `git diff --cached` で差分を確認し、コードをレビューする。後述のレビュー観点に従ってレビューすること。
 6. Write ツールで `./tmp-code-review-conventions.md` にレビュー結果を書き出してから、`fed artifact write code_review_conventions --file ./tmp-code-review-conventions.md` で保存する
-7. `fed workflow-transition --result done` を実行してステート遷移を発火する
+7. `fed workflow respond done` を実行してステート遷移を発火する
 8. その後、再レビューの依頼があればまた1から繰り返す
 
 ---
@@ -110,4 +110,4 @@ description: Conventions-focused code reviewer. Checks test naming, framework us
 @include(workflow-components/review/completion-checklist.md)
 
 1. `fed artifact write code_review_conventions --file ./tmp-code-review-conventions.md` を実行した
-2. `fed workflow-transition --result done` を実行した
+2. `fed workflow respond done` を実行した
