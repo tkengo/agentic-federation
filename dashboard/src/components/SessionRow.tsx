@@ -72,9 +72,10 @@ export function SessionRow({ session, selected, dimmed, blinkOn, colWidths }: Se
             currentStep={session.tmuxAlive ? session.currentStep : null}
             stale={stale}
             stateMtimeMs={session.stateMtimeMs}
+            highlight={highlight}
           />
           {session.waitingHuman.waiting && (
-            <Text color="yellow" dimColor={!blinkOn}>{` [!]`}</Text>
+            <Text color={highlight ? "cyan" : "yellow"} bold={highlight} dimColor={!highlight && !blinkOn}>{` [!]`}</Text>
           )}
         </Box>
       )}
@@ -82,9 +83,9 @@ export function SessionRow({ session, selected, dimmed, blinkOn, colWidths }: Se
       <Text color={highlight ? "cyan" : undefined} bold={highlight} dimColor={dimmed || !highlight}>{age.padStart(4)}</Text>
       {inlineText && (
         <Text
-          color={isWaiting ? "yellow" : (highlight ? "cyan" : undefined)}
-          bold={!isWaiting && highlight}
-          dimColor={!isWaiting && (dimmed || !highlight)}
+          color={highlight ? "cyan" : (isWaiting ? "yellow" : undefined)}
+          bold={highlight}
+          dimColor={!highlight && !isWaiting}
         >
           {`  ${inlineText}`}
         </Text>
