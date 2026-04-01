@@ -462,15 +462,11 @@ export function SessionDetail({
         <Text>{"  "}</Text>
         <StatusBadge
           status={session.status}
+          currentStep={session.currentStep}
+          waitingReason={session.waitingHuman.waiting ? session.waitingHuman.reason : null}
           stale={isStale(session)}
-          statusConfigMap={session.statusConfigMap}
           stateMtimeMs={session.stateMtimeMs}
         />
-        {session.waitingHuman.waiting ? (
-          <Text color="magenta" dimColor={!blinkOn}>{" [!]"}</Text>
-        ) : (
-          <Text>{"    "}</Text>
-        )}
         <Text>{"  "}</Text>
         <Text dimColor>{formatAge(session.meta.created_at)}</Text>
       </Box>

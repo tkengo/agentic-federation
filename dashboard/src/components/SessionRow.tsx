@@ -56,24 +56,15 @@ export function SessionRow({ session, selected, dimmed, blinkOn, colWidths }: Se
       {dimmed ? (
         <Text dimColor>{`- ${session.status}`.padEnd(colWidths.status + 2)}</Text>
       ) : (
-        <Box width={colWidths.status + 2}>
+        <Box>
           <StatusBadge
             status={session.status}
+            currentStep={session.currentStep}
+            waitingReason={session.waitingHuman.waiting ? session.waitingHuman.reason : null}
             stale={stale}
-            statusConfigMap={session.statusConfigMap}
             stateMtimeMs={session.stateMtimeMs}
           />
         </Box>
-      )}
-      {!dimmed && session.waitingHuman.waiting ? (
-        <>
-          <Text color="magenta" dimColor={!blinkOn}>{` [!]`}</Text>
-          {session.waitingHuman.reason && (
-            <Text color="yellow" dimColor={!blinkOn}>{` ${truncate(session.waitingHuman.reason, 40)}`}</Text>
-          )}
-        </>
-      ) : (
-        <Text>{`    `}</Text>
       )}
       <Text dimColor={dimmed}>{`  `}</Text>
       <Text color={highlight ? "cyan" : undefined} bold={highlight} dimColor={dimmed || !highlight}>{age.padStart(4)}</Text>

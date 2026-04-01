@@ -2,9 +2,8 @@ import { useState, useCallback, useEffect } from "react";
 import fs from "node:fs";
 import path from "node:path";
 import { exec } from "node:child_process";
-import { parse as parseYaml } from "yaml";
 import { ACTIVE_DIR, PROTECTED_WORKTREES_FILE } from "../utils/types.js";
-import type { MetaJson, StateJson, SessionData, StatusConfig, WaitingHumanData } from "../utils/types.js";
+import type { MetaJson, StateJson, SessionData, WaitingHumanData } from "../utils/types.js";
 
 function readMeta(sessionDir: string): MetaJson | null {
   try {
@@ -74,36 +73,6 @@ function readDescription(sessionDir: string): string | undefined {
   }
 }
 
-function readStatusConfig(sessionDir: string): Record<string, StatusConfig> | undefined {
-  try {
-    let wfPath = path.join(sessionDir, "workflow.yaml");
-    if (!fs.existsSync(wfPath)) {
-      wfPath = path.join(sessionDir, "workflow-v2.yaml");
-      if (!fs.existsSync(wfPath)) return undefined;
-    }
-    const raw = fs.readFileSync(wfPath, "utf-8");
-    const wf = parseYaml(raw) as { states?: Record<string, { mark?: string; color?: string }> };
-    if (!wf.states) return undefined;
-    const map: Record<string, StatusConfig> = {};
-    for (const [name, state] of Object.entries(wf.states)) {
-      if (state.color) {
-        map[name] = { mark: state.mark ?? "●", color: state.color };
-      }
-    }
-    return Object.keys(map).length > 0 ? map : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-// Default status config for v2 engine statuses
-const V2_DEFAULT_STATUS_CONFIG: Record<string, StatusConfig> = {
-  running: { mark: "▶", color: "cyan" },
-  waiting_human: { mark: "◌", color: "yellow" },
-  completed: { mark: "✓", color: "green" },
-  failed: { mark: "✗", color: "red" },
-};
-
 function loadSessions(): SessionData[] {
   if (!fs.existsSync(ACTIVE_DIR)) return [];
 
@@ -139,12 +108,6 @@ function loadSessions(): SessionData[] {
       }
     }
 
-    // For v2 sessions, merge default v2 status config with any workflow-defined config
-    const workflowStatusConfig = readStatusConfig(sessionDir);
-    const statusConfigMap = v2State
-      ? { ...V2_DEFAULT_STATUS_CONFIG, ...workflowStatusConfig }
-      : workflowStatusConfig;
-
     sessions.push({
       name: entry,
       sessionDir,
@@ -155,8 +118,8 @@ function loadSessions(): SessionData[] {
       escalation: state?.escalation ?? { required: false, reason: null },
       waitingHuman: readWaitingHuman(sessionDir),
       description: readDescription(sessionDir),
+      currentStep: v2State?.current_step ?? null,
       stateMtimeMs,
-      statusConfigMap,
     });
   }
 

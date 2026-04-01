@@ -40,12 +40,6 @@ export const PROTECTED_WORKTREES_FILE = path.join(FED_HOME, "protected-worktrees
 
 export const STALE_THRESHOLD_SEC = 3600;
 
-// Status display config (mark + color) per state
-export interface StatusConfig {
-  mark: string;
-  color: string;
-}
-
 // Waiting-for-human state
 export interface WaitingHumanData {
   waiting: boolean;
@@ -106,6 +100,6 @@ export interface SessionData {
   escalation: { required: boolean; reason: string | null };
   waitingHuman: WaitingHumanData;
   description?: string;
+  currentStep?: string | null;
   stateMtimeMs?: number;
-  statusConfigMap?: Record<string, StatusConfig>;
 }
