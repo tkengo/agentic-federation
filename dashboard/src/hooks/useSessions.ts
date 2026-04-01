@@ -4,6 +4,7 @@ import path from "node:path";
 import { exec } from "node:child_process";
 import { ACTIVE_DIR, PROTECTED_WORKTREES_FILE } from "../utils/types.js";
 import type { MetaJson, StateJson, SessionData, WaitingHumanData } from "../utils/types.js";
+import { listTmuxSessions } from "../utils/tmux.js";
 
 function readMeta(sessionDir: string): MetaJson | null {
   try {
@@ -78,6 +79,7 @@ function loadSessions(): SessionData[] {
 
   const entries = fs.readdirSync(ACTIVE_DIR);
   const sessions: SessionData[] = [];
+  const tmuxSessions = listTmuxSessions();
 
   for (const entry of entries) {
     const sessionDir = resolveSession(entry);
@@ -120,6 +122,7 @@ function loadSessions(): SessionData[] {
       description: readDescription(sessionDir),
       currentStep: v2State?.current_step ?? null,
       stateMtimeMs,
+      tmuxAlive: tmuxSessions.has(entry),
     });
   }
 

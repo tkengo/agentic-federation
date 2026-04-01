@@ -36,6 +36,9 @@ export function SessionRow({ session, selected, dimmed, blinkOn, colWidths }: Se
   const age = formatAge(session.meta.created_at);
   const stale = isStale(session);
 
+  // Override status when tmux session is dead
+  const displayStatus = session.tmuxAlive ? session.status : "disconnected";
+
   // Determine inline text after AGE: waiting reason takes priority over description
   const isWaiting = session.waitingHuman.waiting && !!session.waitingHuman.reason;
   const inlineText = isWaiting
@@ -61,12 +64,12 @@ export function SessionRow({ session, selected, dimmed, blinkOn, colWidths }: Se
       <Text color={highlight ? "cyan" : undefined} bold={highlight} dimColor={dimmed}>{(session.workflow ?? "solo").padEnd(colWidths.workflow)}</Text>
       <Text dimColor={dimmed}>{`  `}</Text>
       {dimmed ? (
-        <Text dimColor>{`- ${session.status}`.padEnd(colWidths.status + 2)}</Text>
+        <Text dimColor>{`- ${displayStatus}`.padEnd(colWidths.status + 2)}</Text>
       ) : (
         <Box width={colWidths.status}>
           <StatusBadge
-            status={session.status}
-            currentStep={session.currentStep}
+            status={displayStatus}
+            currentStep={session.tmuxAlive ? session.currentStep : null}
             stale={stale}
             stateMtimeMs={session.stateMtimeMs}
           />

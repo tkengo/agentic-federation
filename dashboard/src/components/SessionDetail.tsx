@@ -294,6 +294,17 @@ export function SessionDetail({
           const actionIdx = detailIndex - scripts.length;
           const action = sessionActions[actionIdx];
           if (action?.id === "attach") {
+            if (!session.tmuxAlive) {
+              // Recover tmux session first
+              try {
+                execSync(`fed session recover '${session.name}' --no-attach`, { stdio: "ignore" });
+                showMessage(`Recovered: ${session.name}`);
+                refresh();
+              } catch {
+                showMessage(`Failed to recover ${session.name}`);
+                return;
+              }
+            }
             const ok = switchToTmuxSession(session.meta.tmux_session);
             if (ok) {
               showMessage(`Detached from ${session.name}`);
@@ -457,8 +468,8 @@ export function SessionDetail({
         <Text>{session.workflow ?? "solo"}</Text>
         <Text>{"  "}</Text>
         <StatusBadge
-          status={session.status}
-          currentStep={session.currentStep}
+          status={session.tmuxAlive ? session.status : "disconnected"}
+          currentStep={session.tmuxAlive ? session.currentStep : null}
           stale={isStale(session)}
           stateMtimeMs={session.stateMtimeMs}
         />

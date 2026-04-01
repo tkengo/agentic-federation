@@ -90,4 +90,5 @@ export interface SessionData {
   description?: string;
   currentStep?: string | null;
   stateMtimeMs?: number;
+  tmuxAlive: boolean;
 }

@@ -99,6 +99,18 @@ fed session start [options] <workflow> [repo] [branch]
 When `branch` is omitted with a repo, a unique name is auto-generated as `<repo>-<HHMM>-<4hex>`.
 For standalone sessions without `--session-name`, the format is `<workflow>-<HHMM>-<4hex>`.
 
+### `fed session recover`
+
+Recover a session whose tmux session has been lost (v2 only). Rebuilds the tmux session (windows/panes) from the workflow-v2.yaml definition. The engine is NOT started automatically — run `fed workflow engine` afterwards.
+
+```
+fed session recover [session-name]
+```
+
+| Option | Description |
+|---|---|
+| `--no-attach` | Skip tmux attach after recovery |
+
 ### `fed session stop`
 
 Stop a session (current tmux session if not specified).
@@ -372,6 +384,18 @@ Validate a workflow definition.
 ```
 fed workflow validate <name>
 ```
+
+### `fed workflow engine`
+
+Start the v2 engine in the engine pane. By default, resumes from the last completed step (completed steps are skipped). Use `--reset` to reinitialize state and start from the beginning.
+
+```
+fed workflow engine [session-name]
+```
+
+| Option | Description |
+|---|---|
+| `--reset` | Reset state and start from the beginning |
 
 ### `fed workflow status`
 

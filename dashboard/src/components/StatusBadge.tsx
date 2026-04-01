@@ -14,6 +14,7 @@ const STATUS_STYLE: Record<string, { mark: string; color: string }> = {
   waiting_human: { mark: "◌", color: "yellow" },
   completed: { mark: "✓", color: "green" },
   failed: { mark: "✗", color: "red" },
+  disconnected: { mark: "⚠", color: "red" },
 };
 
 const DEFAULT_STYLE = { mark: "●", color: "white" };

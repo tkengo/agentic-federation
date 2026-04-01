@@ -49,6 +49,8 @@ import {
   repoScriptShowCommand,
   repoScriptRunCommand,
 } from "./commands/repo-script.js";
+import { recoverCommand } from "./commands/recover.js";
+import { workflowEngineCommand } from "./commands/workflow-engine.js";
 import { workflowTransitionCommand } from "./commands/workflow-transition.js";
 import { workflowRespondCommand } from "./commands/workflow-respond.js";
 import { workflowGotoCommand } from "./commands/workflow-goto.js";
@@ -168,6 +170,14 @@ session
       envVars[pair.slice(0, eq)] = pair.slice(eq + 1);
     }
     await startCommand(workflow, repo, branch, options.attach === false, options.sessionName, envVars);
+  });
+
+session
+  .command("recover [session-name]")
+  .description("Recover a session whose tmux session has been lost (v2 only)")
+  .option("--no-attach", "Skip tmux attach after recovery")
+  .action((sessionName?: string, options?: { attach?: boolean }) => {
+    recoverCommand(sessionName, options?.attach === false);
   });
 
 session
@@ -386,6 +396,14 @@ workflow
   .description("Validate a workflow definition")
   .action((name: string) => {
     workflowValidateCommand(name);
+  });
+
+workflow
+  .command("engine [session-name]")
+  .description("Start the v2 engine in the engine pane (resumes from last completed step by default)")
+  .option("--reset", "Reset state and start from the beginning")
+  .action((sessionName?: string, options?: { reset?: boolean }) => {
+    workflowEngineCommand(sessionName, options?.reset);
   });
 
 workflow

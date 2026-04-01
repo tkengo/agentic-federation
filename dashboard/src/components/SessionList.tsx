@@ -26,8 +26,9 @@ export function SessionList({ sessions, dimmed, selectedIndex, maxVisible, scrol
     session: Math.max(7, ...sessions.map((s) => s.name.length)),
     workflow: Math.max(8, ...sessions.map((s) => (s.workflow ?? "solo").length)),
     status: Math.max(6, ...sessions.map((s) => {
+      const displayStatus = s.tmuxAlive ? s.status : "disconnected";
       const stale = s.stateMtimeMs != null && (Date.now() - s.stateMtimeMs) / 1000 >= STALE_THRESHOLD_SEC;
-      return statusDisplayWidth(s.status, s.currentStep, stale, s.stateMtimeMs, s.waitingHuman.waiting);
+      return statusDisplayWidth(displayStatus, s.tmuxAlive ? s.currentStep : null, stale, s.stateMtimeMs, s.waitingHuman.waiting);
     })),
   };
 

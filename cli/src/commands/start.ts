@@ -22,7 +22,7 @@ import type { V2Window } from "../lib/engine-v2/types.js";
 import { initV2State } from "../lib/engine-v2/state.js";
 import { stringify as stringifyYaml } from "yaml";
 
-// Re-export functions used by other modules (restore.ts, etc.)
+// Re-export functions used by other modules (recover.ts, etc.)
 export {
   syncCommands,
   syncAgents,
@@ -251,7 +251,7 @@ export async function startCommand(
 /**
  * Create tmux pane layout for a v2 window definition.
  */
-function createV2WindowLayout(
+export function createV2WindowLayout(
   session: string,
   win: V2Window,
   cwd: string,

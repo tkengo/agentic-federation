@@ -48,6 +48,10 @@ export async function runEngine(sessionDir: string, emitter?: EngineEventEmitter
   if (fs.existsSync(stateFilePath)) {
     state = readV2State(sessionDir);
     logger.info("Resuming from existing state");
+    // Reset status for resume (may have been failed/running from previous crash)
+    setStatus(state, "running");
+    appendHistory(state, "engine_resume", "", "Resumed from previous state");
+    writeV2State(sessionDir, state);
   } else {
     state = initV2State(sessionDir);
   }
@@ -130,6 +134,13 @@ function buildExprContext(state: V2State, runCtx?: { iteration: number; max: num
 }
 
 /**
+ * Check if a step type is an action step (produces a result).
+ */
+function isActionStep(type: string): boolean {
+  return type === "claude" || type === "codex" || type === "shell" || type === "human";
+}
+
+/**
  * Execute a single step. Returns true if a loop break was signaled.
  */
 async function executeStep(
@@ -140,6 +151,12 @@ async function executeStep(
   meta: MetaJson,
   logger: EngineLogger,
 ): Promise<boolean> {
+  // Skip already-completed action steps (for resume after crash)
+  if (isActionStep(step.type) && state.results[stepPath]) {
+    logger.info(`Skipping completed step: ${stepPath} (result=${state.results[stepPath].value})`);
+    return false;
+  }
+
   switch (step.type) {
     case "loop":
       return await executeLoop(step, stepPath, sessionDir, state, meta, logger);
@@ -319,6 +336,15 @@ async function executeLoop(
     throw new Error(`Loop step "${stepPath}" has no sub-steps`);
   }
 
+  // Skip if loop was already completed in a previous run
+  const loopCompleted = state.history.some(
+    h => h.event === "loop_complete" && h.step === stepPath
+  );
+  if (loopCompleted) {
+    logger.info(`Skipping completed loop: ${stepPath}`);
+    return false;
+  }
+
   // If max is not set but until is present, loop indefinitely (until condition satisfied)
   // If neither is set, safety limit of 100
   const maxIterations = step.max ?? (step.until ? Infinity : 100);
@@ -429,6 +455,15 @@ async function executeParallel(
 ): Promise<boolean> {
   if (!step.branches || step.branches.length === 0) {
     throw new Error(`Parallel step "${stepPath}" has no branches`);
+  }
+
+  // Skip if parallel was already completed in a previous run
+  const parallelCompleted = state.history.some(
+    h => h.event === "parallel_complete" && h.step === stepPath
+  );
+  if (parallelCompleted) {
+    logger.info(`Skipping completed parallel: ${stepPath}`);
+    return false;
   }
 
   logger.stepStart(stepPath, "parallel", step.description);

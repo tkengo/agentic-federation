@@ -47,6 +47,7 @@ For detailed options and usage of each command, see [fed-cli-detailed-reference.
 | Subcommand | Description |
 |---|---|
 | `fed session start <workflow> [repo] [branch]` | Start a v2 engine-driven development session |
+| `fed session recover [session-name]` | Recover a session whose tmux session has been lost (v2 only) |
 | `fed session stop [session-name]` | Stop a session |
 | `fed session list` | List sessions |
 | `fed session show [session-name]` | Show workflow status for a session (v2 engine) |
@@ -97,6 +98,7 @@ For detailed options and usage of each command, see [fed-cli-detailed-reference.
 | `fed workflow list` | List available workflows |
 | `fed workflow show [name]` | Show workflow YAML content |
 | `fed workflow validate <name>` | Validate a workflow definition |
+| `fed workflow engine [session-name]` | Start the v2 engine in the engine pane (resumes by default) |
 | `fed workflow status [session-name]` | Show current workflow step status (v2 engine) |
 
 ### `fed repo-script`
