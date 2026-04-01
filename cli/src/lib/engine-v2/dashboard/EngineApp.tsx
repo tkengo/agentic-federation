@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, memo } from "react";
 import { Text, Box, Static, useInput, useStdout } from "ink";
 import type { EngineEventEmitter } from "../events.js";
 import type { StepNode } from "./types.js";
-import { useEngineEvents } from "./useEngineEvents.js";
+import { useEngineEvents, type LogEntry } from "./useEngineEvents.js";
 import { computeColumnWidths, type ColumnWidths } from "./StepRow.js";
 
 const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
@@ -87,7 +87,7 @@ export function EngineApp({ emitter, initialSteps, workflowName }: EngineAppProp
 
 function StepsView({ steps, logs, selectedIndex, autoFollow, engineStatus, engineDurationMs, spinnerFrame, workflowName }: {
   steps: StepNode[];
-  logs: Map<string, string[]>;
+  logs: Map<string, LogEntry[]>;
   selectedIndex: number;
   autoFollow: boolean;
   engineStatus: string;
@@ -96,6 +96,17 @@ function StepsView({ steps, logs, selectedIndex, autoFollow, engineStatus, engin
   workflowName: string;
 }): React.ReactElement {
   const colWidths = useMemo(() => computeColumnWidths(steps), [steps]);
+
+  // Compute max step label width from all steps for log prefix alignment
+  const logLabelMaxLen = useMemo(() => {
+    const MAX_LABEL_LEN = 16;
+    let maxLen = 0;
+    for (const s of steps) {
+      const label = s.stepPath.split(".").pop() ?? s.stepPath;
+      maxLen = Math.max(maxLen, label.length);
+    }
+    return Math.min(maxLen, MAX_LABEL_LEN);
+  }, [steps]);
 
   // Track terminal rows for dynamic padding on resize
   const [termRows, setTermRows] = useState(process.stdout.rows ?? 40);
@@ -127,7 +138,7 @@ function StepsView({ steps, logs, selectedIndex, autoFollow, engineStatus, engin
 
   // Static log lines
   const lastLogCountRef = useRef<Map<string, number>>(new Map());
-  const [staticLogLines, setStaticLogLines] = useState<Array<{ key: string; text: string; color?: string }>>(() => {
+  const [staticLogLines, setStaticLogLines] = useState<Array<{ key: string; timestamp?: string; text: string; color?: string }>>(() => {
     const rows = process.stdout.rows ?? 40;
     const dynamicLines = STEP_TREE_VISIBLE + 3;
     const padLines = Math.max(0, rows - dynamicLines);
@@ -138,25 +149,26 @@ function StepsView({ steps, logs, selectedIndex, autoFollow, engineStatus, engin
   });
 
   useEffect(() => {
-    const pending: Array<{ key: string; text: string; color?: string }> = [];
-    for (const [stepPath, lines] of logs.entries()) {
+    const pending: Array<{ key: string; timestamp?: string; text: string; color?: string }> = [];
+    for (const [stepPath, entries] of logs.entries()) {
       const lastSeen = lastLogCountRef.current.get(stepPath) ?? 0;
       // Find step label for prefix
       const stepLabel = stepPath.split(".").pop() ?? stepPath;
-      for (let i = lastSeen; i < lines.length; i++) {
-        const line = lines[i];
+      for (let i = lastSeen; i < entries.length; i++) {
+        const entry = entries[i];
         pending.push({
           key: `${stepPath}-${i}`,
-          text: `  ${dimPrefix(stepLabel)} ${line}`,
-          color: getLogColor(line),
+          timestamp: formatLogTimestamp(entry.timestamp),
+          text: `  ${dimPrefix(stepLabel, logLabelMaxLen)} ${entry.message}`,
+          color: getLogColor(entry.message),
         });
       }
-      lastLogCountRef.current.set(stepPath, lines.length);
+      lastLogCountRef.current.set(stepPath, entries.length);
     }
     if (pending.length > 0) {
       setStaticLogLines((prev) => [...prev, ...pending]);
     }
-  }, [logs]);
+  }, [logs, logLabelMaxLen]);
 
   // Step tree viewport — scroll only when cursor reaches the edge
   const treeStartRef = useRef(0);
@@ -190,8 +202,9 @@ function StepsView({ steps, logs, selectedIndex, autoFollow, engineStatus, engin
     <Box flexDirection="column">
       <Static items={staticLogLines}>
         {(item) => (
-          <Text key={item.key} color={item.color} wrap="truncate">
-            {item.text}
+          <Text key={item.key} wrap="truncate">
+            {item.timestamp ? <Text dimColor>{item.timestamp} </Text> : null}
+            <Text color={item.color}>{item.text}</Text>
           </Text>
         )}
       </Static>
@@ -233,12 +246,12 @@ function StepsView({ steps, logs, selectedIndex, autoFollow, engineStatus, engin
 
 function LogView({ stepPath, logs, steps }: {
   stepPath: string;
-  logs: Map<string, string[]>;
+  logs: Map<string, LogEntry[]>;
   steps: StepNode[];
 }): React.ReactElement {
   const { stdout } = useStdout();
   const rows = stdout?.rows ?? 40;
-  const logLines = logs.get(stepPath) ?? [];
+  const logEntries = logs.get(stepPath) ?? [];
   const step = steps.find((s) => s.stepPath === stepPath);
   const label = step?.label ?? stepPath;
   const status = step ? `${getStaticIcon(step.status)} ${getRightInfo(step)}` : "";
@@ -246,7 +259,7 @@ function LogView({ stepPath, logs, steps }: {
   // Show as many lines as fit on screen
   const headerLines = 2;
   const visibleCount = rows - headerLines;
-  const tail = logLines.slice(-visibleCount);
+  const tail = logEntries.slice(-visibleCount);
 
   return (
     <Box flexDirection="column">
@@ -259,8 +272,11 @@ function LogView({ stepPath, logs, steps }: {
       {tail.length === 0 ? (
         <Text dimColor>{"  (no output)"}</Text>
       ) : (
-        tail.map((line, i) => (
-          <Text key={i} wrap="truncate">{"  "}{colorizeLog(line)}</Text>
+        tail.map((entry, i) => (
+          <Text key={i} wrap="truncate">
+            <Text dimColor>{formatLogTimestamp(entry.timestamp)} </Text>
+            {"  "}{colorizeLog(entry.message)}
+          </Text>
         ))
       )}
     </Box>
@@ -360,8 +376,17 @@ const MemoStepLine = memo(function StepLine({ node, selected, colWidths }: StepL
 // Helpers
 // ---------------------------------------------------------------------------
 
-function dimPrefix(label: string): string {
-  const maxLen = 16;
+function formatLogTimestamp(date: Date): string {
+  const y = date.getFullYear();
+  const mo = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  const h = String(date.getHours()).padStart(2, "0");
+  const mi = String(date.getMinutes()).padStart(2, "0");
+  const s = String(date.getSeconds()).padStart(2, "0");
+  return `${y}-${mo}-${d} ${h}:${mi}:${s}`;
+}
+
+function dimPrefix(label: string, maxLen: number): string {
   const truncated = label.length > maxLen ? label.slice(0, maxLen - 1) + "…" : label;
   const pad = " ".repeat(Math.max(0, maxLen - truncated.length));
   return `[${truncated}]${pad}`;

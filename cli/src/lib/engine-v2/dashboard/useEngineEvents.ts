@@ -4,9 +4,14 @@ import type { StepNode, StepStatus } from "./types.js";
 
 const MAX_LOG_LINES = 500;
 
+export interface LogEntry {
+  timestamp: Date;
+  message: string;
+}
+
 export interface EngineState {
   steps: StepNode[];
-  logs: Map<string, string[]>;
+  logs: Map<string, LogEntry[]>;
   selectedIndex: number;
   autoFollow: boolean;
   engineStatus: "running" | "completed" | "failed";
@@ -28,7 +33,7 @@ export function useEngineEvents(
 } {
   // --- Refs: mutable, updated synchronously by event handlers ---
   const stepsRef = useRef<StepNode[]>(initialSteps);
-  const logsRef = useRef<Map<string, string[]>>(new Map());
+  const logsRef = useRef<Map<string, LogEntry[]>>(new Map());
   const selectedIndexRef = useRef(0);
   const autoFollowRef = useRef(true);
   const engineStatusRef = useRef<"running" | "completed" | "failed">("running");
@@ -38,7 +43,7 @@ export function useEngineEvents(
 
   // --- React state: only updated via flush() ---
   const [steps, setSteps] = useState<StepNode[]>(initialSteps);
-  const [logs, setLogs] = useState<Map<string, string[]>>(new Map());
+  const [logs, setLogs] = useState<Map<string, LogEntry[]>>(new Map());
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [autoFollow, setAutoFollow] = useState(true);
   const [engineStatus, setEngineStatus] = useState<"running" | "completed" | "failed">("running");
@@ -89,7 +94,7 @@ export function useEngineEvents(
 
   const appendLog = (stepPath: string, message: string): void => {
     const existing = logsRef.current.get(stepPath) ?? [];
-    const updated = [...existing, message];
+    const updated = [...existing, { timestamp: new Date(), message }];
     if (updated.length > MAX_LOG_LINES) {
       updated.splice(0, updated.length - MAX_LOG_LINES);
     }
