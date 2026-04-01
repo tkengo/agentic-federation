@@ -61,7 +61,7 @@ fed dashboard
 | `fed session list` (`fed session ls`) | セッション一覧（デフォルトはアクティブのみ） |
 | `fed session list --archive` | アクティブ＋アーカイブ一覧 |
 | `fed session list --restorable` | 復旧可能セッション一覧 |
-| `fed session show [session-name]` | セッション詳細表示 |
+| `fed session status [session-name]` | ワークフローステップ状態表示 |
 | `fed session archive <name>` | 指定セッションをアーカイブ |
 | `fed session restore <name>` | tmux が死んだセッションを復元 |
 | `fed dashboard` (`fed dash`) | インタラクティブダッシュボード (Ink UI) |
@@ -70,9 +70,7 @@ fed dashboard
 
 | Command | Description |
 |---|---|
-| `fed workflow list` | 利用可能なワークフロー一覧 |
-| `fed workflow show <name>` | ワークフロー YAML を表示 |
-| `fed workflow validate <name>` | ワークフロー定義のバリデーション |
+| `fed workflow validate <name>` | ワークフロー定義のバリデーション（v2） |
 
 ### クリーンアップ
 
@@ -149,12 +147,6 @@ scripts:
 ワークフローは `workflows/` ディレクトリに YAML で定義する。ステートマシン、ペイン構成、タスク定義を一つのファイルにまとめる。
 
 ```bash
-# ワークフロー一覧
-fed workflow list
-
-# 内容を確認
-fed workflow show dev-team
-
 # バリデーション
 fed workflow validate dev-team
 ```

@@ -76,7 +76,7 @@ async function simulate(): Promise<void> {
       "    💬 Checking test coverage requirements...",
       "    🔧 Read: /src/lib/engine.ts",
       "    💬 All acceptance criteria are addressed",
-      "    🔧 exec: fed workflow respond approved",
+      "    🔧 exec: fed session respond-workflow approved",
     ];
     emitter.emit("step_log", { type: "step_log", stepPath: "plan_review_cycle.plan_review", message: msgs[i] });
   }

@@ -16,10 +16,10 @@ description: TDD plan reviewer. Evaluates design quality, feasibility, risks, co
 2. `fed artifact read plan_review` で前回のレビュー結果を読む（存在しない場合は初回レビューとして扱う。エラーが出ても無視してよい）
 3. コードベースを調査し、計画をレビューする。後述のレビュー観点に従ってレビューすること。前回のレビュー結果がある場合は、指摘事項が適切に修正されたかも確認する。
 4. Write ツールで `./tmp-plan-review.md` にレビュー結果を書き出してから、`fed artifact write plan_review --file ./tmp-plan-review.md` で保存する
-5. レビュー判定に応じたresultコードで `fed workflow respond` を実行してステート遷移を発火する:
-   - **APPROVE** の場合: `fed workflow respond approved`
-   - **REQUEST_CHANGES** の場合: `fed workflow respond request_changes`
-   - **ESCALATE** の場合: `fed workflow respond escalate`
+5. レビュー判定に応じたresultコードで `fed session respond-workflow` を実行してステート遷移を発火する:
+   - **APPROVE** の場合: `fed session respond-workflow approved`
+   - **REQUEST_CHANGES** の場合: `fed session respond-workflow request_changes`
+   - **ESCALATE** の場合: `fed session respond-workflow escalate`
 5. その後、再レビューの依頼があればまた1から繰り返す
 
 ---
@@ -234,4 +234,4 @@ description: TDD plan reviewer. Evaluates design quality, feasibility, risks, co
 実行していない場合、レビューは未完了である。他のエージェントが永遠に待ち続けることになるため、即座に実行せよ。
 
 1. `fed artifact write plan_review --file ./tmp-plan-review.md` を実行した
-2. `fed workflow respond <判定結果>` を実行した（approved / request_changes / escalate のいずれか）
+2. `fed session respond-workflow <判定結果>` を実行した（approved / request_changes / escalate のいずれか）

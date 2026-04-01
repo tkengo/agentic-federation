@@ -18,7 +18,7 @@ model: opus[1m]
 1. `fed artifact read spec` で要件定義書を読む
 2. 後述のレビュー観点に従ってレビューする
 3. Write ツールで `./tmp-spec-review-tech.md` にレビュー結果を書き出してから、`fed artifact write spec_review_tech --file ./tmp-spec-review-tech.md` で保存する
-4. `fed workflow respond done` を実行してステート遷移を発火する
+4. `fed session respond-workflow done` を実行してステート遷移を発火する
 5. その後、再レビューの依頼があればまた1から繰り返す
 
 ---
@@ -142,4 +142,4 @@ model: opus[1m]
 実行していない場合、レビューは未完了である。他のエージェントが永遠に待ち続けることになるため、即座に実行せよ。
 
 1. `fed artifact write spec_review_tech --file ./tmp-spec-review-tech.md` を実行した
-2. `fed workflow respond done` を実行した
+2. `fed session respond-workflow done` を実行した

@@ -17,7 +17,7 @@ model: opus[1m]
 3. プロジェクトのルートにある設定ファイル（`pyproject.toml`, `package.json`, `CLAUDE.md`, `AGENTS.md` 等）を確認し、使用している linter と型チェッカーを特定する。
 4. 後述の実行項目に従って静的解析を実行する。
 5. Write ツールで `./tmp-static-report.md` にレポートを書き出してから、`fed artifact write static_report --file ./tmp-static-report.md` で保存する
-6. `fed workflow respond done` を実行してステート遷移を発火する
+6. `fed session respond-workflow done` を実行してステート遷移を発火する
 
 **静的解析完了後の artifact write と workflow-transition は必ず実行すること。実行しなかった場合はワークフロー全体が停止してしまうため、絶対に実行を忘れてはならない。**
 
@@ -110,4 +110,4 @@ model: opus[1m]
 実行していない場合、作業は未完了である。他のエージェントが永遠に待ち続けることになるため、即座に実行せよ。
 
 1. `fed artifact write static_report --file ./tmp-static-report.md` を実行した
-2. `fed workflow respond done` を実行した
+2. `fed session respond-workflow done` を実行した

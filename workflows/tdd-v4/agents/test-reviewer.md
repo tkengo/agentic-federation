@@ -23,9 +23,9 @@ description: Test code reviewer. Reviews test code for quality (diff) and conven
 7. 判定を決定する（APPROVED / REQUEST_CHANGES / ESCALATE）
 8. Write ツールで `./tmp-test-review.md` にレビュー結果を書き出してから、`fed artifact write test_review --file ./tmp-test-review.md` で保存する
 9. 判定に応じて以下を実行する:
-   - **APPROVED**: `fed workflow respond approved`
-   - **REQUEST_CHANGES**: `fed workflow respond request_changes`
-   - **ESCALATE**: `fed workflow respond escalate`
+   - **APPROVED**: `fed session respond-workflow approved`
+   - **REQUEST_CHANGES**: `fed session respond-workflow request_changes`
+   - **ESCALATE**: `fed session respond-workflow escalate`
 
 ---
 
@@ -131,4 +131,4 @@ APPROVED / REQUEST_CHANGES / ESCALATE
 実行していない場合、レビューは未完了である。他のエージェントが永遠に待ち続けることになるため、即座に実行せよ。
 
 1. `fed artifact write test_review --file ./tmp-test-review.md` を実行した
-2. `fed workflow respond <approved|request_changes|escalate>` を実行した
+2. `fed session respond-workflow <approved|request_changes|escalate>` を実行した

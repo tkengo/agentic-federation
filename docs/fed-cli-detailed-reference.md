@@ -101,7 +101,7 @@ For standalone sessions without `--session-name`, the format is `<workflow>-<HHM
 
 ### `fed session recover`
 
-Recover a session whose tmux session has been lost (v2 only). Rebuilds the tmux session (windows/panes) from the workflow-v2.yaml definition. The engine is NOT started automatically — run `fed workflow engine` afterwards.
+Recover a session whose tmux session has been lost (v2 only). Rebuilds the tmux session (windows/panes) from the workflow-v2.yaml definition. The engine is NOT started automatically — run `fed session start-engine` afterwards.
 
 ```
 fed session recover [session-name]
@@ -138,13 +138,49 @@ Aliases: `fed session ls`
 | `--restorable` | Show only restorable sessions (tmux dead) |
 | `--limit <n>` | Max sessions to show (default: 20) |
 
-### `fed session show`
+### `fed session status`
 
-Show workflow status for a session (v2 engine). Displays the step tree with completion status.
+Show current workflow step status. Displays the step tree with completion status, current step, and engine status.
 
 ```
-fed session show [session-name]
+fed session status [session-name]
 ```
+
+### `fed session start-engine`
+
+Start the v2 workflow engine. By default, resumes from the last completed step (completed steps are skipped). Use `--reset` to reinitialize state and start from the beginning.
+
+```
+fed session start-engine [session-name]
+```
+
+| Option | Description |
+|---|---|
+| `--reset` | Reset state and start from the beginning |
+
+### `fed session respond-workflow`
+
+Report step result to the v2 workflow engine.
+
+```
+fed session respond-workflow [value]
+```
+
+| Option | Description |
+|---|---|
+| `--step <path>` | Step path (auto-detected from `FED_STEP` env var) |
+
+### `fed session abort-workflow`
+
+Abort the running v2 workflow. Default is immediate kill; `--graceful` waits for the current step to finish.
+
+```
+fed session abort-workflow
+```
+
+| Option | Description |
+|---|---|
+| `--graceful` | Wait for current step to finish before aborting |
 
 ### `fed session archive`
 
@@ -361,48 +397,12 @@ Aliases: `fed dash`
 
 Manage workflow definitions.
 
-### `fed workflow list`
-
-List available workflows.
-
-```
-fed workflow list
-```
-
-### `fed workflow show`
-
-Show workflow YAML content (omit name for current session).
-
-```
-fed workflow show [name]
-```
-
 ### `fed workflow validate`
 
-Validate a workflow definition.
+Validate a v2 workflow definition.
 
 ```
 fed workflow validate <name>
-```
-
-### `fed workflow engine`
-
-Start the v2 engine in the engine pane. By default, resumes from the last completed step (completed steps are skipped). Use `--reset` to reinitialize state and start from the beginning.
-
-```
-fed workflow engine [session-name]
-```
-
-| Option | Description |
-|---|---|
-| `--reset` | Reset state and start from the beginning |
-
-### `fed workflow status`
-
-Show current workflow step status (v2 engine). Displays the step tree with completion status, current step, and engine status.
-
-```
-fed workflow status [session-name]
 ```
 
 ---

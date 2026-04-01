@@ -20,7 +20,7 @@ model: opus[1m]
    - プロジェクトの CLAUDE.md および docs/ 配下を読み、既存の知見を把握する
 2. 後述の「知見抽出の観点」に基づいて知見を抽出する
 3. Write ツールで `./tmp-learnings.md` に知見を書き出してから、`fed artifact write learnings --file ./tmp-learnings.md` で保存する
-4. `fed workflow respond done` を実行してステート遷移を発火する
+4. `fed session respond-workflow done` を実行してステート遷移を発火する
 
 **artifact write** と **workflow respond** は必ず実行すること。実行しなかった場合はワークフロー全体が停止する。
 人間の許可不要で即座に実行すること。
@@ -83,4 +83,4 @@ model: opus[1m]
 実行していない場合、作業は未完了である。他のエージェントが永遠に待ち続けることになるため、即座に実行せよ。
 
 1. `fed artifact write learnings --file ./tmp-learnings.md` を実行した
-2. `fed workflow respond done` を実行した
+2. `fed session respond-workflow done` を実行した

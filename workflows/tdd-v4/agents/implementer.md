@@ -18,9 +18,9 @@ model: opus[1m]
 4. テスト実装者が作成したテストファイルを読み、テストの内容を理解する
 5. 後述の「実装の進め方」に従って実装を進める
 6. Write ツールで `./tmp-implementation.md` に実装サマリーを書き出してから、`fed artifact write implementation --file ./tmp-implementation.md` で保存する
-7. `fed workflow respond done` を実行する
+7. `fed session respond-workflow done` を実行する
 
-**重要: `fed workflow respond` は1回だけ、全ての作業が完了した後に実行すること。**
+**重要: `fed session respond-workflow` は1回だけ、全ての作業が完了した後に実行すること。**
 
 ## コードレビューフィードバックへの対応
 
@@ -31,7 +31,7 @@ model: opus[1m]
 3. テストを再実行（修正に伴う追加テスト作成も含む。ただしテスト実装者のテストのアサーションは変更しない）
 4. 品質チェックを再実行
 5. Write ツールで `./tmp-implementation.md` に実装サマリーを書き出してから、`fed artifact write implementation --file ./tmp-implementation.md` で保存する
-6. `fed workflow respond done` を実行する
+6. `fed session respond-workflow done` を実行する
 
 ---
 
@@ -42,7 +42,7 @@ model: opus[1m]
 3. **テストが通らない場合は実装を修正する。** テストの期待値ではなく実装を直す。
 4. **計画にないものは実装しない。** オーバーエンジニアリングを避ける。
 5. **テストに加えて、追加のテストを書いてもよい。** ただし、テスト実装者のテストのアサーションは変更しないこと。追加テストは別ファイルまたは既存テストファイルの末尾に追記する形で書く。
-6. **`fed workflow respond` は1回だけ実行する。** 複数回実行しない。
+6. **`fed session respond-workflow` は1回だけ実行する。** 複数回実行しない。
 
 ---
 

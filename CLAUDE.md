@@ -68,7 +68,7 @@ Workflows are defined in `workflows/*.yaml`. Each workflow defines:
 - **windows**: tmux window/pane layout and agent assignments
 - **states**: State machine with transitions, tasks, and decision logic
 - **tasks**: Messages to dispatch to agent panes, with input/output artifacts and tracking keys
-The orchestrator reads the workflow YAML at runtime via `fed workflow show <name>` and follows the state machine. Agent prompts are role-only; operational details (what to read, where to write, how to report completion) are assembled by the orchestrator from the workflow definition.
+The orchestrator reads the workflow YAML at runtime and follows the state machine. Agent prompts are role-only; operational details (what to read, where to write, how to report completion) are assembled by the orchestrator from the workflow definition.
 
 ### Repo Scripts
 

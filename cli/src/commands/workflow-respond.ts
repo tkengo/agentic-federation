@@ -4,7 +4,7 @@ import { requireSessionDir } from "../lib/session.js";
 import { readV2State, updateV2StateWithLock, setStepResult, appendHistory } from "../lib/engine-v2/state.js";
 
 /**
- * `fed workflow respond <value> [--step <path>]`
+ * `fed session respond-workflow <value> [--step <path>]`
  *
  * Write a step result for the engine to consume.
  * If value is omitted, reads and displays the current result for the step.

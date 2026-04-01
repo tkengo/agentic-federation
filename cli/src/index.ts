@@ -39,11 +39,7 @@ import { cleanCommand } from "./commands/clean.js";
 import { workflowStatusCommand } from "./commands/workflow-status.js";
 import { dashCommand } from "./commands/dash.js";
 import { describeSetCommand, describeShowCommand } from "./commands/describe.js";
-import {
-  workflowListCommand,
-  workflowShowCommand,
-  workflowValidateCommand,
-} from "./commands/workflow.js";
+import { workflowValidateCommand } from "./commands/workflow.js";
 import {
   repoScriptListCommand,
   repoScriptShowCommand,
@@ -202,10 +198,34 @@ session
   });
 
 session
-  .command("show [session-name]")
-  .description("Show workflow status for a session (v2 engine)")
+  .command("status [session-name]")
+  .description("Show current workflow step status")
   .action((sessionName?: string) => {
     workflowStatusCommand(sessionName);
+  });
+
+session
+  .command("start-engine [session-name]")
+  .description("Start the v2 workflow engine (resumes from last completed step)")
+  .option("--reset", "Reset state and start from the beginning")
+  .action((sessionName?: string, options?: { reset?: boolean }) => {
+    workflowEngineCommand(sessionName, options?.reset);
+  });
+
+session
+  .command("respond-workflow [value]")
+  .description("Report step result to the v2 workflow engine")
+  .option("--step <path>", "Step path (auto-detected from FED_STEP)")
+  .action(async (value: string | undefined, options: { step?: string }) => {
+    await workflowRespondCommand(value, options.step);
+  });
+
+session
+  .command("abort-workflow")
+  .description("Abort the running v2 workflow")
+  .option("--graceful", "Wait for current step to finish before aborting")
+  .action((options: { graceful?: boolean }) => {
+    workflowAbortCommand(options);
   });
 
 session
@@ -379,55 +399,10 @@ const workflow = program
   .description("Manage workflow definitions");
 
 workflow
-  .command("list")
-  .description("List available workflows")
-  .action(() => {
-    workflowListCommand();
-  });
-
-workflow
-  .command("show [name]")
-  .description("Show workflow YAML content (omit name for current session)")
-  .action((name?: string) => {
-    workflowShowCommand(name);
-  });
-
-workflow
   .command("validate <name>")
-  .description("Validate a workflow definition")
+  .description("Validate a v2 workflow definition")
   .action((name: string) => {
     workflowValidateCommand(name);
-  });
-
-workflow
-  .command("engine [session-name]")
-  .description("Start the v2 engine in the engine pane (resumes from last completed step by default)")
-  .option("--reset", "Reset state and start from the beginning")
-  .action((sessionName?: string, options?: { reset?: boolean }) => {
-    workflowEngineCommand(sessionName, options?.reset);
-  });
-
-workflow
-  .command("respond [value]")
-  .description("Report step result to the v2 engine")
-  .option("--step <path>", "Step path (auto-detected from FED_STEP)")
-  .action(async (value: string | undefined, options: { step?: string }) => {
-    await workflowRespondCommand(value, options.step);
-  });
-
-workflow
-  .command("status [session-name]")
-  .description("Show current workflow step status (v2 engine)")
-  .action((sessionName?: string) => {
-    workflowStatusCommand(sessionName);
-  });
-
-workflow
-  .command("abort")
-  .description("Abort the running v2 workflow")
-  .option("--graceful", "Wait for current step to finish before aborting")
-  .action((options: { graceful?: boolean }) => {
-    workflowAbortCommand(options);
   });
 
 // --- workflow-transition ---

@@ -1,77 +1,21 @@
-import fs from "node:fs";
 import path from "node:path";
+import fs from "node:fs";
 import { WORKFLOWS_DIR } from "../lib/paths.js";
-import { getCurrentTmuxSession, resolveSession } from "../lib/session.js";
-import {
-  listWorkflows,
-  loadWorkflowByName,
-  validateWorkflow,
-} from "../lib/workflow.js";
+import { loadV2Workflow } from "../lib/engine-v2/workflow-loader.js";
 
-/** List available workflows from the workflows/ directory. */
-export function workflowListCommand(): void {
-  const names = listWorkflows();
-  if (names.length === 0) {
-    console.log("No workflows found.");
-    return;
-  }
-  for (const name of names) {
-    console.log(name);
-  }
-}
-
-/** Show the YAML content of a workflow.
- *  If name is given, read from source workflows directory.
- *  If name is omitted, show the current session's expanded workflow.yaml. */
-export function workflowShowCommand(name?: string): void {
-  if (name) {
-    // Name specified: always read from source workflows directory
-    const filePath = path.join(WORKFLOWS_DIR, name, "workflow.yaml");
-    if (!fs.existsSync(filePath)) {
-      console.error(`Workflow not found: ${name}`);
-      process.exit(1);
-    }
-    process.stdout.write(fs.readFileSync(filePath, "utf-8"));
-    return;
-  }
-
-  // Name omitted: show current session's expanded workflow
-  const tmuxSession = getCurrentTmuxSession();
-  if (!tmuxSession) {
-    console.error("Error: Not inside a session. Specify a workflow name.");
-    process.exit(1);
-  }
-  const sessionDir = resolveSession(tmuxSession);
-  if (!sessionDir) {
-    console.error(`Error: No active session found for '${tmuxSession}'.`);
-    process.exit(1);
-  }
-  const sessionWf = path.join(sessionDir, "workflow.yaml");
-  if (!fs.existsSync(sessionWf)) {
-    console.error("Error: No workflow.yaml found in current session.");
-    process.exit(1);
-  }
-  process.stdout.write(fs.readFileSync(sessionWf, "utf-8"));
-}
-
-/** Validate a workflow definition and report errors. */
+/** Validate a v2 workflow definition and report errors. */
 export function workflowValidateCommand(name: string): void {
+  const v2Path = path.join(WORKFLOWS_DIR, name, "workflow-v2.yaml");
+  if (!fs.existsSync(v2Path)) {
+    console.error(`Workflow not found: ${name} (expected ${v2Path})`);
+    process.exit(1);
+  }
   try {
-    const wf = loadWorkflowByName(name);
-    // loadWorkflowByName already validates, but let's show explicit results
-    const errors = validateWorkflow(wf);
-    if (errors.length === 0) {
-      console.log(`Valid: workflow "${name}" passed all checks.`);
-    } else {
-      console.error(`Validation errors for "${name}":`);
-      for (const err of errors) {
-        console.error(`  - ${err}`);
-      }
-      process.exit(1);
-    }
+    loadV2Workflow(v2Path);
+    console.log(`Valid: workflow "${name}" passed all checks.`);
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
-    console.error(msg);
+    console.error(`Validation error for "${name}":\n  ${msg}`);
     process.exit(1);
   }
 }

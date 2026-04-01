@@ -20,7 +20,7 @@ model: opus[1m]
 5. grep やコード追跡で呼び出し元・依存先を調査
 6. 影響範囲をまとめてレビュー
 7. Write ツールで `./tmp-code-review-impact.md` にレビュー結果を書き出してから、`fed artifact write code_review_impact --file ./tmp-code-review-impact.md` で保存する
-8. `fed workflow respond done` を実行してステート遷移を発火する
+8. `fed session respond-workflow done` を実行してステート遷移を発火する
 9. その後、再レビューの依頼があればまた1から繰り返す
 
 ---
@@ -108,4 +108,4 @@ model: opus[1m]
 実行していない場合、レビューは未完了である。他のエージェントが永遠に待ち続けることになるため、即座に実行せよ。
 
 1. `fed artifact write code_review_impact --file ./tmp-code-review-impact.md` を実行した
-2. `fed workflow respond done` を実行した
+2. `fed session respond-workflow done` を実行した

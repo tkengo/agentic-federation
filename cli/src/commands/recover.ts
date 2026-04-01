@@ -11,7 +11,7 @@ import { applyEnvironmentVars, createV2WindowLayout } from "./start.js";
  * `fed session recover [session-name]`
  *
  * Rebuild tmux session from workflow-v2.yaml for a session whose tmux died.
- * The engine is NOT started automatically — human must run `fed workflow engine`.
+ * The engine is NOT started automatically — human must run `fed session start-engine`.
  */
 export function recoverCommand(sessionName: string | undefined, noAttach?: boolean): void {
   if (!sessionName) {
@@ -77,7 +77,7 @@ export function recoverCommand(sessionName: string | undefined, noAttach?: boole
   // Set per-pane env vars for engine window
   tmux.sendKeys(`${tmuxSession}:engine.1`, `export FED_SESSION=${tmuxSession} FED_SESSION_DIR=${sessionPath}`);
 
-  // NOTE: Engine is NOT started — human must run `fed workflow engine`
+  // NOTE: Engine is NOT started — human must run `fed session start-engine`
 
   // Rebuild user-defined windows from workflow definition
   const v2Workflow = loadV2Workflow(workflowYamlPath);
@@ -103,7 +103,7 @@ export function recoverCommand(sessionName: string | undefined, noAttach?: boole
   console.log("");
   console.log("=== Session Recovered ===");
   console.log("Engine is NOT running. Start it with:");
-  console.log("  fed workflow engine");
+  console.log("  fed session start-engine");
   console.log("");
 
   if (noAttach) {

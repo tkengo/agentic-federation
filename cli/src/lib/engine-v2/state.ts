@@ -42,7 +42,7 @@ export function writeV2State(sessionDir: string, state: V2State): void {
 }
 
 /**
- * Update state with file lock (for external callers like `fed workflow respond`).
+ * Update state with file lock (for external callers like `fed session respond-workflow`).
  */
 export async function updateV2StateWithLock(
   sessionDir: string,

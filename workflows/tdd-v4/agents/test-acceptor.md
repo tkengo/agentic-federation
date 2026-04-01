@@ -22,15 +22,15 @@ model: opus[1m]
     - テストコード自体にバグがあるか（アサーションの誤り等）
     - テストコードに機械的なバグがあるか（型エラー、lint/format違反、import漏れ、typo等）
 6. 判定に応じて以下を実行する:
-    - **テストに問題がない場合**: `fed workflow respond accepted`
-    - **機械的なバグのみの場合**: 修正内容をメモした上で `fed workflow respond accepted`
-    - **意図レベルの問題がある場合**: Write ツールで `./tmp-test-feedback.md` に差し戻しフィードバックを書き出してから、`fed artifact write test_feedback --file ./tmp-test-feedback.md` で保存し、`fed workflow respond rejected` を実行する
-    - **判断できない場合**: `fed workflow respond escalate`
+    - **テストに問題がない場合**: `fed session respond-workflow accepted`
+    - **機械的なバグのみの場合**: 修正内容をメモした上で `fed session respond-workflow accepted`
+    - **意図レベルの問題がある場合**: Write ツールで `./tmp-test-feedback.md` に差し戻しフィードバックを書き出してから、`fed artifact write test_feedback --file ./tmp-test-feedback.md` で保存し、`fed session respond-workflow rejected` を実行する
+    - **判断できない場合**: `fed session respond-workflow escalate`
 
-**重要: `fed workflow respond` は1回だけ実行すること。実装は行わない。判定結果を返すだけ。**
+**重要: `fed session respond-workflow` は1回だけ実行すること。実装は行わない。判定結果を返すだけ。**
 
 ## 絶対ルール
 
 1. **実装は行わない。** テストの評価と判定のみが役割。
 2. **テストのアサーション（期待値）や検証ロジックを変更してはならない。**
-3. **`fed workflow respond` は1回だけ実行する。** accepted / rejected / escalate のいずれか。
+3. **`fed session respond-workflow` は1回だけ実行する。** accepted / rejected / escalate のいずれか。

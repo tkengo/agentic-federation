@@ -50,7 +50,10 @@ For detailed options and usage of each command, see [fed-cli-detailed-reference.
 | `fed session recover [session-name]` | Recover a session whose tmux session has been lost (v2 only) |
 | `fed session stop [session-name]` | Stop a session |
 | `fed session list` | List sessions |
-| `fed session show [session-name]` | Show workflow status for a session (v2 engine) |
+| `fed session status [session-name]` | Show current workflow step status |
+| `fed session start-engine [session-name]` | Start the v2 workflow engine (resumes from last completed step) |
+| `fed session respond-workflow [value]` | Report step result to the v2 workflow engine |
+| `fed session abort-workflow` | Abort the running v2 workflow |
 | `fed session archive <session-name>` | Archive a specific session |
 
 ### `fed state`
@@ -95,12 +98,7 @@ For detailed options and usage of each command, see [fed-cli-detailed-reference.
 
 | Subcommand | Description |
 |---|---|
-| `fed workflow list` | List available workflows |
-| `fed workflow show [name]` | Show workflow YAML content |
-| `fed workflow validate <name>` | Validate a workflow definition |
-| `fed workflow engine [session-name]` | Start the v2 engine in the engine pane (resumes by default) |
-| `fed workflow status [session-name]` | Show current workflow step status (v2 engine) |
-| `fed workflow abort [--graceful]` | Abort the running v2 workflow (default: immediate kill; `--graceful` waits for current step) |
+| `fed workflow validate <name>` | Validate a v2 workflow definition |
 
 ### `fed repo-script`
 

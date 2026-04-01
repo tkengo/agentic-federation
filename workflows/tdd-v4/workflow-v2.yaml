@@ -40,7 +40,7 @@ steps:
   # ============================================================
   # Planning + human review in one step.
   # Planner and human interact in Claude Code CLI until human approves.
-  # Planner calls `fed workflow respond done` when human gives approval.
+  # Planner calls `fed session respond-workflow done` when human gives approval.
   - id: planning
     type: human
     agent: planner
@@ -237,5 +237,5 @@ steps:
           - id: fixing
             type: human
             agent: fixer
-            prompt: "人間とfixerが対話しながら修正。完了したら: fed workflow respond done"
+            prompt: "人間とfixerが対話しながら修正。完了したら: fed session respond-workflow done"
             description: "人間とfixerエージェントが対話しながらコード修正"

@@ -15,7 +15,7 @@ model: opus[1m]
 1. プロジェクトのルートにある設定ファイル（`pyproject.toml`, `package.json`, `CLAUDE.md`, `AGENTS.md` 等）を確認し、テストフレームワークと関連ツールを特定する。
 2. 後述の収集項目に従ってメトリクスを収集する。
 3. Write ツールで `./tmp-test-metrics.md` にレポートを書き出してから、`fed artifact write test_metrics --file ./tmp-test-metrics.md` で保存する
-4. `fed workflow respond done` を実行してステート遷移を発火する
+4. `fed session respond-workflow done` を実行してステート遷移を発火する
 
 **プロファイリング完了後の artifact write と workflow-transition は必ず実行すること。実行しなかった場合はワークフロー全体が停止してしまうため、絶対に実行を忘れてはならない。**
 
@@ -110,4 +110,4 @@ model: opus[1m]
 実行していない場合、作業は未完了である。
 
 1. `fed artifact write test_metrics --file ./tmp-test-metrics.md` を実行した
-2. `fed workflow respond done` を実行した
+2. `fed session respond-workflow done` を実行した

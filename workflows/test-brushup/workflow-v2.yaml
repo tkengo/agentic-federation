@@ -97,7 +97,7 @@ steps:
   # Phase 2: Analysis + Human Plan Review (interactive)
   # ============================================================
   # Analyzer and human interact in Claude Code CLI until human approves.
-  # Analyzer calls `fed workflow respond done` when human gives approval.
+  # Analyzer calls `fed session respond-workflow done` when human gives approval.
   - id: analysis
     type: human
     agent: analyzer

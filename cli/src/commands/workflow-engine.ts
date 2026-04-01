@@ -5,7 +5,7 @@ import * as tmux from "../lib/tmux.js";
 import { initV2State } from "../lib/engine-v2/state.js";
 
 /**
- * `fed workflow engine [session-name]`
+ * `fed session start-engine [session-name]`
  *
  * Start the v2 engine in the engine pane.
  * By default, resumes from last completed step (skips completed steps).

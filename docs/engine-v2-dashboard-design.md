@@ -84,7 +84,7 @@ Navigate to individual branches to see their logs. No log interleaving.
 - **Auto-follow**: When no manual navigation, selection follows the currently active step
 - Log panel shows the selected step's log
 
-No respond UI for now — human uses `fed workflow respond` from the [human] window.
+No respond UI for now — human uses `fed session respond-workflow` from the [human] window.
 
 ## Implementation
 

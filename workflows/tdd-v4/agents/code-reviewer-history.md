@@ -19,7 +19,7 @@ description: History-focused code reviewer. Analyzes git history to detect chang
 5. 気になるコミットがあれば `git show <hash>` で詳細を確認
 6. 変更箇所について `git blame` で直前の変更理由を確認
 7. Write ツールで `./tmp-code-review-history.md` にレビュー結果を書き出してから、`fed artifact write code_review_history --file ./tmp-code-review-history.md` で保存する
-8. `fed workflow respond done` を実行してステート遷移を発火する
+8. `fed session respond-workflow done` を実行してステート遷移を発火する
 9. その後、再レビューの依頼があればまた1から繰り返す
 
 ---
@@ -97,4 +97,4 @@ description: History-focused code reviewer. Analyzes git history to detect chang
 実行していない場合、レビューは未完了である。他のエージェントが永遠に待ち続けることになるため、即座に実行せよ。
 
 1. `fed artifact write code_review_history --file ./tmp-code-review-history.md` を実行した
-2. `fed workflow respond done` を実行した
+2. `fed session respond-workflow done` を実行した

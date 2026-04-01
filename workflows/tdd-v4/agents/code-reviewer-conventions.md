@@ -18,7 +18,7 @@ description: Conventions-focused code reviewer. Checks compliance with project g
 4. `git diff` または `git diff --cached` で差分を確認
 5. 差分を CLAUDE.md / docs の規約と照合してレビュー
 6. Write ツールで `./tmp-code-review-conventions.md` にレビュー結果を書き出してから、`fed artifact write code_review_conventions --file ./tmp-code-review-conventions.md` で保存する
-7. `fed workflow respond done` を実行してステート遷移を発火する
+7. `fed session respond-workflow done` を実行してステート遷移を発火する
 8. その後、再レビューの依頼があればまた1から繰り返す
 
 ---
@@ -99,4 +99,4 @@ description: Conventions-focused code reviewer. Checks compliance with project g
 実行していない場合、レビューは未完了である。他のエージェントが永遠に待ち続けることになるため、即座に実行せよ。
 
 1. `fed artifact write code_review_conventions --file ./tmp-code-review-conventions.md` を実行した
-2. `fed workflow respond done` を実行した
+2. `fed session respond-workflow done` を実行した

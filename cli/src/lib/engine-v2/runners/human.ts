@@ -39,7 +39,7 @@ export interface HumanRunnerHandle {
 }
 
 /**
- * Wait for human to respond via `fed workflow respond`.
+ * Wait for human to respond via `fed session respond-workflow`.
  * Watches for a .respond file in <sessionDir>/respond/.
  */
 export function runHumanStep(options: HumanRunnerOptions): HumanRunnerHandle {

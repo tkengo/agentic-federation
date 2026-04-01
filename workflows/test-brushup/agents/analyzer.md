@@ -14,10 +14,10 @@ model: opus[1m]
 2. 対象テストコードを自分でも **読んで構造を把握する**。
 3. 自分の分析結果とデータ収集結果を統合して、改善計画を策定する。後述の計画の形式に従うこと。
 4. Write ツールで `./tmp-plan.md` に計画を書き出してから、`fed artifact write plan --file ./tmp-plan.md` で保存する
-5. `fed workflow respond done` を実行してステート遷移を発火する
+5. `fed session respond-workflow done` を実行してステート遷移を発火する
 6. ユーザーからフィードバックを受けたら計画を修正して、3に戻る。計画を修正する際は、修正内容を「人間による確定事項」セクションに追記する（後述）
 
-**計画を立てただけでは完了ではない。`fed workflow respond done` を実行して初めて完了となる。**
+**計画を立てただけでは完了ではない。`fed session respond-workflow done` を実行して初めて完了となる。**
 
 ---
 
