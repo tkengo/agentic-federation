@@ -6,7 +6,7 @@ import { useEngineEvents } from "./useEngineEvents.js";
 import { computeColumnWidths, type ColumnWidths } from "./StepRow.js";
 
 const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
-const STEP_TREE_VISIBLE = 13;
+const STEP_TREE_VISIBLE = 12;
 
 interface EngineAppProps {
   emitter: EngineEventEmitter;
@@ -97,6 +97,17 @@ function StepsView({ steps, logs, selectedIndex, autoFollow, engineStatus, engin
 }): React.ReactElement {
   const colWidths = useMemo(() => computeColumnWidths(steps), [steps]);
 
+  // Track terminal rows for dynamic padding on resize
+  const [termRows, setTermRows] = useState(process.stdout.rows ?? 40);
+
+  useEffect(() => {
+    const onResize = (): void => {
+      setTermRows(process.stdout.rows ?? 40);
+    };
+    process.stdout.on("resize", onResize);
+    return () => { process.stdout.off("resize", onResize); };
+  }, []);
+
   // Mark skipped steps: not_started steps that appear before any started/completed step
   const displaySteps = useMemo(() => {
     let lastActiveIndex = -1;
@@ -159,6 +170,12 @@ function StepsView({ steps, logs, selectedIndex, autoFollow, engineStatus, engin
   const treeStart = treeStartRef.current;
   const visibleSteps = displaySteps.slice(treeStart, treeStart + STEP_TREE_VISIBLE);
 
+  // Dynamic padding to pin workflow area to terminal bottom
+  const hasMoreBelow = treeStart + STEP_TREE_VISIBLE < displaySteps.length;
+  const workflowAreaLines = 1 + 1 + visibleSteps.length + (hasMoreBelow ? 1 : 0);
+  const staticCount = staticLogLines.length;
+  const dynamicPadCount = Math.max(0, termRows - staticCount - workflowAreaLines);
+
   // Status
   const statusText = engineStatus === "completed"
     ? `✓ Completed (${formatDuration(engineDurationMs ?? 0)})`
@@ -178,6 +195,11 @@ function StepsView({ steps, logs, selectedIndex, autoFollow, engineStatus, engin
           </Text>
         )}
       </Static>
+
+      {/* Dynamic padding to pin workflow area to bottom */}
+      {dynamicPadCount > 0 && Array.from({ length: dynamicPadCount }, (_, i) => (
+        <Text key={`dpad_${i}`}>{" "}</Text>
+      ))}
 
       <Text dimColor>{"─".repeat(process.stdout.columns ?? 80)}</Text>
 
