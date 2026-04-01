@@ -66,7 +66,12 @@ export function SessionRow({ session, selected, dimmed, blinkOn, colWidths }: Se
         </Box>
       )}
       {!dimmed && session.waitingHuman.waiting ? (
-        <Text color="magenta" dimColor={!blinkOn}>{` [!]`}</Text>
+        <>
+          <Text color="magenta" dimColor={!blinkOn}>{` [!]`}</Text>
+          {session.waitingHuman.reason && (
+            <Text color="yellow" dimColor={!blinkOn}>{` ${truncate(session.waitingHuman.reason, 40)}`}</Text>
+          )}
+        </>
       ) : (
         <Text>{`    `}</Text>
       )}
