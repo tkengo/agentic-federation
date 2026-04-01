@@ -1,0 +1,26 @@
+name: standalone
+description: "通常のClaude Code起動"
+
+focus: standalone
+
+windows:
+  - name: standalone
+    panes:
+      - id: claude
+        name: Claude
+        pane: 1
+        command: yoloclaude
+      - id: editor
+        name: Editor
+        pane: 2
+        command: nvim
+    layout:
+      splits:
+        - { source: 1, direction: h, percent: 50 }
+      focus: 1
+
+steps:
+  - id: working
+    type: human
+    prompt: "作業が完了したら done で応答してください。"
+    description: "通常作業"
