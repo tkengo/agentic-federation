@@ -18,11 +18,20 @@ import { runClaudeStep } from "./runners/claude.js";
 import { runHumanStep } from "./runners/human.js";
 import { runCodexStep } from "./runners/codex.js";
 import { runShellStep } from "./runners/shell.js";
+import type { RunnerHandle } from "./runners/types.js";
 import { evaluateCondition, type ExprContext } from "./expr.js";
+import { readAbortRequest, consumeAbortRequest, clearAbortRequest } from "./abort.js";
 import type { V2Step, V2State, V2BranchCase } from "./types.js";
 
 // Sentinel to signal loop break from a branch case
 const BREAK_LOOP = Symbol("BREAK_LOOP");
+
+class EngineAbortError extends Error {
+  constructor(public readonly mode: "immediate" | "graceful") {
+    super(`Engine aborted (${mode})`);
+    this.name = "EngineAbortError";
+  }
+}
 
 /**
  * Main engine entry point.
@@ -56,6 +65,9 @@ export async function runEngine(sessionDir: string, emitter?: EngineEventEmitter
     state = initV2State(sessionDir);
   }
 
+  // Clear any stale abort request from a previous run
+  clearAbortRequest(sessionDir);
+
   const engineStartTime = Date.now();
 
   try {
@@ -69,6 +81,21 @@ export async function runEngine(sessionDir: string, emitter?: EngineEventEmitter
 
     logger.engineComplete(Date.now() - engineStartTime);
   } catch (err) {
+    if (err instanceof EngineAbortError) {
+      consumeAbortRequest(sessionDir);
+      const abortedStep = state.current_step;
+      // Clear the aborted step's result so it re-runs on resume
+      if (abortedStep && state.results[abortedStep]) {
+        delete state.results[abortedStep];
+      }
+      setStatus(state, "aborted");
+      setCurrentStep(state, null);
+      appendHistory(state, "engine_aborted", abortedStep ?? "", `mode=${err.mode}`);
+      writeV2State(sessionDir, state);
+
+      logger.engineAborted(err.mode);
+      return;
+    }
     if (err === BREAK_LOOP) {
       // Should not reach here at top level
       logger.error("Unexpected break at top level");
@@ -82,6 +109,49 @@ export async function runEngine(sessionDir: string, emitter?: EngineEventEmitter
     process.exit(1);
   } finally {
     logger.close();
+  }
+}
+
+/**
+ * Wait for a runner to complete, polling for abort requests.
+ * For immediate abort: kills the child process and throws EngineAbortError.
+ * For graceful abort: lets the step finish, then the caller checks after completion.
+ */
+async function waitWithAbortCheck(handle: RunnerHandle, sessionDir: string): Promise<number> {
+  return new Promise<number>((resolve, reject) => {
+    let settled = false;
+
+    const abortChecker = setInterval(() => {
+      const req = readAbortRequest(sessionDir);
+      if (req && req.mode === "immediate") {
+        clearInterval(abortChecker);
+        handle.kill();
+        settled = true;
+        reject(new EngineAbortError("immediate"));
+      }
+    }, 500);
+
+    handle.promise.then(
+      (exitCode) => {
+        clearInterval(abortChecker);
+        if (!settled) resolve(exitCode);
+      },
+      (err) => {
+        clearInterval(abortChecker);
+        if (!settled) reject(err);
+      },
+    );
+  });
+}
+
+/**
+ * Check for graceful abort request after a step completes.
+ * Throws EngineAbortError if a graceful (or immediate) abort was requested.
+ */
+function checkGracefulAbort(sessionDir: string): void {
+  const req = readAbortRequest(sessionDir);
+  if (req) {
+    throw new EngineAbortError(req.mode);
   }
 }
 
@@ -103,6 +173,9 @@ async function executeBlock(
 
     const shouldBreak = await executeStep(step, stepPath, sessionDir, state, meta, logger);
     if (shouldBreak) return true;
+
+    // Check for graceful abort between steps
+    checkGracefulAbort(sessionDir);
   }
   return false;
 }
@@ -215,7 +288,7 @@ async function executeActionStep(
         FED_REPO_DIR: worktreeDir,
       };
 
-      const exitCode = await runClaudeStep({
+      const handle = runClaudeStep({
         step,
         stepPath,
         sessionDir,
@@ -224,6 +297,8 @@ async function executeActionStep(
         env,
         logger,
       });
+
+      const exitCode = await waitWithAbortCheck(handle, sessionDir);
 
       if (exitCode !== 0) {
         throw new Error(`claude -p exited with code ${exitCode}`);
@@ -244,7 +319,7 @@ async function executeActionStep(
         FED_REPO_DIR: worktreeDir,
       };
 
-      const exitCode = await runCodexStep({
+      const handle = runCodexStep({
         step,
         stepPath,
         sessionDir,
@@ -253,6 +328,8 @@ async function executeActionStep(
         env,
         logger,
       });
+
+      const exitCode = await waitWithAbortCheck(handle, sessionDir);
 
       if (exitCode !== 0) {
         throw new Error(`codex exec exited with code ${exitCode}`);
@@ -270,7 +347,7 @@ async function executeActionStep(
         FED_REPO_DIR: worktreeDir,
       };
 
-      const exitCode = await runShellStep({
+      const handle = runShellStep({
         step,
         stepPath,
         sessionDir,
@@ -278,6 +355,8 @@ async function executeActionStep(
         env,
         logger,
       });
+
+      const exitCode = await waitWithAbortCheck(handle, sessionDir);
 
       // Shell step result is based on exit code
       resultValue = exitCode === 0 ? "pass" : "fail";
@@ -288,13 +367,23 @@ async function executeActionStep(
     }
 
     case "human": {
-      const value = await runHumanStep({
+      const handle = runHumanStep({
         step,
         stepPath,
         sessionDir,
         logger,
       });
-      resultValue = value;
+
+      // Wrap string promise into RunnerHandle for abort checking
+      let humanResult: string | undefined;
+      await waitWithAbortCheck(
+        {
+          promise: handle.promise.then((v) => { humanResult = v; return 0; }),
+          kill: handle.kill,
+        },
+        sessionDir,
+      );
+      resultValue = humanResult;
       break;
     }
   }
@@ -606,6 +695,7 @@ async function main(): Promise<void> {
       emitter,
       initialSteps,
       workflowName: workflow.name,
+      sessionDir,
     }),
     { patchConsole: false },
   );

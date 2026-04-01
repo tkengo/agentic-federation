@@ -1,8 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
-import { watch } from "chokidar";
+import { watch, type FSWatcher } from "chokidar";
 import type { V2Step } from "../types.js";
 import type { EngineLogger } from "../logger.js";
+import type { RunnerHandle } from "./types.js";
 import { sendOsNotification } from "../../../commands/notify-human.js";
 
 export interface HumanRunnerOptions {
@@ -32,14 +33,21 @@ function clearWaitingHuman(sessionDir: string): void {
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2) + "\n");
 }
 
+export interface HumanRunnerHandle {
+  promise: Promise<string>;
+  kill: () => void;
+}
+
 /**
  * Wait for human to respond via `fed workflow respond`.
  * Watches for a .respond file in <sessionDir>/respond/.
  */
-export function runHumanStep(options: HumanRunnerOptions): Promise<string> {
+export function runHumanStep(options: HumanRunnerOptions): HumanRunnerHandle {
   const { step, stepPath, sessionDir, logger } = options;
 
-  return new Promise((resolve, reject) => {
+  let watcher: FSWatcher | null = null;
+
+  const promise = new Promise<string>((resolve, reject) => {
     const respondDir = path.join(sessionDir, "respond");
     fs.mkdirSync(respondDir, { recursive: true });
 
@@ -72,13 +80,13 @@ export function runHumanStep(options: HumanRunnerOptions): Promise<string> {
     }
 
     // Watch for the respond file
-    const watcher = watch(respondDir, {
+    watcher = watch(respondDir, {
       ignoreInitial: true,
       awaitWriteFinish: { stabilityThreshold: 200, pollInterval: 100 },
     });
 
     const cleanup = () => {
-      watcher.close().catch(() => {});
+      watcher?.close().catch(() => {});
       clearWaitingHuman(sessionDir);
     };
 
@@ -100,4 +108,12 @@ export function runHumanStep(options: HumanRunnerOptions): Promise<string> {
       reject(new Error(`Watcher error: ${err}`));
     });
   });
+
+  return {
+    promise,
+    kill: () => {
+      watcher?.close().catch(() => {});
+      clearWaitingHuman(sessionDir);
+    },
+  };
 }

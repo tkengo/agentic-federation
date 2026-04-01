@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import readline from "node:readline";
 import type { V2Step } from "../types.js";
 import type { EngineLogger } from "../logger.js";
+import type { RunnerHandle } from "./types.js";
 
 export interface ShellRunnerOptions {
   step: V2Step;
@@ -17,10 +18,12 @@ export interface ShellRunnerOptions {
  * The command is taken from step.prompt.
  * Returns the exit code.
  */
-export function runShellStep(options: ShellRunnerOptions): Promise<number> {
+export function runShellStep(options: ShellRunnerOptions): RunnerHandle {
   const { step, stepPath, worktreeDir, env, logger } = options;
 
-  return new Promise((resolve, reject) => {
+  let childProcess: ReturnType<typeof spawn> | null = null;
+
+  const promise = new Promise<number>((resolve, reject) => {
     const command = step.prompt;
     if (!command) {
       reject(new Error(`Shell step "${stepPath}" has no command (set 'prompt' field)`));
@@ -40,6 +43,7 @@ export function runShellStep(options: ShellRunnerOptions): Promise<number> {
       env: childEnv,
       stdio: ["ignore", "pipe", "pipe"],
     });
+    childProcess = child;
 
     // Stream stdout lines to logger
     const stdoutRl = readline.createInterface({ input: child.stdout });
@@ -67,4 +71,9 @@ export function runShellStep(options: ShellRunnerOptions): Promise<number> {
       resolve(code ?? 1);
     });
   });
+
+  return {
+    promise,
+    kill: () => { childProcess?.kill("SIGTERM"); },
+  };
 }

@@ -20,6 +20,11 @@ export interface EngineFailedEvent {
   error: string;
 }
 
+export interface EngineAbortedEvent {
+  type: "engine_aborted";
+  mode: string;
+}
+
 export interface StepStartEvent {
   type: "step_start";
   stepPath: string;
@@ -64,6 +69,7 @@ export type EngineEvent =
   | EngineStartEvent
   | EngineCompleteEvent
   | EngineFailedEvent
+  | EngineAbortedEvent
   | StepStartEvent
   | StepCompleteEvent
   | StepFailedEvent
@@ -79,6 +85,7 @@ export interface EngineEventMap {
   engine_start: [EngineStartEvent];
   engine_complete: [EngineCompleteEvent];
   engine_failed: [EngineFailedEvent];
+  engine_aborted: [EngineAbortedEvent];
   step_start: [StepStartEvent];
   step_complete: [StepCompleteEvent];
   step_failed: [StepFailedEvent];

@@ -45,6 +45,7 @@ const app = render(
     emitter,
     initialSteps: steps,
     workflowName: "test-dashboard",
+    sessionDir: process.argv[2] || "/tmp/test-session",
   }),
   { patchConsole: false },
 );

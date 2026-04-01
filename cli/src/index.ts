@@ -54,6 +54,7 @@ import { workflowEngineCommand } from "./commands/workflow-engine.js";
 import { workflowTransitionCommand } from "./commands/workflow-transition.js";
 import { workflowRespondCommand } from "./commands/workflow-respond.js";
 import { workflowGotoCommand } from "./commands/workflow-goto.js";
+import { workflowAbortCommand } from "./commands/workflow-abort.js";
 import { convListCommand, convShowCommand } from "./commands/conv.js";
 import { configGetCommand, configSetCommand, configShowCommand } from "./commands/config.js";
 import {
@@ -419,6 +420,14 @@ workflow
   .description("Show current workflow step status (v2 engine)")
   .action((sessionName?: string) => {
     workflowStatusCommand(sessionName);
+  });
+
+workflow
+  .command("abort")
+  .description("Abort the running v2 workflow")
+  .option("--graceful", "Wait for current step to finish before aborting")
+  .action((options: { graceful?: boolean }) => {
+    workflowAbortCommand(options);
   });
 
 // --- workflow-transition ---

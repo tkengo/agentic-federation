@@ -100,6 +100,7 @@ For detailed options and usage of each command, see [fed-cli-detailed-reference.
 | `fed workflow validate <name>` | Validate a workflow definition |
 | `fed workflow engine [session-name]` | Start the v2 engine in the engine pane (resumes by default) |
 | `fed workflow status [session-name]` | Show current workflow step status (v2 engine) |
+| `fed workflow abort [--graceful]` | Abort the running v2 workflow (default: immediate kill; `--graceful` waits for current step) |
 
 ### `fed repo-script`
 

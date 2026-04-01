@@ -4,6 +4,7 @@ import type { EngineEventEmitter } from "../events.js";
 import type { StepNode } from "./types.js";
 import { useEngineEvents, type LogEntry } from "./useEngineEvents.js";
 import { computeColumnWidths, type ColumnWidths } from "./StepRow.js";
+import { writeAbortRequest } from "../abort.js";
 
 const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 const STEP_TREE_VISIBLE = 12;
@@ -12,11 +13,12 @@ interface EngineAppProps {
   emitter: EngineEventEmitter;
   initialSteps: StepNode[];
   workflowName: string;
+  sessionDir: string;
 }
 
 type ViewMode = "steps" | "log";
 
-export function EngineApp({ emitter, initialSteps, workflowName }: EngineAppProps): React.ReactElement {
+export function EngineApp({ emitter, initialSteps, workflowName, sessionDir }: EngineAppProps): React.ReactElement {
   const { steps, logs, selectedIndex, autoFollow, engineStatus, engineDurationMs, hasRunningStep, moveSelection, flush } =
     useEngineEvents(emitter, initialSteps);
 
@@ -56,6 +58,14 @@ export function EngineApp({ emitter, initialSteps, workflowName }: EngineAppProp
           setViewMode("log");
         }
       }
+      // Abort (immediate): 'a' key
+      if (input === "a" && engineStatus === "running") {
+        writeAbortRequest(sessionDir, "immediate");
+      }
+      // Graceful abort: 'g' key
+      if (input === "g" && engineStatus === "running") {
+        writeAbortRequest(sessionDir, "graceful");
+      }
     } else {
       // In log view, space/q/Esc goes back
       if (input === " " || input === "q" || key.escape) {
@@ -78,6 +88,7 @@ export function EngineApp({ emitter, initialSteps, workflowName }: EngineAppProp
     engineDurationMs={engineDurationMs}
     spinnerFrame={spinnerFrame}
     workflowName={workflowName}
+    sessionDir={sessionDir}
   />;
 }
 
@@ -85,7 +96,7 @@ export function EngineApp({ emitter, initialSteps, workflowName }: EngineAppProp
 // Steps View (normal dashboard)
 // ---------------------------------------------------------------------------
 
-function StepsView({ steps, logs, selectedIndex, autoFollow, engineStatus, engineDurationMs, spinnerFrame, workflowName }: {
+function StepsView({ steps, logs, selectedIndex, autoFollow, engineStatus, engineDurationMs, spinnerFrame, workflowName, sessionDir }: {
   steps: StepNode[];
   logs: Map<string, LogEntry[]>;
   selectedIndex: number;
@@ -94,6 +105,7 @@ function StepsView({ steps, logs, selectedIndex, autoFollow, engineStatus, engin
   engineDurationMs?: number;
   spinnerFrame: number;
   workflowName: string;
+  sessionDir: string;
 }): React.ReactElement {
   const colWidths = useMemo(() => computeColumnWidths(steps), [steps]);
 
@@ -193,10 +205,18 @@ function StepsView({ steps, logs, selectedIndex, autoFollow, engineStatus, engin
     ? `✓ Completed (${formatDuration(engineDurationMs ?? 0)})`
     : engineStatus === "failed"
       ? "✗ Failed"
-      : autoFollow ? "running" : "manual nav";
+      : engineStatus === "aborted"
+        ? "⏸ Aborted"
+        : autoFollow ? "running" : "manual nav";
   const statusColor = engineStatus === "completed" ? "green"
-    : engineStatus === "failed" ? "red" : "cyan";
+    : engineStatus === "failed" ? "red"
+      : engineStatus === "aborted" ? "yellow"
+        : "cyan";
   const completedCount = displaySteps.filter((s) => s.status === "completed").length;
+  const canAbort = engineStatus === "running";
+  const hintText = canAbort
+    ? "[space: view log]  [a: abort]  [g: graceful abort]"
+    : "[space: view log]";
 
   return (
     <Box flexDirection="column">
@@ -220,7 +240,7 @@ function StepsView({ steps, logs, selectedIndex, autoFollow, engineStatus, engin
         <Text bold color="cyan">⚡ {workflowName}</Text>
         <Text>{"  "}</Text>
         <Text color={statusColor}>{statusText}</Text>
-        <Text dimColor>{"  [space: view log]"}</Text>
+        <Text dimColor>{"  "}{hintText}</Text>
         {treeStart > 0 ? <Text dimColor>{"  ↑"}</Text> : null}
       </Box>
 

@@ -101,7 +101,12 @@ export interface V2Workflow {
 // Engine state (state-v2.json)
 // ---------------------------------------------------------------------------
 
-export type V2Status = "running" | "waiting_human" | "completed" | "failed";
+export type V2Status = "running" | "waiting_human" | "completed" | "failed" | "aborted";
+
+export interface V2AbortRequest {
+  mode: "immediate" | "graceful";
+  requested_at: string; // ISO 8601
+}
 
 export interface V2StepResult {
   value: string;

@@ -133,6 +133,14 @@ export class EngineLogger {
     });
   }
 
+  engineAborted(mode: string): void {
+    this.write("●", `Engine aborted (${mode})`);
+    this.emitter?.emit("engine_aborted", {
+      type: "engine_aborted",
+      mode,
+    });
+  }
+
   waiting(message: string): void {
     this.write("◌", `Waiting: ${message}`);
     if (this.emitter && this.currentStepPath) {

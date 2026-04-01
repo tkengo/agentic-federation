@@ -14,7 +14,7 @@ export interface EngineState {
   logs: Map<string, LogEntry[]>;
   selectedIndex: number;
   autoFollow: boolean;
-  engineStatus: "running" | "completed" | "failed";
+  engineStatus: "running" | "completed" | "failed" | "aborted";
   engineDurationMs?: number;
   hasRunningStep: boolean;
 }
@@ -36,7 +36,7 @@ export function useEngineEvents(
   const logsRef = useRef<Map<string, LogEntry[]>>(new Map());
   const selectedIndexRef = useRef(0);
   const autoFollowRef = useRef(true);
-  const engineStatusRef = useRef<"running" | "completed" | "failed">("running");
+  const engineStatusRef = useRef<"running" | "completed" | "failed" | "aborted">("running");
   const engineDurationRef = useRef<number | undefined>();
   const manualNavTime = useRef(0);
   const dirtyRef = useRef(false);
@@ -46,7 +46,7 @@ export function useEngineEvents(
   const [logs, setLogs] = useState<Map<string, LogEntry[]>>(new Map());
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [autoFollow, setAutoFollow] = useState(true);
-  const [engineStatus, setEngineStatus] = useState<"running" | "completed" | "failed">("running");
+  const [engineStatus, setEngineStatus] = useState<"running" | "completed" | "failed" | "aborted">("running");
   const [engineDurationMs, setEngineDurationMs] = useState<number | undefined>();
   const [hasRunningStep, setHasRunningStep] = useState(false);
 
@@ -179,6 +179,11 @@ export function useEngineEvents(
       markDirty();
     };
 
+    const onEngineAborted = () => {
+      engineStatusRef.current = "aborted";
+      markDirty();
+    };
+
     emitter.on("step_start", onStepStart);
     emitter.on("step_complete", onStepComplete);
     emitter.on("step_failed", onStepFailed);
@@ -187,6 +192,7 @@ export function useEngineEvents(
     emitter.on("waiting_human", onWaitingHuman);
     emitter.on("engine_complete", onEngineComplete);
     emitter.on("engine_failed", onEngineFailed);
+    emitter.on("engine_aborted", onEngineAborted);
 
     return () => {
       emitter.removeAllListeners();

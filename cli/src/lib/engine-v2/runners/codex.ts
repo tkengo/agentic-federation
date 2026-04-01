@@ -3,6 +3,7 @@ import readline from "node:readline";
 import fs from "node:fs";
 import type { V2Step } from "../types.js";
 import type { EngineLogger } from "../logger.js";
+import type { RunnerHandle } from "./types.js";
 
 export interface CodexRunnerOptions {
   step: V2Step;
@@ -32,10 +33,12 @@ interface CodexEvent {
  * Uses --json output to show real-time activity in engine logs.
  * Returns the exit code.
  */
-export function runCodexStep(options: CodexRunnerOptions): Promise<number> {
+export function runCodexStep(options: CodexRunnerOptions): RunnerHandle {
   const { step, stepPath, sessionDir, worktreeDir, agentInstructionPath, env, logger } = options;
 
-  return new Promise((resolve, reject) => {
+  let childProcess: ReturnType<typeof spawn> | null = null;
+
+  const promise = new Promise<number>((resolve, reject) => {
     if (!fs.existsSync(agentInstructionPath)) {
       reject(new Error(`Agent instruction not found: ${agentInstructionPath}`));
       return;
@@ -68,6 +71,7 @@ export function runCodexStep(options: CodexRunnerOptions): Promise<number> {
       env: childEnv,
       stdio: ["pipe", "pipe", "pipe"],
     });
+    childProcess = child;
 
     child.stdin.write(prompt);
     child.stdin.end();
@@ -114,6 +118,11 @@ export function runCodexStep(options: CodexRunnerOptions): Promise<number> {
       resolve(exitCode);
     });
   });
+
+  return {
+    promise,
+    kill: () => { childProcess?.kill("SIGTERM"); },
+  };
 }
 
 /**
