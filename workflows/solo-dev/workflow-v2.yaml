@@ -1,4 +1,4 @@
-name: solo-dev-v2
+name: solo-dev
 description: "ソロ開発用（v2エンジン）"
 
 focus: solo-dev
@@ -24,7 +24,7 @@ windows:
       - id: developer
         name: Developer
         pane: 1
-        command: "yoloclaude --agent __fed-solo-dev-v2-$FED_SESSION-planner"
+        command: "yoloclaude --agent __fed-solo-dev-$FED_SESSION-planner"
       - id: human
         name: Human
         pane: 2
