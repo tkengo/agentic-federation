@@ -101,7 +101,14 @@ export function runClaudeStep(options: ClaudeRunnerOptions): Promise<number> {
       reject(new Error(`Failed to spawn claude: ${err.message}`));
     });
 
-    child.on("close", (code) => {
+    child.on("exit", (code) => {
+      // Explicitly close streams to avoid hanging when subprocesses inherit stdio FDs.
+      // The "close" event waits for all stdio to close, which may never happen
+      // if a grandchild process inherited the file descriptors.
+      rl.close();
+      child.stdout.destroy();
+      child.stderr.destroy();
+
       const exitCode = code ?? 1;
 
       if (stderr.trim()) {

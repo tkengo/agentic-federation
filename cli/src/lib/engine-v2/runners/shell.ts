@@ -57,7 +57,13 @@ export function runShellStep(options: ShellRunnerOptions): Promise<number> {
       reject(new Error(`Failed to spawn shell: ${err.message}`));
     });
 
-    child.on("close", (code) => {
+    child.on("exit", (code) => {
+      // Explicitly close streams to avoid hanging when subprocesses inherit stdio FDs.
+      stdoutRl.close();
+      stderrRl.close();
+      child.stdout.destroy();
+      child.stderr.destroy();
+
       resolve(code ?? 1);
     });
   });
