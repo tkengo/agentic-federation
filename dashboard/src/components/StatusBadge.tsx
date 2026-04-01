@@ -4,7 +4,6 @@ import { Text } from "ink";
 interface StatusBadgeProps {
   status: string;
   currentStep?: string | null;
-  waitingReason?: string | null;
   stale?: boolean;
   stateMtimeMs?: number;
 }
@@ -22,16 +21,37 @@ const DEFAULT_STYLE = { mark: "●", color: "white" };
 // Terminal statuses that should never show as stale
 const TERMINAL_STATUSES = new Set(["completed", "failed", "waiting_human"]);
 
-export function StatusBadge({ status, currentStep, waitingReason, stale, stateMtimeMs }: StatusBadgeProps) {
+/**
+ * Compute the display width of the status label (icon + space + label + elapsed).
+ * Used by SessionList to calculate column width.
+ */
+export function statusDisplayWidth(status: string, currentStep?: string | null, stale?: boolean, stateMtimeMs?: number): number {
+  const label = (status === "completed" || status === "failed")
+    ? status
+    : (currentStep ? currentStep.split(".").pop()! : status);
+
+  let elapsed = "";
+  const isStale = stale && !TERMINAL_STATUSES.has(status);
+  if (isStale && stateMtimeMs != null) {
+    const diffMs = Date.now() - stateMtimeMs;
+    const minutes = Math.floor(diffMs / 60_000);
+    elapsed = minutes < 60 ? ` (${minutes}m)` : ` (${Math.floor(minutes / 60)}h)`;
+  }
+
+  // "▶ label(elapsed)" → mark(1) + space(1) + label + elapsed
+  return 2 + label.length + elapsed.length;
+}
+
+export function StatusBadge({ status, currentStep, stale, stateMtimeMs }: StatusBadgeProps) {
   const style = STATUS_STYLE[status] ?? DEFAULT_STYLE;
   const isStale = stale && !TERMINAL_STATUSES.has(status);
 
-  // Determine label: current step for running/waiting_human, status name for terminal states
+  // Determine label: shortened step name for running/waiting_human, status name for terminal states
   let label: string;
   if (status === "completed" || status === "failed") {
     label = status;
   } else {
-    label = currentStep ?? status;
+    label = currentStep ? currentStep.split(".").pop()! : status;
   }
 
   // Append elapsed time for stale non-terminal statuses
@@ -47,14 +67,9 @@ export function StatusBadge({ status, currentStep, waitingReason, stale, stateMt
     }
   }
 
-  // For waiting_human, append reason inline
-  const reason = status === "waiting_human" && waitingReason
-    ? ` ${waitingReason}`
-    : "";
-
   return (
     <Text color={style.color}>
-      {style.mark} {label}{elapsed}{reason}
+      {style.mark} {label}{elapsed}
     </Text>
   );
 }

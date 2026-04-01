@@ -35,7 +35,14 @@ export function SessionRow({ session, selected, dimmed, blinkOn, colWidths }: Se
   const highlight = !dimmed && selected;
   const age = formatAge(session.meta.created_at);
   const stale = isStale(session);
-  const inlineDesc = session.description ? truncate(session.description, DESC_INLINE_MAX) : null;
+
+  // Determine inline text after AGE: waiting reason takes priority over description
+  const isWaiting = session.waitingHuman.waiting && !!session.waitingHuman.reason;
+  const inlineText = isWaiting
+    ? truncate(session.waitingHuman.reason!, DESC_INLINE_MAX)
+    : session.description
+      ? truncate(session.description, DESC_INLINE_MAX)
+      : null;
 
   return (
     <Box>
@@ -56,21 +63,27 @@ export function SessionRow({ session, selected, dimmed, blinkOn, colWidths }: Se
       {dimmed ? (
         <Text dimColor>{`- ${session.status}`.padEnd(colWidths.status + 2)}</Text>
       ) : (
-        <Box>
+        <Box width={colWidths.status}>
           <StatusBadge
             status={session.status}
             currentStep={session.currentStep}
-            waitingReason={session.waitingHuman.waiting ? session.waitingHuman.reason : null}
             stale={stale}
             stateMtimeMs={session.stateMtimeMs}
           />
+          {session.waitingHuman.waiting && (
+            <Text color="yellow" dimColor={!blinkOn}>{` [!]`}</Text>
+          )}
         </Box>
       )}
       <Text dimColor={dimmed}>{`  `}</Text>
       <Text color={highlight ? "cyan" : undefined} bold={highlight} dimColor={dimmed || !highlight}>{age.padStart(4)}</Text>
-      {inlineDesc && (
-        <Text color={highlight ? "cyan" : undefined} bold={highlight} dimColor={dimmed || !highlight}>
-          {`  ${inlineDesc}`}
+      {inlineText && (
+        <Text
+          color={isWaiting ? "yellow" : (highlight ? "cyan" : undefined)}
+          bold={!isWaiting && highlight}
+          dimColor={!isWaiting && (dimmed || !highlight)}
+        >
+          {`  ${inlineText}`}
         </Text>
       )}
     </Box>

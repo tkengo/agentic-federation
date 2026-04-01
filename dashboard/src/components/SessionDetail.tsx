@@ -11,7 +11,6 @@ import { PreviewPanel } from "./PreviewPanel.js";
 import { StatusBadge } from "./StatusBadge.js";
 import { usePreviewContent } from "../hooks/usePreviewContent.js";
 import { useKeyboard } from "../hooks/useKeyboard.js";
-import { useBlink } from "../hooks/useBlink.js";
 import { useFooter } from "../contexts/FooterContext.js";
 import { switchToTmuxSession } from "../utils/tmux.js";
 import { shortenHome, formatAge } from "../utils/format.js";
@@ -104,9 +103,6 @@ export function SessionDetail({
     scripts,
     detailIndex,
   );
-
-  // Blink for waiting indicator
-  const blinkOn = useBlink(500, session.waitingHuman.waiting);
 
   // Reset preview scroll when detail selection changes
   const prevDetailIndexRef = useRef(detailIndex);
@@ -463,7 +459,6 @@ export function SessionDetail({
         <StatusBadge
           status={session.status}
           currentStep={session.currentStep}
-          waitingReason={session.waitingHuman.waiting ? session.waitingHuman.reason : null}
           stale={isStale(session)}
           stateMtimeMs={session.stateMtimeMs}
         />
