@@ -17,7 +17,6 @@ import {
 } from "./commands/repo.js";
 import { setSessionOverride } from "./lib/session.js";
 import { startCommand } from "./commands/start.js";
-import { stateReadCommand, stateUpdateCommand } from "./commands/state.js";
 import {
   artifactReadCommand,
   artifactWriteCommand,
@@ -47,9 +46,7 @@ import {
 } from "./commands/repo-script.js";
 import { recoverCommand } from "./commands/recover.js";
 import { workflowEngineCommand } from "./commands/workflow-engine.js";
-import { workflowTransitionCommand } from "./commands/workflow-transition.js";
 import { workflowRespondCommand } from "./commands/workflow-respond.js";
-import { workflowGotoCommand } from "./commands/workflow-goto.js";
 import { workflowAbortCommand } from "./commands/workflow-abort.js";
 import { convListCommand, convShowCommand } from "./commands/conv.js";
 import { configGetCommand, configSetCommand, configShowCommand } from "./commands/config.js";
@@ -235,26 +232,6 @@ session
     archiveCommand(sessionName);
   });
 
-// --- state ---
-const state = program
-  .command("state")
-  .description("Read/update workflow state (state.json)");
-
-state
-  .command("read [field]")
-  .description("Read state.json (optionally a specific field, e.g. 'status')")
-  .option("--nvim", "Open the file in nvim instead of printing to stdout")
-  .action((field: string | undefined, options: { nvim?: boolean }) => {
-    stateReadCommand(field, options.nvim);
-  });
-
-state
-  .command("update <field> <value>")
-  .description("Update a field in state.json (e.g. 'status plan_review')")
-  .action((field: string, value: string) => {
-    stateUpdateCommand(field, value);
-  });
-
 // --- artifact ---
 const artifact = program
   .command("artifact")
@@ -403,25 +380,6 @@ workflow
   .description("Validate a v2 workflow definition")
   .action((name: string) => {
     workflowValidateCommand(name);
-  });
-
-// --- workflow-transition ---
-program
-  .command("workflow-transition")
-  .description("Report task completion and trigger workflow state transition")
-  .requiredOption("--result <code>", "Result code (e.g. done, approved, request_changes, escalate)")
-  .option("--pane <id>", "Pane ID (auto-detected from FED_PANE env var or tmux if not specified)")
-  .action(async (options: { result: string; pane?: string }) => {
-    await workflowTransitionCommand(options.result, options.pane);
-  });
-
-// --- workflow-goto ---
-program
-  .command("workflow-goto")
-  .description("Force-transition to an arbitrary workflow state (human recovery tool)")
-  .argument("<state>", "Target state name to transition to")
-  .action(async (state: string) => {
-    await workflowGotoCommand(state);
   });
 
 // --- repo-script ---

@@ -27,7 +27,7 @@ model: opus[1m]
    - **REQUEST_CHANGES**: `fed session respond-workflow request_changes`
    - **ESCALATE**: `fed session respond-workflow escalate`
 
-レビュー完了後の **artifact write** と **workflow-transition** は、必ず実行すること。実行しなかった場合はワークフロー全体が停止してしまうため、絶対に実行を忘れてはならない。
+レビュー完了後の **artifact write** と **session respond-workflow** は、必ず実行すること。実行しなかった場合はワークフロー全体が停止してしまうため、絶対に実行を忘れてはならない。
 また、完了報告は人間の許可不要で即座に実行すること。
 
 ---

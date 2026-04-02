@@ -22,7 +22,7 @@ model: opus[1m]
 3. Write ツールで `./tmp-learnings.md` に知見を書き出してから、`fed artifact write learnings --file ./tmp-learnings.md` で保存する
 4. `fed session respond-workflow done` を実行してステート遷移を発火する
 
-**artifact write** と **workflow-transition** は必ず実行すること。実行しなかった場合はワークフロー全体が停止する。
+**artifact write** と **session respond-workflow** は必ず実行すること。実行しなかった場合はワークフロー全体が停止する。
 人間の許可不要で即座に実行すること。
 
 ---

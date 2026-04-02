@@ -14,21 +14,6 @@ export interface MetaJson {
   mode?: "solo" | "team";
 }
 
-export interface StateJson {
-  session_name: string;
-  status: string;
-  workflow?: string;
-  retry_count: Record<string, number>;
-  pending_tasks: string[];
-  escalation: { required: boolean; reason: string | null };
-  history: Array<{
-    ts: string;
-    event: string;
-    status: string;
-    detail?: string;
-  }>;
-}
-
 // Mirror of cli/src/lib/paths.ts
 export const FED_HOME = path.join(os.homedir(), ".fed");
 export const SESSIONS_DIR = path.join(FED_HOME, "sessions");
@@ -84,8 +69,6 @@ export interface SessionData {
   meta: MetaJson;
   status: string;
   workflow?: string;
-  pendingTasks: string[];
-  escalation: { required: boolean; reason: string | null };
   waitingHuman: WaitingHumanData;
   description?: string;
   currentStep?: string | null;

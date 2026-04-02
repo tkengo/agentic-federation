@@ -11,7 +11,6 @@ For detailed options and usage of each command, see [fed-cli-detailed-reference.
 | `fed init` | Initialize `~/.fed/` directory structure |
 | `fed repo` | Manage repository definitions |
 | `fed session` | Manage development sessions |
-| `fed state` | Read/update workflow state (`state.json`) |
 | `fed artifact` | Read/write session artifacts |
 | `fed notify` | Send a notification to a tmux pane |
 | `fed prompt` | Read agent prompts |
@@ -26,7 +25,6 @@ For detailed options and usage of each command, see [fed-cli-detailed-reference.
 | `fed conv` | View collected conversations from AI tools |
 | `fed config` | Manage fed configuration (`~/.fed/config.json`) |
 | `fed files` | Manage knowledge base files |
-| `fed workflow-transition` | Report task completion and trigger workflow state transition |
 
 ## Subcommands
 
@@ -55,13 +53,6 @@ For detailed options and usage of each command, see [fed-cli-detailed-reference.
 | `fed session respond-workflow [value]` | Report step result to the v2 workflow engine |
 | `fed session abort-workflow` | Abort the running v2 workflow |
 | `fed session archive <session-name>` | Archive a specific session |
-
-### `fed state`
-
-| Subcommand | Description |
-|---|---|
-| `fed state read [field]` | Read `state.json` (optionally a specific field) |
-| `fed state update <field> <value>` | Update a field in `state.json` |
 
 ### `fed artifact`
 

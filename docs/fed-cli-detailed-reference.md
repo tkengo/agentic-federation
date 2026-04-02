@@ -190,32 +190,6 @@ Archive a specific session.
 fed session archive <session-name>
 ```
 
-## `fed state`
-
-Read/update workflow state (`state.json`).
-
-### `fed state read`
-
-Read `state.json` (optionally a specific field, e.g. `status`).
-
-```
-fed state read [options] [field]
-```
-
-| Option | Description |
-|---|---|
-| `--nvim` | Open the file in nvim instead of printing to stdout |
-
-### `fed state update`
-
-Update a field in `state.json`.
-
-```
-fed state update <field> <value>
-```
-
----
-
 ## `fed artifact`
 
 Read/write session artifacts.
@@ -533,46 +507,4 @@ fed files dir
 
 ---
 
-## `fed workflow-transition`
-
-Report task completion and trigger workflow state transition.
-
-```
-fed workflow-transition --result <code> [--pane <id>]
-```
-
-| Option | Description |
-|---|---|
-| `--result <code>` | **(required)** Result code (e.g. `done`, `approved`, `request_changes`, `escalate`) |
-| `--pane <id>` | Pane ID. Auto-detected from `FED_PANE` env var or tmux if not specified |
-
-Pane resolution priority:
-1. `--pane` option (explicit)
-2. `FED_PANE` environment variable
-3. tmux query (fallback, requires running inside tmux)
-
----
-
-## `fed workflow-goto`
-
-Force-transition to an arbitrary workflow state. Used by humans to recover from stuck states (e.g., `waiting_human` terminal state) or to manually control workflow progression.
-
-```
-fed workflow-goto <state>
-```
-
-| Argument | Description |
-|---|---|
-| `<state>` | **(required)** Target state name to transition to |
-
-Behavior:
-- Resets `pending_tasks` to empty
-- Dispatches tasks defined on the target state (if any)
-- Clears `waiting_human.json` if transitioning to a non-wait state
-- Records `forced_transition` event in `history.jsonl`
-- Works from any current state (no restrictions)
-
-> **Note**: This command bypasses normal state machine transition rules. Use it for recovery or manual workflow control.
-
----
 

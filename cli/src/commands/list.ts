@@ -2,7 +2,6 @@ import fs from "node:fs";
 import path from "node:path";
 import { ACTIVE_DIR, ARCHIVE_DIR } from "../lib/paths.js";
 import { resolveSession, readMeta } from "../lib/session.js";
-
 import { findCleanTargets } from "./clean.js";
 
 type Row = {
@@ -38,10 +37,8 @@ function readStatus(sessionDir: string): string {
   const statePath = path.join(sessionDir, "state-v2.json");
   if (!fs.existsSync(statePath)) return "unknown";
   try {
-    const state = JSON.parse(
-      fs.readFileSync(statePath, "utf-8")
-    ) as { status?: string };
-    return state.status || "unknown";
+    const data = JSON.parse(fs.readFileSync(statePath, "utf-8")) as { status?: string };
+    return data.status || "unknown";
   } catch {
     return "unknown";
   }

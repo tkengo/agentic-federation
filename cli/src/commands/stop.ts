@@ -54,10 +54,7 @@ export function stopCommand(sessionName?: string): void {
   // 0.5. Remove agent symlinks from ~/.claude/agents/ (before archive moves files)
   unlinkAgents(sessionDir);
 
-  // 1. Stop watcher processes via PID files
-  stopWatcherProcesses(sessionDir);
-
-  // 1.5. Collect conversations from AI tools (best-effort)
+  // 1. Collect conversations from AI tools (best-effort)
   console.log("  Collecting conversations...");
   try {
     collectConversations(sessionDir);
@@ -136,35 +133,6 @@ function killArtifactSessions(parentSession: string): void {
     }
   } catch {
     // tmux not running or no sessions
-  }
-}
-
-// Kill watcher processes tracked by PID files in the session directory
-function stopWatcherProcesses(sessionDir: string): void {
-  const pidFiles = [
-    "notification-watcher.pid",
-  ];
-
-  for (const pidFile of pidFiles) {
-    const pidPath = path.join(sessionDir, pidFile);
-    if (!fs.existsSync(pidPath)) continue;
-
-    try {
-      const pid = parseInt(fs.readFileSync(pidPath, "utf-8").trim(), 10);
-      if (!isNaN(pid)) {
-        process.kill(pid, "SIGTERM");
-        console.log(`  Stopped ${pidFile.replace(".pid", "")} (PID: ${pid})`);
-      }
-    } catch {
-      // Process already dead or permission issue
-    }
-
-    // Remove PID file
-    try {
-      fs.unlinkSync(pidPath);
-    } catch {
-      // Best effort
-    }
   }
 }
 

@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { exec } from "node:child_process";
 import { ACTIVE_DIR, PROTECTED_WORKTREES_FILE } from "../utils/types.js";
-import type { MetaJson, StateJson, SessionData, WaitingHumanData } from "../utils/types.js";
+import type { MetaJson, SessionData, WaitingHumanData } from "../utils/types.js";
 import { listTmuxSessions } from "../utils/tmux.js";
 
 function readMeta(sessionDir: string): MetaJson | null {
@@ -12,16 +12,6 @@ function readMeta(sessionDir: string): MetaJson | null {
       fs.readFileSync(path.join(sessionDir, "meta.json"), "utf-8")
     ) as MetaJson;
     return meta;
-  } catch {
-    return null;
-  }
-}
-
-function readState(sessionDir: string): StateJson | null {
-  try {
-    return JSON.parse(
-      fs.readFileSync(path.join(sessionDir, "state.json"), "utf-8")
-    ) as StateJson;
   } catch {
     return null;
   }
@@ -88,23 +78,15 @@ function loadSessions(): SessionData[] {
     const meta = readMeta(sessionDir);
     if (!meta) continue;
 
-    const state = readState(sessionDir);
     const v2State = readV2State(sessionDir);
-
-    // Determine status: v1 state.json takes precedence, then v2 state-v2.json
-    const statusValue = state?.status ?? v2State?.status ?? "";
+    const statusValue = v2State?.status ?? "";
 
     // Read state file mtime for staleness detection
-    // Skip staleness tracking when status is empty (stateless workflows)
     let stateMtimeMs: number | undefined;
     if (statusValue) {
-      // Use v2 state file when v2 session, otherwise v1
-      const stateFile = v2State
-        ? path.join(sessionDir, "state-v2.json")
-        : path.join(sessionDir, "state.json");
+      const stateFile = path.join(sessionDir, "state-v2.json");
       try {
-        const stat = fs.statSync(stateFile);
-        stateMtimeMs = stat.mtimeMs;
+        stateMtimeMs = fs.statSync(stateFile).mtimeMs;
       } catch {
         // state file may not exist
       }
@@ -116,8 +98,6 @@ function loadSessions(): SessionData[] {
       meta,
       status: statusValue || "active",
       workflow: meta.workflow,
-      pendingTasks: state?.pending_tasks ?? [],
-      escalation: state?.escalation ?? { required: false, reason: null },
       waitingHuman: readWaitingHuman(sessionDir),
       description: readDescription(sessionDir),
       currentStep: v2State?.current_step ?? null,

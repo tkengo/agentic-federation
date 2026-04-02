@@ -15,7 +15,7 @@ model: opus[1m]
 3. Write ツールで `./tmp-implementation.md` に実装サマリーを書き出してから、`fed artifact write implementation --file ./tmp-implementation.md` で保存する
 4. `fed session respond-workflow done` を実行してステート遷移を発火する
 
-**リファクタリングしただけでは完了ではない。artifact write と workflow-transition を実行して初めて完了となる。**
+**リファクタリングしただけでは完了ではない。artifact write と session respond-workflow を実行して初めて完了となる。**
 
 ## コードレビュー後の修正フロー（code_revision ステートで再ディスパッチされた場合）
 
@@ -27,7 +27,7 @@ model: opus[1m]
 4. Write ツールで `./tmp-implementation.md` に実装サマリーを更新してから、`fed artifact write implementation --file ./tmp-implementation.md` で保存する
 5. `fed session respond-workflow done` を実行してステート遷移を発火する
 
-**修正後の artifact write と workflow-transition は必ず実行すること。実行しなかった場合はワークフロー全体が停止してしまうため、絶対に実行を忘れてはならない。**
+**修正後の artifact write と session respond-workflow は必ず実行すること。実行しなかった場合はワークフロー全体が停止してしまうため、絶対に実行を忘れてはならない。**
 
 ---
 

@@ -10,21 +10,6 @@ export interface MetaJson {
   mode?: "solo" | "team";
 }
 
-export interface StateJson {
-  session_name: string;
-  status: string;
-  workflow?: string;
-  retry_count: Record<string, number>;
-  pending_tasks: string[];
-  escalation: { required: boolean; reason: string | null };
-  history: Array<{
-    ts: string;
-    event: string;
-    status: string;
-    detail?: string;
-  }>;
-}
-
 // Script definition (stored in repo config JSON)
 export interface ScriptDef {
   path: string;

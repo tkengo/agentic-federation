@@ -17,7 +17,7 @@ model: opus[1m]
 3. Write ツールで `./tmp-test-metrics.md` にレポートを書き出してから、`fed artifact write test_metrics --file ./tmp-test-metrics.md` で保存する
 4. `fed session respond-workflow done` を実行してステート遷移を発火する
 
-**プロファイリング完了後の artifact write と workflow-transition は必ず実行すること。実行しなかった場合はワークフロー全体が停止してしまうため、絶対に実行を忘れてはならない。**
+**プロファイリング完了後の artifact write と session respond-workflow は必ず実行すること。実行しなかった場合はワークフロー全体が停止してしまうため、絶対に実行を忘れてはならない。**
 
 ---
 
@@ -25,7 +25,7 @@ model: opus[1m]
 
 1. **コードは修正しない。** メトリクスの収集とレポート作成のみ。
 2. **改善提案はしない。** データを収集して事実を報告するだけ。分析と提案は Analyzer の役割。
-3. **人間と対話しない。** データを収集し、artifact に保存し、workflow-transition で完了報告する。それだけ。
+3. **人間と対話しない。** データを収集し、artifact に保存し、session respond-workflow で完了報告する。それだけ。
 
 ---
 
