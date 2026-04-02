@@ -444,6 +444,9 @@ async function executeLoop(
   appendHistory(state, "loop_start", stepPath, `max=${maxLabel}`);
   const startTime = Date.now();
 
+  // Track loop exit reason
+  let exitReason: "until_satisfied" | "break" | "max_reached" = "max_reached";
+
   for (let iteration = 1; iteration <= maxIterations; iteration++) {
     logger.loopIteration(stepPath, iteration, maxLabel);
 
@@ -461,6 +464,7 @@ async function executeLoop(
       const ctx = buildExprContext(state, { iteration, max: maxIterations });
       if (evaluateCondition(step.until, ctx)) {
         logger.info(`  Loop ${stepPath}: until condition satisfied`);
+        exitReason = "until_satisfied";
         break;
       }
     }
@@ -469,6 +473,7 @@ async function executeLoop(
     const didBreak = await executeBlock(step.steps, stepPath, sessionDir, state, meta, logger);
     if (didBreak) {
       logger.info(`  Loop ${stepPath}: break signaled`);
+      exitReason = "break";
       break;
     }
 
@@ -477,13 +482,51 @@ async function executeLoop(
       const ctx = buildExprContext(state, { iteration, max: maxIterations });
       if (evaluateCondition(step.until, ctx)) {
         logger.info(`  Loop ${stepPath}: until condition satisfied`);
+        exitReason = "until_satisfied";
         break;
       }
     }
   }
 
+  // Escalate to human when max reached with unsatisfied until condition.
+  // If there's no until condition, max_reached is the expected/normal termination.
+  if (exitReason === "max_reached" && step.until) {
+    logger.info(`  Loop ${stepPath}: max iterations reached without satisfying until condition — escalating to human`);
+    appendHistory(state, "loop_max_reached", stepPath, `max=${maxLabel} until=${step.until}`);
+    writeV2State(sessionDir, state);
+
+    const escalationStepPath = `${stepPath}.__max_escalation`;
+    const prompt = `ループ "${stepPath}" が最大回数 (${maxLabel}) に到達しましたが、終了条件 (${step.until}) が満たされていません。状況を確認して対応してください。`;
+
+    setCurrentStep(state, escalationStepPath);
+    setStatus(state, "waiting_human");
+    appendHistory(state, "step_start", escalationStepPath, "type=human (max_reached escalation)");
+    writeV2State(sessionDir, state);
+
+    const handle = runHumanStep({
+      step: { id: "__max_escalation", type: "human", prompt, notify: true } as V2Step,
+      stepPath: escalationStepPath,
+      sessionDir,
+      logger,
+    });
+
+    let humanResult: string | undefined;
+    await waitWithAbortCheck(
+      {
+        promise: handle.promise.then((v) => { humanResult = v; return 0; }),
+        kill: handle.kill,
+      },
+      sessionDir,
+    );
+
+    setStepResult(state, escalationStepPath, humanResult ?? "acknowledged");
+    setStatus(state, "running");
+    appendHistory(state, "step_complete", escalationStepPath, `result=${humanResult ?? "acknowledged"}`);
+    writeV2State(sessionDir, state);
+  }
+
   const durationMs = Date.now() - startTime;
-  appendHistory(state, "loop_complete", stepPath, `duration=${durationMs}ms`);
+  appendHistory(state, "loop_complete", stepPath, `reason=${exitReason} duration=${durationMs}ms`);
   writeV2State(sessionDir, state);
 
   logger.stepComplete(stepPath, undefined, durationMs);
