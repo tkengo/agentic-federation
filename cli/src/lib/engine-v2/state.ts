@@ -75,6 +75,25 @@ export function setStepResult(
 }
 
 /**
+ * Clear all descendant step results under the given path prefix.
+ * Used by loop iterations to allow re-execution of child steps.
+ */
+export function clearDescendantResults(
+  state: V2State,
+  pathPrefix: string,
+): string[] {
+  const cleared: string[] = [];
+  const prefix = pathPrefix + ".";
+  for (const key of Object.keys(state.results)) {
+    if (key.startsWith(prefix)) {
+      delete state.results[key];
+      cleared.push(key);
+    }
+  }
+  return cleared;
+}
+
+/**
  * Append a history entry.
  */
 export function appendHistory(

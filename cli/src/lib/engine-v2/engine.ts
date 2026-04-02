@@ -8,6 +8,7 @@ import {
   readV2State,
   writeV2State,
   setStepResult,
+  clearDescendantResults,
   appendHistory,
   setStatus,
   setCurrentStep,
@@ -445,6 +446,15 @@ async function executeLoop(
 
   for (let iteration = 1; iteration <= maxIterations; iteration++) {
     logger.loopIteration(stepPath, iteration, maxLabel);
+
+    // Clear descendant results from previous iteration to allow re-execution
+    if (iteration > 1) {
+      const cleared = clearDescendantResults(state, stepPath);
+      if (cleared.length > 0) {
+        logger.info(`  Loop ${stepPath}: cleared ${cleared.length} descendant result(s) for re-execution`);
+        writeV2State(sessionDir, state);
+      }
+    }
 
     // Check 'until' condition BEFORE executing steps (except first iteration)
     if (iteration > 1 && step.until) {
