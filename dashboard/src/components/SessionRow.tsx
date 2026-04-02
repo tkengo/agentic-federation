@@ -1,7 +1,7 @@
 import React from "react";
 import { Box, Text } from "ink";
 import { StatusBadge } from "./StatusBadge.js";
-import { formatAge } from "../utils/format.js";
+import { formatCreated } from "../utils/format.js";
 import type { SessionData } from "../utils/types.js";
 import { STALE_THRESHOLD_SEC } from "../utils/types.js";
 
@@ -33,13 +33,13 @@ function truncate(text: string, max: number): string {
 export function SessionRow({ session, selected, dimmed, blinkOn, colWidths }: SessionRowProps) {
   const cursor = !dimmed && selected ? ">" : " ";
   const highlight = !dimmed && selected;
-  const age = formatAge(session.meta.created_at);
+  const created = formatCreated(session.meta.created_at);
   const stale = isStale(session);
 
   // Override status when tmux session is dead
   const displayStatus = session.tmuxAlive ? session.status : "disconnected";
 
-  // Determine inline text after AGE: waiting reason takes priority over description
+  // Determine inline text after CREATED: waiting reason takes priority over description
   const isWaiting = session.waitingHuman.waiting && !!session.waitingHuman.reason;
   const inlineText = isWaiting
     ? truncate(session.waitingHuman.reason!, DESC_INLINE_MAX)
@@ -80,7 +80,7 @@ export function SessionRow({ session, selected, dimmed, blinkOn, colWidths }: Se
         </Box>
       )}
       <Text dimColor={dimmed}>{`  `}</Text>
-      <Text color={highlight ? "cyan" : undefined} bold={highlight} dimColor={dimmed || !highlight}>{age.padStart(4)}</Text>
+      <Text color={highlight ? "cyan" : undefined} bold={highlight} dimColor={dimmed || !highlight}>{created}</Text>
       {inlineText && (
         <Text
           color={highlight ? "cyan" : (isWaiting ? "yellow" : undefined)}

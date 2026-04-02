@@ -26,6 +26,20 @@ export function formatAge(createdAt: string): string {
   return `${days}d`;
 }
 
+// Format created_at as "MM/DD HH:MM (age)"
+export function formatCreated(createdAt: string): string {
+  const created = new Date(createdAt);
+  if (isNaN(created.getTime())) return "?";
+
+  const mm = String(created.getMonth() + 1).padStart(2, "0");
+  const dd = String(created.getDate()).padStart(2, "0");
+  const hh = String(created.getHours()).padStart(2, "0");
+  const min = String(created.getMinutes()).padStart(2, "0");
+  const age = formatAge(createdAt);
+
+  return `${mm}/${dd} ${hh}:${min} (${age})`;
+}
+
 // Format current time as HH:MM
 export function formatTime(): string {
   const now = new Date();

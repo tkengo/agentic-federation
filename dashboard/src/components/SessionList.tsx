@@ -47,7 +47,7 @@ export function SessionList({ sessions, dimmed, selectedIndex, maxVisible, scrol
       {/* Column header */}
       <Box>
         <Text dimColor>
-          {`    ${"REPO".padEnd(colWidths.repo)}  ${"SESSION".padEnd(colWidths.session)}  ${"WORKFLOW".padEnd(colWidths.workflow)}  ${"STATUS".padEnd(colWidths.status + 2)}       AGE`}
+          {`    ${"REPO".padEnd(colWidths.repo)}  ${"SESSION".padEnd(colWidths.session)}  ${"WORKFLOW".padEnd(colWidths.workflow)}  ${"STATUS".padEnd(colWidths.status + 2)}  CREATED`}
         </Text>
       </Box>
 
