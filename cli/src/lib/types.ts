@@ -6,8 +6,6 @@ export interface MetaJson {
   tmux_session: string;
   session_dir: string;
   created_at: string;
-  /** @deprecated old format compat */
-  mode?: "solo" | "team";
 }
 
 // Script definition (stored in repo config JSON)

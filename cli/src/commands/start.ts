@@ -141,7 +141,7 @@ export async function startCommand(
   const sessionPath = createSessionDir(repoName ?? "_standalone", meta);
   const cwd = worktreePath || sessionPath;
 
-  console.log(`=== fed session start (v2) ===`);
+  console.log(`=== fed session start ===`);
   console.log(`Workflow: ${workflowName}`);
   if (repoName) console.log(`Repo:     ${repoName}`);
   if (branch) console.log(`Branch:   ${branch}`);
@@ -160,7 +160,7 @@ export async function startCommand(
   fs.mkdirSync(path.join(sessionPath, "respond"), { recursive: true });
   fs.mkdirSync(path.join(sessionPath, "logs"), { recursive: true });
 
-  // Copy v2 workflow YAML as-is (no v1 template expansion; v2 uses ${{ }} expressions at runtime)
+  // Copy workflow YAML as-is (${{ }} expressions are evaluated at runtime by the engine)
   const rawYaml = fs.readFileSync(srcV2Workflow, "utf-8");
   fs.writeFileSync(path.join(sessionPath, "workflow-v2.yaml"), rawYaml);
 
@@ -206,12 +206,12 @@ export async function startCommand(
   // Customize tmux status bar
   tmux.setOption(tmuxSession, "status-style", "bg=colour22,fg=white");
   const label = repoName
-    ? `${workflowName}:${repoName}/${branch} (v2)`
-    : `${workflowName} (v2)`;
-  tmux.setOption(tmuxSession, "status-right", ` ⚡fed v2 ▸ ${label} `);
+    ? `${workflowName}:${repoName}/${branch}`
+    : workflowName;
+  tmux.setOption(tmuxSession, "status-right", ` ⚡fed ▸ ${label} `);
 
   console.log("");
-  console.log("=== Engine v2 Ready ===");
+  console.log("=== Engine Ready ===");
   console.log("Windows:");
   console.log("  1. engine (workflow engine)");
   for (let i = 0; i < windows.length; i++) {

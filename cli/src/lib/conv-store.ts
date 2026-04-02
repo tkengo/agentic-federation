@@ -168,14 +168,14 @@ export function generateConversationSummary(sessionDir: string): void {
   const meta = readMeta(sessionDir);
   if (!meta) return;
 
-  // Read state.json for status
+  // Read state-v2.json for status
   let status = "unknown";
   try {
-    const stateRaw = fs.readFileSync(path.join(sessionDir, "state.json"), "utf-8");
+    const stateRaw = fs.readFileSync(path.join(sessionDir, "state-v2.json"), "utf-8");
     const state = JSON.parse(stateRaw) as { status?: string };
     if (state.status) status = state.status;
   } catch {
-    // No state.json
+    // No state-v2.json
   }
 
   // Read description.txt

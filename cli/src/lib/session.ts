@@ -135,7 +135,6 @@ export function findActiveSessionsByRepo(repoName: string): MetaJson[] {
 }
 
 // Read meta.json from a session directory
-// Normalizes old format (mode) to new format (workflow)
 export function readMeta(sessionPath: string): MetaJson | null {
   const metaPath = path.join(sessionPath, "meta.json");
   try {

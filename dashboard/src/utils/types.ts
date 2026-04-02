@@ -10,8 +10,6 @@ export interface MetaJson {
   tmux_session: string;
   session_dir: string;
   created_at: string;
-  /** @deprecated old format compat */
-  mode?: "solo" | "team";
 }
 
 // Mirror of cli/src/lib/paths.ts

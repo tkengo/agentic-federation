@@ -259,7 +259,6 @@ agentic-federation/
 │   │   │   ├── archive.ts        # fed session archive
 │   │   │   ├── clean.ts          # fed clean
 │   │   │   ├── dash.ts           # fed dashboard
-│   │   │   ├── state.ts          # fed state
 │   │   │   ├── artifact.ts       # fed artifact
 │   │   │   ├── notify.ts         # fed notify
 │   │   │   ├── prompt.ts         # fed prompt
@@ -269,13 +268,11 @@ agentic-federation/
 │   │   │   └── notify-human.ts   # fed notify-human
 │   │   └── lib/                  # 共通ライブラリ
 │   │       ├── paths.ts          # ~/.fed/ パス定数
-│   │       ├── types.ts          # MetaJson, StateJson, RepoConfig 型
+│   │       ├── types.ts          # MetaJson, RepoConfig 型
 │   │       ├── session.ts        # セッション管理
 │   │       ├── tmux.ts           # tmux ヘルパー
 │   │       ├── repo.ts           # リポジトリ定義管理
-│   │       ├── workflow.ts       # ワークフロー定義の読み込み・バリデーション
-│   │       ├── notification-watcher.ts  # 通知ファイル監視 (chokidar)
-│   │       └── stale-watcher.ts  # 状態停滞検知
+│   │       └── workflow.ts       # エージェントインストラクション合成
 ├── dashboard/                    # ダッシュボード (TypeScript + Ink/React)
 │   ├── src/
 │   │   ├── index.tsx             # エントリポイント

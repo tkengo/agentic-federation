@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import { parse as parseYaml } from "yaml";
-import type { V2Workflow, V2Window, V2Pane, V2LayoutSplit, V2LegacyWindow, V2Step } from "./types.js";
+import type { V2Workflow, V2Window, V2Step } from "./types.js";
 
 const VALID_STEP_TYPES = new Set([
   "claude", "codex", "shell", "human", "loop", "branch", "parallel",
@@ -35,17 +35,6 @@ export function loadV2Workflow(filePath: string): V2Workflow {
     throw new Error("Workflow must have at least one step");
   }
 
-  // Validate windows
-  if (workflow.windows && workflow.window) {
-    throw new Error("Cannot specify both 'windows' and 'window'. Use 'windows' (the 'window' form is deprecated).");
-  }
-
-  // Convert legacy single-window to windows array
-  if (workflow.window && !workflow.windows) {
-    workflow.windows = convertLegacyWindow(workflow.window);
-    delete workflow.window;
-  }
-
   // Validate windows array
   if (workflow.windows) {
     validateWindows(workflow.windows);
@@ -66,29 +55,6 @@ export function loadV2Workflow(filePath: string): V2Workflow {
   }
 
   return workflow;
-}
-
-/**
- * Convert legacy `window` (single-window shorthand) to `windows` array.
- */
-function convertLegacyWindow(legacy: V2LegacyWindow): V2Window[] {
-  const panes: V2Pane[] = legacy.panes.map((p, i) => ({
-    id: p.id,
-    name: p.id,
-    pane: i + 1,
-    command: p.command,
-  }));
-
-  const splits: V2LayoutSplit[] = [];
-  for (let i = 1; i < panes.length; i++) {
-    splits.push({ source: 1, direction: "h", percent: 50 });
-  }
-
-  return [{
-    name: "human",
-    panes,
-    layout: { splits, focus: 1 },
-  }];
 }
 
 /**

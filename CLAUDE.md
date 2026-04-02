@@ -54,21 +54,18 @@ Each command is a file in `cli/src/commands/<name>.ts`:
 | Module | Purpose |
 |---|---|
 | `paths.ts` | Constants: `FED_HOME`, `SESSIONS_DIR`, `ACTIVE_DIR`, `ARCHIVE_DIR`, etc. |
-| `types.ts` | Interfaces: `MetaJson`, `StateJson`, `RepoConfig`, `ScriptDef`, `WorkflowOverride` |
+| `types.ts` | Interfaces: `MetaJson`, `RepoConfig`, `ScriptDef`, `WorkflowOverride` |
 | `session.ts` | Session resolution: `requireSessionDir()`, `resolveSession()`, `readMeta()` |
 | `tmux.ts` | tmux wrapper: `hasSession()`, `newSession()`, `sendKeys()`, etc. |
 | `repo.ts` | Repo config: `loadRepoConfig()`, `listRepoConfigs()`, `resolveRepoScriptPath()` |
-| `workflow.ts` | Workflow loading, validation, template expansion, @include() composition, workflow overrides |
-| `notification-watcher.ts` | Standalone process: watches notifications/ with chokidar |
-| `stale-watcher.ts` | Standalone process: checks state.json staleness periodically |
+| `workflow.ts` | Agent instruction composition: @include() expansion, template variable expansion |
 
 ## Workflow System
 
 Workflows are defined in `workflows/*.yaml`. Each workflow defines:
 - **windows**: tmux window/pane layout and agent assignments
-- **states**: State machine with transitions, tasks, and decision logic
-- **tasks**: Messages to dispatch to agent panes, with input/output artifacts and tracking keys
-The orchestrator reads the workflow YAML at runtime and follows the state machine. Agent prompts are role-only; operational details (what to read, where to write, how to report completion) are assembled by the orchestrator from the workflow definition.
+- **steps**: Sequential/branching/parallel execution steps with agent assignments and result declarations
+The engine reads the workflow YAML at runtime and executes steps. Agent prompts are role-only; operational details (what to read, where to write, how to report completion) are assembled by the engine from the workflow definition.
 
 ### Repo Scripts
 
@@ -118,7 +115,7 @@ The following environment variables are set in each tmux pane at session start v
 | `FED_PANE` | Pane ID from workflow definition | `planner`, `test_implementer` |
 | `FED_WINDOW` | Window name from workflow definition | `planner`, `implement` |
 
-These are available in the shell environment of each pane. Used by `fed workflow-transition` (pane auto-detection) and the logger (context tagging).
+These are available in the shell environment of each pane. Used by the logger (context tagging).
 
 ### Template Variables
 
@@ -192,9 +189,8 @@ Dashboard duplicates minimal type definitions from cli/src/lib/ (MetaJson, State
 - All agent communication via `fed` CLI commands (not direct file access)
 - Agents detect their session automatically via `tmux display-message -p '#S'`
 - `~/.fed/active/<tmux-session>` symlinks point to real session directories
-- Watcher processes (notification, stale) write PID files to session dir for cleanup
-- `fed session stop` kills watchers via PID files, then kills tmux session, then archives
-- Agent prompts are role-only; operational instructions come from workflow YAML via orchestrator
+- `fed session stop` kills tmux session and archives the session directory
+- Agent prompts are role-only; operational instructions come from workflow YAML via engine
 - Composed agent instructions are written to `<sessionDir>/agents/<name>.md`
 - `workflow` is a required positional argument to `fed session start`
 - Scripts defined in repo config JSON can be run via `fed repo-script run` or from the dashboard
