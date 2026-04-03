@@ -130,7 +130,6 @@ scripts:
 | `fed artifact write <name>` | stdin から成果物を書き込み |
 | `fed artifact list` | 成果物一覧 |
 | `fed artifact delete <name>` | 成果物を削除 |
-| `fed notify <window.pane> <message>` | tmux ペインに通知を送信 |
 | `fed prompt read <name>` | エージェントプロンプトを読み取り |
 | `fed prompt list` | プロンプト一覧 |
 | `fed notify-human <title> <message>` | macOS 通知を送信 |
@@ -260,7 +259,6 @@ agentic-federation/
 │   │   │   ├── clean.ts          # fed clean
 │   │   │   ├── dash.ts           # fed dashboard
 │   │   │   ├── artifact.ts       # fed artifact
-│   │   │   ├── notify.ts         # fed notify
 │   │   │   ├── prompt.ts         # fed prompt
 │   │   │   ├── stale.ts          # fed stale
 │   │   │   ├── workflow.ts       # fed workflow

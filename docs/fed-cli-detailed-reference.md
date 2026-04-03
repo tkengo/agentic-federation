@@ -237,16 +237,6 @@ fed artifact delete <name>
 
 ---
 
-## `fed notify`
-
-Send a notification to a tmux pane.
-
-```
-fed notify <pane> <message>
-```
-
----
-
 ## `fed prompt`
 
 Read agent prompts.

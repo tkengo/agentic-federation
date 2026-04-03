@@ -23,7 +23,6 @@ import {
   artifactListCommand,
   artifactDeleteCommand,
 } from "./commands/artifact.js";
-import { notifyCommand } from "./commands/notify.js";
 import { promptReadCommand, promptListCommand } from "./commands/prompt.js";
 import { notifyHumanCommand } from "./commands/notify-human.js";
 import {
@@ -266,14 +265,6 @@ artifact
   .description("Delete an artifact")
   .action((name: string) => {
     artifactDeleteCommand(name);
-  });
-
-// --- notify ---
-program
-  .command("notify <pane> <message>")
-  .description("Send a notification to a tmux pane")
-  .action((pane: string, message: string) => {
-    notifyCommand(pane, message);
   });
 
 // --- prompt ---
