@@ -60,6 +60,8 @@ steps:
         type: codex
         agent: plan-reviewer
         description: "計画レビュー（TDD適合性を含む）"
+        resume: true
+        resume_prompt: "計画が修正されました。前回の指摘事項が対応されているか確認し、再レビューしてください。"
         result:
           values: [approved, request_changes, escalate]
 
@@ -79,6 +81,8 @@ steps:
                 type: claude
                 agent: plan-revisor
                 description: "レビューFBに基づく計画修正"
+                resume: true
+                resume_prompt: "計画に対する新しいレビューフィードバックが届きました。最新のレビューアーティファクトを読み直して、指摘事項に対応してください。"
 
   # ============================================================
   # Phase 3: Test Implementation & Review
@@ -92,6 +96,8 @@ steps:
         type: claude
         agent: test-implementer
         description: "計画の擬似コードに基づくテスト実装"
+        resume: true
+        resume_prompt: "テスト受入で差し戻されました。最新のフィードバックアーティファクトを読み直して、テストを改善してください。"
 
       - id: test_review_cycle
         type: loop
@@ -102,6 +108,8 @@ steps:
             type: codex
             agent: test-reviewer
             description: "テストコードの品質レビュー"
+            resume: true
+            resume_prompt: "テストコードが修正されました。前回の指摘事項が対応されているか確認し、再レビューしてください。"
             result:
               values: [approved, request_changes, escalate]
 
@@ -121,11 +129,15 @@ steps:
                     type: claude
                     agent: test-implementer
                     description: "フィードバックに基づくテスト修正"
+                    resume: true
+                    resume_prompt: "テストコードに対する新しいレビューフィードバックが届きました。最新のレビューアーティファクトを読み直して、指摘事項に対応してください。"
 
       - id: test_acceptance
         type: claude
         agent: test-acceptor
         description: "テスト受入判断"
+        resume: true
+        resume_prompt: "テストが修正されました。最新のテストコードを確認し、再度受入判断してください。"
         result:
           values: [accepted, rejected, escalate]
 
@@ -164,23 +176,33 @@ steps:
             type: codex
             agent: code-reviewer-diff
             description: "差分特化レビュー"
+            resume: true
+            resume_prompt: "コードが修正されました。前回の指摘事項が対応されているか確認し、再レビューしてください。"
           - id: review_history
             type: codex
             agent: code-reviewer-history
             description: "変更履歴・コミット観点レビュー"
+            resume: true
+            resume_prompt: "コードが修正されました。変更履歴・コミット観点で再レビューしてください。"
           - id: review_impact
             type: claude
             agent: code-reviewer-impact
             description: "影響範囲・リスク観点レビュー"
+            resume: true
+            resume_prompt: "コードが修正されました。影響範囲・リスク観点で再レビューしてください。"
           - id: review_conventions
             type: claude
             agent: code-reviewer-conventions
             description: "規約・一貫性観点レビュー"
+            resume: true
+            resume_prompt: "コードが修正されました。規約・一貫性観点で再レビューしてください。"
 
       - id: code_review_integrate
         type: claude
         agent: code-review-integrator
         description: "レビュー結果の統合・判定"
+        resume: true
+        resume_prompt: "新しいレビューラウンドの結果が出揃いました。最新のレビューアーティファクトを読み直して、統合判定してください。"
         result:
           values: [approved, request_changes, escalate]
 
@@ -200,6 +222,8 @@ steps:
                 type: claude
                 agent: implementer
                 description: "レビューFBに基づくコード修正"
+                resume: true
+                resume_prompt: "コードに対する新しいレビューフィードバックが届きました。最新のレビューアーティファクトを読み直して、指摘事項に対応してください。"
 
   # ============================================================
   # Phase 6: Post-processing

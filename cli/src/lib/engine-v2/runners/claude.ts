@@ -14,12 +14,14 @@ export interface ClaudeRunnerOptions {
   agentInstructionPath: string;
   env: Record<string, string>;
   logger: EngineLogger;
+  resumeSessionId?: string;
 }
 
 // Stream-json event types we care about
 interface StreamEvent {
   type: string;
   subtype?: string;
+  session_id?: string;
   message?: {
     content?: ContentBlock[];
   };
@@ -39,22 +41,22 @@ interface ContentBlock {
  * Returns the exit code.
  */
 export function runClaudeStep(options: ClaudeRunnerOptions): RunnerHandle {
-  const { step, stepPath, sessionDir, worktreeDir, agentInstructionPath, env, logger } = options;
+  const { step, stepPath, sessionDir, worktreeDir, agentInstructionPath, env, logger, resumeSessionId } = options;
 
   let childProcess: ReturnType<typeof spawn> | null = null;
+  const handle: RunnerHandle = {
+    promise: null as unknown as Promise<number>,
+    kill: () => { childProcess?.kill("SIGTERM"); },
+  };
 
-  const promise = new Promise<number>((resolve, reject) => {
+  handle.promise = new Promise<number>((resolve, reject) => {
     if (!fs.existsSync(agentInstructionPath)) {
       reject(new Error(`Agent instruction not found: ${agentInstructionPath}`));
       return;
     }
     const agentInstruction = fs.readFileSync(agentInstructionPath, "utf-8");
 
-    let prompt = agentInstruction;
-    if (step.prompt) {
-      prompt += "\n\n---\n\n" + step.prompt;
-    }
-
+    let prompt: string;
     const args = [
       "-p",
       "--output-format", "stream-json",
@@ -62,7 +64,20 @@ export function runClaudeStep(options: ClaudeRunnerOptions): RunnerHandle {
       "--permission-mode", "bypassPermissions",
     ];
 
-    logger.info(`  Running: claude -p (stream-json)`);
+    if (resumeSessionId) {
+      // Resume mode: use --resume flag, send only resume prompt
+      args.push("--resume", resumeSessionId);
+      prompt = step.resume_prompt
+        ?? "Continue from where you left off. Re-read artifacts for updated context.";
+      logger.info(`  Running: claude -p --resume ${resumeSessionId.slice(0, 8)}...`);
+    } else {
+      // Normal mode: full instruction
+      prompt = agentInstruction;
+      if (step.prompt) {
+        prompt += "\n\n---\n\n" + step.prompt;
+      }
+      logger.info(`  Running: claude -p (stream-json)`);
+    }
 
     const childEnv: Record<string, string> = {
       ...process.env as Record<string, string>,
@@ -91,6 +106,11 @@ export function runClaudeStep(options: ClaudeRunnerOptions): RunnerHandle {
         event = JSON.parse(line) as StreamEvent;
       } catch {
         return;
+      }
+
+      // Capture session_id from init event
+      if (event.type === "system" && event.subtype === "init" && event.session_id) {
+        handle.sessionId = event.session_id;
       }
 
       processStreamEvent(event, logger);
@@ -125,10 +145,7 @@ export function runClaudeStep(options: ClaudeRunnerOptions): RunnerHandle {
     });
   });
 
-  return {
-    promise,
-    kill: () => { childProcess?.kill("SIGTERM"); },
-  };
+  return handle;
 }
 
 /**

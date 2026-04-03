@@ -13,11 +13,13 @@ export interface CodexRunnerOptions {
   agentInstructionPath: string;
   env: Record<string, string>;
   logger: EngineLogger;
+  resumeSessionId?: string;
 }
 
 // Codex JSONL event types
 interface CodexEvent {
   type: string;
+  thread_id?: string;
   item?: {
     id?: string;
     type?: string;
@@ -34,31 +36,51 @@ interface CodexEvent {
  * Returns the exit code.
  */
 export function runCodexStep(options: CodexRunnerOptions): RunnerHandle {
-  const { step, stepPath, sessionDir, worktreeDir, agentInstructionPath, env, logger } = options;
+  const { step, stepPath, sessionDir, worktreeDir, agentInstructionPath, env, logger, resumeSessionId } = options;
 
   let childProcess: ReturnType<typeof spawn> | null = null;
+  const handle: RunnerHandle = {
+    promise: null as unknown as Promise<number>,
+    kill: () => { childProcess?.kill("SIGTERM"); },
+  };
 
-  const promise = new Promise<number>((resolve, reject) => {
+  handle.promise = new Promise<number>((resolve, reject) => {
     if (!fs.existsSync(agentInstructionPath)) {
       reject(new Error(`Agent instruction not found: ${agentInstructionPath}`));
       return;
     }
     const agentInstruction = fs.readFileSync(agentInstructionPath, "utf-8");
 
-    let prompt = agentInstruction;
-    if (step.prompt) {
-      prompt += "\n\n---\n\n" + step.prompt;
+    let prompt: string;
+    let args: string[];
+
+    if (resumeSessionId) {
+      // Resume mode
+      args = [
+        "exec", "resume",
+        resumeSessionId,
+        "-",  // Read prompt from stdin
+        "--json",
+        "--dangerously-bypass-approvals-and-sandbox",
+      ];
+      prompt = step.resume_prompt
+        ?? "Continue from where you left off. Re-read artifacts for updated context.";
+      logger.info(`  Running: codex exec resume ${resumeSessionId.slice(0, 8)}...`);
+    } else {
+      // Normal mode
+      args = [
+        "exec",
+        "--json",
+        "--dangerously-bypass-approvals-and-sandbox",
+        "-C", worktreeDir,
+        "-",
+      ];
+      prompt = agentInstruction;
+      if (step.prompt) {
+        prompt += "\n\n---\n\n" + step.prompt;
+      }
+      logger.info(`  Running: codex exec (json)`);
     }
-
-    const args = [
-      "exec",
-      "--json",
-      "--dangerously-bypass-approvals-and-sandbox",
-      "-C", worktreeDir,
-      "-",
-    ];
-
-    logger.info(`  Running: codex exec (json)`);
 
     const childEnv: Record<string, string> = {
       ...process.env as Record<string, string>,
@@ -87,6 +109,11 @@ export function runCodexStep(options: CodexRunnerOptions): RunnerHandle {
         event = JSON.parse(line) as CodexEvent;
       } catch {
         return;
+      }
+
+      // Capture thread_id from thread.started event
+      if (event.type === "thread.started" && event.thread_id) {
+        handle.sessionId = event.thread_id;
       }
 
       processCodexEvent(event, logger);
@@ -119,10 +146,7 @@ export function runCodexStep(options: CodexRunnerOptions): RunnerHandle {
     });
   });
 
-  return {
-    promise,
-    kill: () => { childProcess?.kill("SIGTERM"); },
-  };
+  return handle;
 }
 
 /**

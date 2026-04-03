@@ -12,6 +12,8 @@ import {
   appendHistory,
   setStatus,
   setCurrentStep,
+  getSessionId,
+  setSessionId,
 } from "./state.js";
 import { EngineLogger } from "./logger.js";
 import { EngineEventEmitter } from "./events.js";
@@ -289,6 +291,9 @@ async function executeActionStep(
         FED_REPO_DIR: worktreeDir,
       };
 
+      // Determine resume session ID
+      const resumeSessionId = step.resume ? getSessionId(state, stepPath) : undefined;
+
       const handle = runClaudeStep({
         step,
         stepPath,
@@ -297,12 +302,46 @@ async function executeActionStep(
         agentInstructionPath: agentPath,
         env,
         logger,
+        resumeSessionId,
       });
 
       const exitCode = await waitWithAbortCheck(handle, sessionDir);
 
+      // Store session ID for future resume
+      if (handle.sessionId) {
+        setSessionId(state, stepPath, handle.sessionId);
+        writeV2State(sessionDir, state);
+      }
+
       if (exitCode !== 0) {
-        throw new Error(`claude -p exited with code ${exitCode}`);
+        // If resume failed (e.g. session expired), retry without resume
+        if (resumeSessionId) {
+          logger.warn(`  Resume failed (exit ${exitCode}), retrying without resume...`);
+          delete state.sessions[stepPath];
+
+          const retryHandle = runClaudeStep({
+            step,
+            stepPath,
+            sessionDir,
+            worktreeDir,
+            agentInstructionPath: agentPath,
+            env,
+            logger,
+          });
+
+          const retryExitCode = await waitWithAbortCheck(retryHandle, sessionDir);
+
+          if (retryHandle.sessionId) {
+            setSessionId(state, stepPath, retryHandle.sessionId);
+            writeV2State(sessionDir, state);
+          }
+
+          if (retryExitCode !== 0) {
+            throw new Error(`claude -p exited with code ${retryExitCode}`);
+          }
+        } else {
+          throw new Error(`claude -p exited with code ${exitCode}`);
+        }
       }
 
       resultValue = readRespondFile(sessionDir, stepPath);
@@ -320,6 +359,9 @@ async function executeActionStep(
         FED_REPO_DIR: worktreeDir,
       };
 
+      // Determine resume session ID
+      const resumeSessionId = step.resume ? getSessionId(state, stepPath) : undefined;
+
       const handle = runCodexStep({
         step,
         stepPath,
@@ -328,12 +370,46 @@ async function executeActionStep(
         agentInstructionPath: agentPath,
         env,
         logger,
+        resumeSessionId,
       });
 
       const exitCode = await waitWithAbortCheck(handle, sessionDir);
 
+      // Store session ID for future resume
+      if (handle.sessionId) {
+        setSessionId(state, stepPath, handle.sessionId);
+        writeV2State(sessionDir, state);
+      }
+
       if (exitCode !== 0) {
-        throw new Error(`codex exec exited with code ${exitCode}`);
+        // If resume failed (e.g. session expired), retry without resume
+        if (resumeSessionId) {
+          logger.warn(`  Resume failed (exit ${exitCode}), retrying without resume...`);
+          delete state.sessions[stepPath];
+
+          const retryHandle = runCodexStep({
+            step,
+            stepPath,
+            sessionDir,
+            worktreeDir,
+            agentInstructionPath: agentPath,
+            env,
+            logger,
+          });
+
+          const retryExitCode = await waitWithAbortCheck(retryHandle, sessionDir);
+
+          if (retryHandle.sessionId) {
+            setSessionId(state, stepPath, retryHandle.sessionId);
+            writeV2State(sessionDir, state);
+          }
+
+          if (retryExitCode !== 0) {
+            throw new Error(`codex exec exited with code ${retryExitCode}`);
+          }
+        } else {
+          throw new Error(`codex exec exited with code ${exitCode}`);
+        }
       }
 
       resultValue = readRespondFile(sessionDir, stepPath);
@@ -630,6 +706,8 @@ async function executeParallel(
       description: branch.description,
       prompt: branch.prompt,
       result: branch.result,
+      resume: branch.resume,
+      resume_prompt: branch.resume_prompt,
     };
 
     try {

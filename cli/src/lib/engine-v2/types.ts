@@ -59,6 +59,10 @@ export interface V2Step {
 
   // Control flow
   break?: boolean; // Exit parent loop
+
+  // Resume fields
+  resume?: boolean;        // Enable session resume on loop re-execution
+  resume_prompt?: string;  // Custom prompt for resumed sessions (default: auto-generated)
 }
 
 /** A case in a branch step */
@@ -78,6 +82,8 @@ export interface V2ParallelBranch {
   prompt?: string;
   result?: V2ResultDeclaration;
   notify?: boolean; // Suppress OS notification for human steps (default: true)
+  resume?: boolean;
+  resume_prompt?: string;
 }
 
 /** Top-level v2 workflow document */
@@ -116,5 +122,6 @@ export interface V2State {
   current_step: string | null;
   status: V2Status;
   results: Record<string, V2StepResult>;
+  sessions: Record<string, string>;  // stepPath -> agent session ID (Claude session_id / Codex thread_id)
   history: V2HistoryEntry[];
 }

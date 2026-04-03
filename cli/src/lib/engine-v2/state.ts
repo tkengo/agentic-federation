@@ -17,6 +17,7 @@ export function initV2State(sessionDir: string): V2State {
     current_step: null,
     status: "running",
     results: {},
+    sessions: {},
     history: [],
   };
   fs.writeFileSync(statePath(sessionDir), JSON.stringify(state, null, 2) + "\n");
@@ -31,7 +32,12 @@ export function readV2State(sessionDir: string): V2State {
   if (!fs.existsSync(fp)) {
     throw new Error(`State file not found: ${fp}`);
   }
-  return JSON.parse(fs.readFileSync(fp, "utf-8")) as V2State;
+  const state = JSON.parse(fs.readFileSync(fp, "utf-8")) as V2State;
+  // Backward compatibility: ensure sessions field exists
+  if (!state.sessions) {
+    state.sessions = {};
+  }
+  return state;
 }
 
 /**
@@ -91,6 +97,27 @@ export function clearDescendantResults(
     }
   }
   return cleared;
+}
+
+/**
+ * Store agent session ID for a step (for resume on loop re-execution).
+ */
+export function setSessionId(
+  state: V2State,
+  stepPath: string,
+  sessionId: string,
+): void {
+  state.sessions[stepPath] = sessionId;
+}
+
+/**
+ * Get stored session ID for a step.
+ */
+export function getSessionId(
+  state: V2State,
+  stepPath: string,
+): string | undefined {
+  return state.sessions[stepPath];
 }
 
 /**
