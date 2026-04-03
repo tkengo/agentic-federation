@@ -714,7 +714,8 @@ async function executeParallel(
       // Check abort before starting
       if (abortController.signal.aborted) return;
 
-      await executeActionStep(branchStep, branchPath, sessionDir, state, meta, logger);
+      const branchLogger = logger.createChildLogger(branchPath);
+      await executeActionStep(branchStep, branchPath, sessionDir, state, meta, branchLogger);
     } catch (err) {
       // Abort all sibling branches
       abortController.abort();

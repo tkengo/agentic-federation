@@ -10,11 +10,24 @@ export class EngineLogger {
   private logStream: fs.WriteStream;
   private emitter: EngineEventEmitter | null;
   private currentStepPath: string | null = null;
+  private isChild = false;
 
   constructor(sessionDir: string, emitter?: EngineEventEmitter) {
     const logPath = path.join(sessionDir, "engine.log");
     this.logStream = fs.createWriteStream(logPath, { flags: "a" });
     this.emitter = emitter ?? null;
+  }
+
+  /**
+   * Create a child logger that shares the same log stream and emitter
+   * but has its own independent currentStepPath.
+   * Used for parallel branch execution to avoid stepPath conflicts.
+   */
+  createChildLogger(stepPath: string): EngineLogger {
+    const child = Object.create(this) as EngineLogger;
+    child.currentStepPath = stepPath;
+    child.isChild = true;
+    return child;
   }
 
   /** Set the active step path for log routing */
@@ -163,7 +176,9 @@ export class EngineLogger {
   }
 
   close(): void {
-    this.logStream.end();
+    if (!this.isChild) {
+      this.logStream.end();
+    }
   }
 
   private formatDuration(ms: number): string {
