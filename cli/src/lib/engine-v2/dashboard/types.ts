@@ -1,4 +1,4 @@
-export type StepStatus = "not_started" | "running" | "completed" | "failed" | "waiting_human" | "skipped";
+export type StepStatus = "not_started" | "running" | "completed" | "failed" | "waiting_human" | "waiting_network" | "skipped";
 
 /**
  * A flattened row in the step tree display.

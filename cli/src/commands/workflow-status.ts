@@ -16,6 +16,7 @@ const STATUS_ICONS: Record<StepStatus, string> = {
   completed: "✓",
   running: "◉",
   waiting_human: "◉",
+  waiting_network: "⟳",
   failed: "✗",
   skipped: "─",
   not_started: "◌",
@@ -26,6 +27,7 @@ const STATUS_COLORS: Record<StepStatus, (s: string) => string> = {
   completed: color.green,
   running: color.boldCyan,
   waiting_human: color.yellow,
+  waiting_network: color.magenta,
   failed: color.red,
   skipped: color.dim,
   not_started: color.dim,
@@ -45,7 +47,9 @@ function applyState(nodes: StepNode[], state: V2State): void {
   if (state.current_step) {
     for (const node of nodes) {
       if (node.stepPath === state.current_step) {
-        node.status = state.status === "waiting_human" ? "waiting_human" : "running";
+        node.status = state.status === "waiting_human" ? "waiting_human"
+          : state.status === "waiting_network" ? "waiting_network"
+          : "running";
         break;
       }
     }

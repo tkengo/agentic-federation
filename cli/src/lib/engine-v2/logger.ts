@@ -154,6 +154,17 @@ export class EngineLogger {
     });
   }
 
+  waitingNetwork(message: string): void {
+    this.write("⟳", `Network: ${message}`);
+    if (this.emitter && this.currentStepPath) {
+      this.emitter.emit("waiting_network", {
+        type: "waiting_network",
+        stepPath: this.currentStepPath,
+        message,
+      });
+    }
+  }
+
   waiting(message: string): void {
     this.write("◌", `Waiting: ${message}`);
     if (this.emitter && this.currentStepPath) {

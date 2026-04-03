@@ -23,6 +23,7 @@ export const color = {
   dim: (s: string) => `${ESC}[2m${s}${RESET}`,
   bold: (s: string) => `${ESC}[1m${s}${RESET}`,
   boldCyan: (s: string) => `${ESC}[1;36m${s}${RESET}`,
+  magenta: (s: string) => `${ESC}[35m${s}${RESET}`,
 };
 
 // Strip ANSI escape sequences to measure visible string length

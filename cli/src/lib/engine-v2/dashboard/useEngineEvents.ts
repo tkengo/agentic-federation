@@ -14,7 +14,7 @@ export interface EngineState {
   logs: Map<string, LogEntry[]>;
   selectedIndex: number;
   autoFollow: boolean;
-  engineStatus: "running" | "completed" | "failed" | "aborted";
+  engineStatus: "running" | "completed" | "failed" | "aborted" | "waiting_network";
   engineDurationMs?: number;
   hasRunningStep: boolean;
 }
@@ -36,7 +36,7 @@ export function useEngineEvents(
   const logsRef = useRef<Map<string, LogEntry[]>>(new Map());
   const selectedIndexRef = useRef(0);
   const autoFollowRef = useRef(true);
-  const engineStatusRef = useRef<"running" | "completed" | "failed" | "aborted">("running");
+  const engineStatusRef = useRef<"running" | "completed" | "failed" | "aborted" | "waiting_network">("running");
   const engineDurationRef = useRef<number | undefined>();
   const manualNavTime = useRef(0);
   const dirtyRef = useRef(false);
@@ -46,7 +46,7 @@ export function useEngineEvents(
   const [logs, setLogs] = useState<Map<string, LogEntry[]>>(new Map());
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [autoFollow, setAutoFollow] = useState(true);
-  const [engineStatus, setEngineStatus] = useState<"running" | "completed" | "failed" | "aborted">("running");
+  const [engineStatus, setEngineStatus] = useState<"running" | "completed" | "failed" | "aborted" | "waiting_network">("running");
   const [engineDurationMs, setEngineDurationMs] = useState<number | undefined>();
   const [hasRunningStep, setHasRunningStep] = useState(false);
 
@@ -132,6 +132,7 @@ export function useEngineEvents(
     const onStepStart = (e: { stepPath: string; stepType: string; description?: string }) => {
       updateStepRef(e.stepPath, { status: "running" });
       setParentRunning(e.stepPath);
+      engineStatusRef.current = "running"; // Restore from waiting_network
       appendLog(e.stepPath, `▶ Starting (${e.stepType})${e.description ? ` - ${e.description}` : ""}`);
     };
 
@@ -168,6 +169,13 @@ export function useEngineEvents(
       appendLog(e.stepPath, `◌ Waiting: ${e.message}`);
     };
 
+    const onWaitingNetwork = (e: { stepPath: string; message: string }) => {
+      updateStepRef(e.stepPath, { status: "waiting_network" });
+      appendLog(e.stepPath, `⟳ ${e.message}`);
+      engineStatusRef.current = "waiting_network";
+      markDirty();
+    };
+
     const onEngineComplete = (e: { durationMs: number }) => {
       engineStatusRef.current = "completed";
       engineDurationRef.current = e.durationMs;
@@ -190,6 +198,7 @@ export function useEngineEvents(
     emitter.on("step_log", onStepLog);
     emitter.on("loop_iteration", onLoopIteration);
     emitter.on("waiting_human", onWaitingHuman);
+    emitter.on("waiting_network", onWaitingNetwork);
     emitter.on("engine_complete", onEngineComplete);
     emitter.on("engine_failed", onEngineFailed);
     emitter.on("engine_aborted", onEngineAborted);

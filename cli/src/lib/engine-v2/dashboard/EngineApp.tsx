@@ -59,11 +59,11 @@ export function EngineApp({ emitter, initialSteps, workflowName, sessionDir }: E
         }
       }
       // Abort (immediate): 'a' key
-      if (input === "a" && engineStatus === "running") {
+      if (input === "a" && (engineStatus === "running" || engineStatus === "waiting_network")) {
         writeAbortRequest(sessionDir, "immediate");
       }
       // Graceful abort: 'g' key
-      if (input === "g" && engineStatus === "running") {
+      if (input === "g" && (engineStatus === "running" || engineStatus === "waiting_network")) {
         writeAbortRequest(sessionDir, "graceful");
       }
     } else {
@@ -207,13 +207,16 @@ function StepsView({ steps, logs, selectedIndex, autoFollow, engineStatus, engin
       ? "✗ Failed"
       : engineStatus === "aborted"
         ? "⏸ Aborted"
-        : autoFollow ? "running" : "manual nav";
+        : engineStatus === "waiting_network"
+          ? "⟳ Waiting for network..."
+          : autoFollow ? "running" : "manual nav";
   const statusColor = engineStatus === "completed" ? "green"
     : engineStatus === "failed" ? "red"
       : engineStatus === "aborted" ? "yellow"
-        : "cyan";
+        : engineStatus === "waiting_network" ? "magenta"
+          : "cyan";
   const completedCount = displaySteps.filter((s) => s.status === "completed").length;
-  const canAbort = engineStatus === "running";
+  const canAbort = engineStatus === "running" || engineStatus === "waiting_network";
   const hintText = canAbort
     ? "[space: view log]  [a: abort]  [g: graceful abort]"
     : "[space: view log]";
@@ -316,13 +319,13 @@ function SpinnerIcon(): React.ReactElement {
   return <Text color="cyan">{SPINNER_FRAMES[frame % SPINNER_FRAMES.length]}</Text>;
 }
 
-function BlinkIcon({ icon }: { icon: string }): React.ReactElement {
+function BlinkIcon({ icon, color = "cyan" }: { icon: string; color?: string }): React.ReactElement {
   const [on, setOn] = useState(true);
   useEffect(() => {
     const timer = setInterval(() => setOn((v) => !v), 600);
     return () => clearInterval(timer);
   }, []);
-  return <Text color="cyan" dimColor={!on}>{icon}</Text>;
+  return <Text color={color} dimColor={!on}>{icon}</Text>;
 }
 
 // ---------------------------------------------------------------------------
@@ -342,7 +345,9 @@ const MemoStepLine = memo(function StepLine({ node, selected, colWidths }: StepL
 
   const isActionStep = ["claude", "codex", "shell", "human"].includes(node.stepType);
   let icon: React.ReactElement;
-  if (node.status === "running" && isActionStep) {
+  if (node.status === "waiting_network" && isActionStep) {
+    icon = <BlinkIcon icon="⟳" color="magenta" />;
+  } else if (node.status === "running" && isActionStep) {
     icon = <SpinnerIcon />;
   } else if (node.status === "running" && !isActionStep) {
     // Parent control-flow step with running children: blink
@@ -417,6 +422,7 @@ function getStaticIcon(status: StepNode["status"]): string {
     case "completed": return "✓";
     case "running": return "▸";
     case "waiting_human": return "◌";
+    case "waiting_network": return "⟳";
     case "failed": return "✗";
     case "skipped": return "─";
     case "not_started": return "○";
@@ -428,6 +434,7 @@ function getStatusColor(status: StepNode["status"]): string {
     case "completed": return "green";
     case "running": return "cyan";
     case "waiting_human": return "yellow";
+    case "waiting_network": return "magenta";
     case "failed": return "red";
     case "skipped": return "gray";
     case "not_started": return "gray";
@@ -452,6 +459,7 @@ function getRightInfo(node: StepNode): string {
   }
   if (node.status === "running") return "running";
   if (node.status === "waiting_human") return "waiting";
+  if (node.status === "waiting_network") return "waiting network";
   if (node.status === "skipped") return "skipped";
   return "";
 }
@@ -460,6 +468,7 @@ function getLogColor(line: string): string | undefined {
   if (line.startsWith("✓")) return "green";
   if (line.startsWith("✗")) return "red";
   if (line.startsWith("◌")) return "yellow";
+  if (line.startsWith("⟳")) return "magenta";
   if (line.startsWith("▶")) return "cyan";
   if (line.startsWith("⚠")) return "yellow";
   if (line.includes("🔧")) return "blue";
@@ -470,6 +479,7 @@ function colorizeLog(line: string): React.ReactElement {
   if (line.startsWith("✓")) return <Text color="green">{line}</Text>;
   if (line.startsWith("✗")) return <Text color="red">{line}</Text>;
   if (line.startsWith("◌")) return <Text color="yellow">{line}</Text>;
+  if (line.startsWith("⟳")) return <Text color="magenta">{line}</Text>;
   if (line.startsWith("▶")) return <Text color="cyan">{line}</Text>;
   if (line.startsWith("⚠")) return <Text color="yellow">{line}</Text>;
   if (line.includes("🔧")) return <Text color="blue">{line}</Text>;

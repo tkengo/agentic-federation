@@ -83,6 +83,7 @@ function getStatusIcon(status: StepNode["status"], frame: number): string {
     case "completed": return "✓";
     case "running": return SPINNER_FRAMES[frame % SPINNER_FRAMES.length];
     case "waiting_human": return "◌";
+    case "waiting_network": return "⟳";
     case "failed": return "✗";
     case "skipped": return "─";
     case "not_started": return "○";
@@ -94,6 +95,7 @@ function getStatusColor(status: StepNode["status"]): string {
     case "completed": return "green";
     case "running": return "cyan";
     case "waiting_human": return "yellow";
+    case "waiting_network": return "magenta";
     case "failed": return "red";
     case "skipped": return "gray";
     case "not_started": return "gray";

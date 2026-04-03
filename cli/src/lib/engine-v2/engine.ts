@@ -24,7 +24,10 @@ import { runShellStep } from "./runners/shell.js";
 import type { RunnerHandle } from "./runners/types.js";
 import { evaluateCondition, type ExprContext } from "./expr.js";
 import { readAbortRequest, consumeAbortRequest, clearAbortRequest } from "./abort.js";
+import { isNetworkAvailable } from "./network.js";
 import type { V2Step, V2State, V2BranchCase } from "./types.js";
+
+const NETWORK_POLL_INTERVAL_MS = 30_000; // 30 seconds
 
 // Sentinel to signal loop break from a branch case
 const BREAK_LOOP = Symbol("BREAK_LOOP");
@@ -155,6 +158,69 @@ function checkGracefulAbort(sessionDir: string): void {
   const req = readAbortRequest(sessionDir);
   if (req) {
     throw new EngineAbortError(req.mode);
+  }
+}
+
+/**
+ * Execute an async function with network-aware retry.
+ * If fn throws and network is down, waits for recovery and retries.
+ * If fn throws and network is up, re-throws the original error.
+ * EngineAbortError is always re-thrown immediately.
+ */
+async function withNetworkRetry<T>(
+  fn: () => Promise<T>,
+  stepPath: string,
+  sessionDir: string,
+  state: V2State,
+  logger: EngineLogger,
+): Promise<T> {
+  while (true) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (err instanceof EngineAbortError) throw err;
+
+      if (await isNetworkAvailable()) throw err;
+
+      // Network is down — wait for recovery
+      logger.waitingNetwork("Network disconnected. Waiting for recovery...");
+      setStatus(state, "waiting_network");
+      appendHistory(state, "waiting_network", stepPath, "Network disconnected");
+      writeV2State(sessionDir, state);
+
+      await waitForNetworkWithAbort(sessionDir, logger);
+
+      // Network recovered
+      logger.info("  Network recovered. Retrying step...");
+      setStatus(state, "running");
+      appendHistory(state, "network_recovered", stepPath, "Retrying");
+      writeV2State(sessionDir, state);
+    }
+  }
+}
+
+/**
+ * Wait for network recovery, polling every 30 seconds.
+ * Checks for abort requests between polls.
+ * Throws EngineAbortError if abort is requested.
+ */
+async function waitForNetworkWithAbort(
+  sessionDir: string,
+  logger: EngineLogger,
+): Promise<void> {
+  while (true) {
+    const req = readAbortRequest(sessionDir);
+    if (req) {
+      throw new EngineAbortError(req.mode);
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, NETWORK_POLL_INTERVAL_MS));
+
+    if (await isNetworkAvailable()) {
+      return;
+    }
+
+    logger.info("  Still waiting for network...");
   }
 }
 
@@ -291,58 +357,60 @@ async function executeActionStep(
         FED_REPO_DIR: worktreeDir,
       };
 
-      // Determine resume session ID
-      const resumeSessionId = step.resume ? getSessionId(state, stepPath) : undefined;
+      await withNetworkRetry(async () => {
+        // Determine resume session ID
+        const resumeSessionId = step.resume ? getSessionId(state, stepPath) : undefined;
 
-      const handle = runClaudeStep({
-        step,
-        stepPath,
-        sessionDir,
-        worktreeDir,
-        agentInstructionPath: agentPath,
-        env,
-        logger,
-        resumeSessionId,
-      });
+        const handle = runClaudeStep({
+          step,
+          stepPath,
+          sessionDir,
+          worktreeDir,
+          agentInstructionPath: agentPath,
+          env,
+          logger,
+          resumeSessionId,
+        });
 
-      const exitCode = await waitWithAbortCheck(handle, sessionDir);
+        const exitCode = await waitWithAbortCheck(handle, sessionDir);
 
-      // Store session ID for future resume
-      if (handle.sessionId) {
-        setSessionId(state, stepPath, handle.sessionId);
-        writeV2State(sessionDir, state);
-      }
-
-      if (exitCode !== 0) {
-        // If resume failed (e.g. session expired), retry without resume
-        if (resumeSessionId) {
-          logger.warn(`  Resume failed (exit ${exitCode}), retrying without resume...`);
-          delete state.sessions[stepPath];
-
-          const retryHandle = runClaudeStep({
-            step,
-            stepPath,
-            sessionDir,
-            worktreeDir,
-            agentInstructionPath: agentPath,
-            env,
-            logger,
-          });
-
-          const retryExitCode = await waitWithAbortCheck(retryHandle, sessionDir);
-
-          if (retryHandle.sessionId) {
-            setSessionId(state, stepPath, retryHandle.sessionId);
-            writeV2State(sessionDir, state);
-          }
-
-          if (retryExitCode !== 0) {
-            throw new Error(`claude -p exited with code ${retryExitCode}`);
-          }
-        } else {
-          throw new Error(`claude -p exited with code ${exitCode}`);
+        // Store session ID for future resume
+        if (handle.sessionId) {
+          setSessionId(state, stepPath, handle.sessionId);
+          writeV2State(sessionDir, state);
         }
-      }
+
+        if (exitCode !== 0) {
+          // If resume failed (e.g. session expired), retry without resume
+          if (resumeSessionId) {
+            logger.warn(`  Resume failed (exit ${exitCode}), retrying without resume...`);
+            delete state.sessions[stepPath];
+
+            const retryHandle = runClaudeStep({
+              step,
+              stepPath,
+              sessionDir,
+              worktreeDir,
+              agentInstructionPath: agentPath,
+              env,
+              logger,
+            });
+
+            const retryExitCode = await waitWithAbortCheck(retryHandle, sessionDir);
+
+            if (retryHandle.sessionId) {
+              setSessionId(state, stepPath, retryHandle.sessionId);
+              writeV2State(sessionDir, state);
+            }
+
+            if (retryExitCode !== 0) {
+              throw new Error(`claude -p exited with code ${retryExitCode}`);
+            }
+          } else {
+            throw new Error(`claude -p exited with code ${exitCode}`);
+          }
+        }
+      }, stepPath, sessionDir, state, logger);
 
       resultValue = readRespondFile(sessionDir, stepPath);
       break;
@@ -359,58 +427,60 @@ async function executeActionStep(
         FED_REPO_DIR: worktreeDir,
       };
 
-      // Determine resume session ID
-      const resumeSessionId = step.resume ? getSessionId(state, stepPath) : undefined;
+      await withNetworkRetry(async () => {
+        // Determine resume session ID
+        const resumeSessionId = step.resume ? getSessionId(state, stepPath) : undefined;
 
-      const handle = runCodexStep({
-        step,
-        stepPath,
-        sessionDir,
-        worktreeDir,
-        agentInstructionPath: agentPath,
-        env,
-        logger,
-        resumeSessionId,
-      });
+        const handle = runCodexStep({
+          step,
+          stepPath,
+          sessionDir,
+          worktreeDir,
+          agentInstructionPath: agentPath,
+          env,
+          logger,
+          resumeSessionId,
+        });
 
-      const exitCode = await waitWithAbortCheck(handle, sessionDir);
+        const exitCode = await waitWithAbortCheck(handle, sessionDir);
 
-      // Store session ID for future resume
-      if (handle.sessionId) {
-        setSessionId(state, stepPath, handle.sessionId);
-        writeV2State(sessionDir, state);
-      }
-
-      if (exitCode !== 0) {
-        // If resume failed (e.g. session expired), retry without resume
-        if (resumeSessionId) {
-          logger.warn(`  Resume failed (exit ${exitCode}), retrying without resume...`);
-          delete state.sessions[stepPath];
-
-          const retryHandle = runCodexStep({
-            step,
-            stepPath,
-            sessionDir,
-            worktreeDir,
-            agentInstructionPath: agentPath,
-            env,
-            logger,
-          });
-
-          const retryExitCode = await waitWithAbortCheck(retryHandle, sessionDir);
-
-          if (retryHandle.sessionId) {
-            setSessionId(state, stepPath, retryHandle.sessionId);
-            writeV2State(sessionDir, state);
-          }
-
-          if (retryExitCode !== 0) {
-            throw new Error(`codex exec exited with code ${retryExitCode}`);
-          }
-        } else {
-          throw new Error(`codex exec exited with code ${exitCode}`);
+        // Store session ID for future resume
+        if (handle.sessionId) {
+          setSessionId(state, stepPath, handle.sessionId);
+          writeV2State(sessionDir, state);
         }
-      }
+
+        if (exitCode !== 0) {
+          // If resume failed (e.g. session expired), retry without resume
+          if (resumeSessionId) {
+            logger.warn(`  Resume failed (exit ${exitCode}), retrying without resume...`);
+            delete state.sessions[stepPath];
+
+            const retryHandle = runCodexStep({
+              step,
+              stepPath,
+              sessionDir,
+              worktreeDir,
+              agentInstructionPath: agentPath,
+              env,
+              logger,
+            });
+
+            const retryExitCode = await waitWithAbortCheck(retryHandle, sessionDir);
+
+            if (retryHandle.sessionId) {
+              setSessionId(state, stepPath, retryHandle.sessionId);
+              writeV2State(sessionDir, state);
+            }
+
+            if (retryExitCode !== 0) {
+              throw new Error(`codex exec exited with code ${retryExitCode}`);
+            }
+          } else {
+            throw new Error(`codex exec exited with code ${exitCode}`);
+          }
+        }
+      }, stepPath, sessionDir, state, logger);
 
       resultValue = readRespondFile(sessionDir, stepPath);
       break;

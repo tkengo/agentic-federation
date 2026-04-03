@@ -65,6 +65,12 @@ export interface WaitingHumanEvent {
   message: string;
 }
 
+export interface WaitingNetworkEvent {
+  type: "waiting_network";
+  stepPath: string;
+  message: string;
+}
+
 export type EngineEvent =
   | EngineStartEvent
   | EngineCompleteEvent
@@ -75,7 +81,8 @@ export type EngineEvent =
   | StepFailedEvent
   | StepLogEvent
   | LoopIterationEvent
-  | WaitingHumanEvent;
+  | WaitingHumanEvent
+  | WaitingNetworkEvent;
 
 // ---------------------------------------------------------------------------
 // Typed event emitter
@@ -92,6 +99,7 @@ export interface EngineEventMap {
   step_log: [StepLogEvent];
   loop_iteration: [LoopIterationEvent];
   waiting_human: [WaitingHumanEvent];
+  waiting_network: [WaitingNetworkEvent];
   event: [EngineEvent]; // catch-all for any event
 }
 

@@ -21,7 +21,7 @@ interface DashboardState {
   logs: Map<string, string[]>;
   selectedIndex: number;
   autoFollow: boolean;
-  engineStatus: "running" | "completed" | "failed";
+  engineStatus: "running" | "completed" | "failed" | "waiting_network";
   engineDurationMs?: number;
   spinnerFrame: number;
 }
@@ -81,6 +81,7 @@ export function startDashboard(
   emitter.on("step_start", (e) => {
     updateStep(e.stepPath, { status: "running" });
     setParentRunning(e.stepPath);
+    state.engineStatus = "running"; // Restore from waiting_network
     appendLog(e.stepPath, `▶ Starting (${e.stepType})${e.description ? ` - ${e.description}` : ""}`);
     if (state.autoFollow) {
       const idx = state.steps.findIndex((s) => s.stepPath === e.stepPath);
@@ -113,6 +114,12 @@ export function startDashboard(
   emitter.on("waiting_human", (e) => {
     updateStep(e.stepPath, { status: "waiting_human" });
     appendLog(e.stepPath, `◌ Waiting: ${e.message}`);
+  });
+
+  emitter.on("waiting_network", (e) => {
+    updateStep(e.stepPath, { status: "waiting_network" });
+    appendLog(e.stepPath, `⟳ ${e.message}`);
+    state.engineStatus = "waiting_network";
   });
 
   emitter.on("engine_complete", (e) => {
@@ -201,9 +208,11 @@ function renderFrame(renderer: TerminalRenderer, state: DashboardState, workflow
     ? color.green(`✓ Completed (${formatDuration(state.engineDurationMs ?? 0)})`)
     : state.engineStatus === "failed"
       ? color.red("✗ Failed")
-      : state.autoFollow
-        ? color.cyan("running (auto-follow)")
-        : color.cyan("running (manual nav)");
+      : state.engineStatus === "waiting_network"
+        ? color.magenta("⟳ Waiting for network...")
+        : state.autoFollow
+          ? color.cyan("running (auto-follow)")
+          : color.cyan("running (manual nav)");
 
   lines.push(`${color.boldCyan("⚡ Engine v2")}${color.dim(` ▸ ${workflowName}`)}  ${statusText}`);
 
@@ -336,6 +345,7 @@ function getStatusIcon(status: StepStatus, frame: number): string {
     case "completed": return "✓";
     case "running": return SPINNER_FRAMES[frame % SPINNER_FRAMES.length];
     case "waiting_human": return "◌";
+    case "waiting_network": return "⟳";
     case "failed": return "✗";
     case "skipped": return "─";
     case "not_started": return "○";
@@ -347,6 +357,7 @@ function colorizeIcon(icon: string, status: StepStatus): string {
     case "completed": return color.green(icon);
     case "running": return color.cyan(icon);
     case "waiting_human": return color.yellow(icon);
+    case "waiting_network": return color.magenta(icon);
     case "failed": return color.red(icon);
     case "skipped": return color.dim(icon);
     case "not_started": return color.dim(icon);
@@ -371,6 +382,7 @@ function getRightInfo(node: StepNode): string {
   }
   if (node.status === "running") return "running";
   if (node.status === "waiting_human") return "waiting";
+  if (node.status === "waiting_network") return "waiting network";
   return "";
 }
 
@@ -378,6 +390,7 @@ function colorizeLog(line: string): string {
   if (line.startsWith("✓")) return color.green(line);
   if (line.startsWith("✗")) return color.red(line);
   if (line.startsWith("◌")) return color.yellow(line);
+  if (line.startsWith("⟳")) return color.magenta(line);
   if (line.startsWith("▶")) return color.cyan(line);
   if (line.startsWith("⚠")) return color.yellow(line);
   if (line.includes("🔧")) return color.dim(line);
