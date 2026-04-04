@@ -1,0 +1,86 @@
+name: pr-review
+description: "PR code review pipeline"
+
+focus: analyze
+
+windows:
+  - name: review
+    panes:
+      - id: terminal
+        name: Terminal
+        pane: 1
+        command: null
+      - id: editor
+        name: Editor
+        pane: 2
+        command: nvim
+    layout:
+      splits:
+        - { source: 1, direction: h, percent: 50 }
+      focus: 1
+
+  - name: analyze
+    panes:
+      - id: analyzer
+        name: Analyzer
+        pane: 1
+        command: "yoloclaude --agent __fed-pr-review-$FED_SESSION-analyzer"
+      - id: human
+        name: Human
+        pane: 2
+        command: "cd $FED_SESSION_DIR && nvim"
+    layout:
+      splits:
+        - { source: 1, direction: h, percent: 50 }
+      focus: 1
+
+steps:
+  # ============================================================
+  # Phase 1: PR Analysis (human-interactive)
+  # ============================================================
+  - id: analysis
+    type: human
+    agent: analyzer
+    notify: false
+    description: "人間がPR情報を渡し、Analyzerが変更概要を作成"
+    prompt: "analyzerペインにPR URL/番号を渡してください。Analyzerが分析完了後に自動でワークフローを進めます。"
+
+  # ============================================================
+  # Phase 2: Parallel Code Review (4 perspectives)
+  # ============================================================
+  - id: code_review_parallel
+    type: parallel
+    description: "4観点の並列コードレビュー"
+    branches:
+      - id: review_diff
+        type: codex
+        agent: code-reviewer-diff
+        description: "差分特化レビュー"
+      - id: review_history
+        type: codex
+        agent: code-reviewer-history
+        description: "変更履歴・コミット観点レビュー"
+      - id: review_impact
+        type: claude
+        agent: code-reviewer-impact
+        description: "影響範囲・リスク観点レビュー"
+      - id: review_conventions
+        type: claude
+        agent: code-reviewer-conventions
+        description: "規約・一貫性観点レビュー"
+
+  # ============================================================
+  # Phase 3: Integration
+  # ============================================================
+  - id: code_review_integrate
+    type: claude
+    agent: code-review-integrator
+    description: "レビュー結果の統合・判定"
+
+  # ============================================================
+  # Phase 4: Human Final Review
+  # ============================================================
+  - id: final_review
+    type: human
+    prompt: "コードレビューが完了しました。code_review_integrated アーティファクトを確認してください。"
+    description: "人間の最終確認"
