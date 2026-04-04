@@ -204,8 +204,8 @@ session
   .command("start-engine [session-name]")
   .description("Start the v2 workflow engine (resumes from last completed step)")
   .option("--reset", "Reset state and start from the beginning")
-  .action((sessionName?: string, options?: { reset?: boolean }) => {
-    workflowEngineCommand(sessionName, options?.reset);
+  .action(async (sessionName?: string, options?: { reset?: boolean }) => {
+    await workflowEngineCommand(sessionName, options?.reset);
   });
 
 session
