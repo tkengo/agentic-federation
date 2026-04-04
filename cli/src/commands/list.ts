@@ -5,13 +5,15 @@ import { resolveSession, readMeta } from "../lib/session.js";
 import { findCleanTargets } from "./clean.js";
 
 type Row = {
-  repoBranch: string;
+  repo: string;
+  branch: string;
   session: string;
   workflow: string;
   status: string;
-  age: string;
+  created: string;
   createdAt: string;
   source: "active" | "archive";
+  description: string;
 };
 
 // Format elapsed time as human-readable string
@@ -30,6 +32,30 @@ function formatAge(createdAt: string): string {
 
   const days = Math.floor(hours / 24);
   return `${days}d`;
+}
+
+// Format created_at as "MM/DD HH:MM (age)"
+function formatCreated(createdAt: string): string {
+  const created = new Date(createdAt);
+  if (isNaN(created.getTime())) return "?";
+
+  const mm = String(created.getMonth() + 1).padStart(2, "0");
+  const dd = String(created.getDate()).padStart(2, "0");
+  const hh = String(created.getHours()).padStart(2, "0");
+  const min = String(created.getMinutes()).padStart(2, "0");
+  const age = formatAge(createdAt);
+
+  return `${mm}/${dd} ${hh}:${min} (${age})`;
+}
+
+// Read description from description.txt in a session directory
+function readDescription(sessionDir: string): string {
+  try {
+    const content = fs.readFileSync(path.join(sessionDir, "description.txt"), "utf-8").trim();
+    return content || "";
+  } catch {
+    return "";
+  }
 }
 
 // Read status from state-v2.json in a session directory
@@ -65,15 +91,15 @@ function collectActiveSessions(): Row[] {
     const meta = readMeta(sessionDir);
     if (!meta) continue;
     rows.push({
-      repoBranch: meta.repo
-        ? `${meta.repo}/${meta.branch}`
-        : meta.tmux_session,
+      repo: meta.repo || meta.tmux_session,
+      branch: meta.branch || "",
       session: entry,
       workflow: meta.workflow ?? "solo",
       status: readStatus(sessionDir),
-      age: formatAge(meta.created_at),
+      created: formatCreated(meta.created_at),
       createdAt: meta.created_at,
       source: "active",
+      description: readDescription(sessionDir),
     });
   }
   return rows;
@@ -92,15 +118,15 @@ function collectArchiveSessions(): Row[] {
       const meta = readMeta(sessDir);
       if (!meta) continue;
       rows.push({
-        repoBranch: meta.repo
-          ? `${meta.repo}/${meta.branch}`
-          : meta.tmux_session,
+        repo: meta.repo || meta.tmux_session,
+        branch: meta.branch || "",
         session: meta.tmux_session,
         workflow: meta.workflow ?? "solo",
         status: readStatus(sessDir),
-        age: formatAge(meta.created_at),
+        created: formatCreated(meta.created_at),
         createdAt: meta.created_at,
         source: "archive",
+        description: readDescription(sessDir),
       });
     }
   }
@@ -110,39 +136,49 @@ function collectArchiveSessions(): Row[] {
 // Print a formatted table of session rows
 function printTable(rows: Row[], showSource: boolean): void {
   const headers = {
-    repoBranch: "REPO/BRANCH",
+    repo: "REPO",
+    branch: "BRANCH",
     session: "SESSION",
     workflow: "WORKFLOW",
     status: "STATUS",
     source: "SOURCE",
-    age: "AGE",
+    created: "CREATED",
   };
   const widths = {
-    repoBranch: Math.max(headers.repoBranch.length, ...rows.map((r) => r.repoBranch.length)),
+    repo: Math.max(headers.repo.length, ...rows.map((r) => r.repo.length)),
+    branch: Math.max(headers.branch.length, ...rows.map((r) => r.branch.length)),
     session: Math.max(headers.session.length, ...rows.map((r) => r.session.length)),
     workflow: Math.max(headers.workflow.length, ...rows.map((r) => r.workflow.length)),
     status: Math.max(headers.status.length, ...rows.map((r) => r.status.length)),
     source: Math.max(headers.source.length, ...rows.map((r) => r.source.length)),
-    age: Math.max(headers.age.length, ...rows.map((r) => r.age.length)),
+    created: Math.max(headers.created.length, ...rows.map((r) => r.created.length)),
   };
 
   let header =
-    `  ${headers.repoBranch.padEnd(widths.repoBranch)}  ` +
+    `  ${headers.repo.padEnd(widths.repo)}  ` +
+    `${headers.branch.padEnd(widths.branch)}  ` +
     `${headers.session.padEnd(widths.session)}  ` +
     `${headers.workflow.padEnd(widths.workflow)}  ` +
     `${headers.status.padEnd(widths.status)}`;
   if (showSource) header += `  ${headers.source.padEnd(widths.source)}`;
-  header += `  ${headers.age.padStart(widths.age)}`;
+  header += `  ${headers.created}`;
   console.log(header);
 
   for (const row of rows) {
     let line =
-      `  ${row.repoBranch.padEnd(widths.repoBranch)}  ` +
+      `  ${row.repo.padEnd(widths.repo)}  ` +
+      `${row.branch.padEnd(widths.branch)}  ` +
       `${row.session.padEnd(widths.session)}  ` +
       `${row.workflow.padEnd(widths.workflow)}  ` +
       `${row.status.padEnd(widths.status)}`;
     if (showSource) line += `  ${row.source.padEnd(widths.source)}`;
-    line += `  ${row.age.padStart(widths.age)}`;
+    line += `  ${row.created}`;
+    if (row.description) {
+      const truncated = row.description.length > 50
+        ? row.description.slice(0, 49) + "…"
+        : row.description;
+      line += `  ${truncated}`;
+    }
     console.log(line);
   }
 }
