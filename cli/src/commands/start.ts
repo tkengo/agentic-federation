@@ -74,6 +74,10 @@ export async function startCommand(
     tmuxSession = branch;
   }
 
+  // Sanitize tmux session name: branch names may contain '/' (e.g. feature/xxx)
+  // which is invalid for tmux session names and filesystem paths.
+  tmuxSession = sanitizeForTmux(tmuxSession);
+
   // Preflight checks
   if (tmux.hasSession(tmuxSession)) {
     console.error(`Error: tmux session '${tmuxSession}' already exists.`);
@@ -455,4 +459,9 @@ function extractBranchFromRemote(remoteBranch: string): string {
     return remoteBranch;
   }
   return remoteBranch.slice(slashIndex + 1);
+}
+
+/** Sanitize a string for use as tmux session name (replace / with -) */
+function sanitizeForTmux(name: string): string {
+  return name.replace(/\//g, "-");
 }

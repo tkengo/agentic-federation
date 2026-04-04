@@ -6,6 +6,7 @@ import { SESSIONS_DIR, ACTIVE_DIR } from "./paths.js";
 import type { MetaJson } from "./types.js";
 
 // Generate session directory name: YYYYMMDDHHMMSS_<6charID>_<suffix>
+// Slashes in suffix are replaced with hyphens to avoid nested directories.
 export function generateSessionDirName(suffix: string): string {
   const now = new Date();
   const ts = [
@@ -17,7 +18,8 @@ export function generateSessionDirName(suffix: string): string {
     String(now.getSeconds()).padStart(2, "0"),
   ].join("");
   const id = crypto.randomBytes(3).toString("hex");
-  return `${ts}_${id}_${suffix}`;
+  const safeSuffix = suffix.replace(/\//g, "-");
+  return `${ts}_${id}_${safeSuffix}`;
 }
 
 // Create session directory and write meta.json
