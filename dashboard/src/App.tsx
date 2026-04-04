@@ -147,10 +147,13 @@ function AppInner() {
 
   // Create new session via fed session start --no-attach
   const createSession = useCallback(
-    (repo: string, branch: string, workflow: string) => {
+    (repo: string, branch: string, workflow: string, from?: string) => {
       let cliArgs: string[];
       if (repo) {
-        if (branch) {
+        if (from) {
+          // Track remote branch mode
+          cliArgs = ["session", "start", workflow, repo, "--from", from, "--no-attach"];
+        } else if (branch) {
           cliArgs = ["session", "start", workflow, repo, branch, "--no-attach"];
         } else {
           // Auto-generate branch name (omit branch argument)

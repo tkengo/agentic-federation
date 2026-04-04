@@ -150,8 +150,9 @@ session
   .description("Start a development session with a workflow")
   .option("--no-attach", "Skip tmux attach after creation")
   .option("--session-name <name>", "Custom tmux session name (auto-generated for standalone if omitted)")
+  .option("--from <remote-branch>", "Track an existing remote branch instead of creating from base branch")
   .option("-e, --env <KEY=VALUE...>", "Environment variables to set in all panes (repeatable)")
-  .action(async (workflow: string, repo: string | undefined, branch: string | undefined, options: { attach?: boolean; sessionName?: string; env?: string[] }) => {
+  .action(async (workflow: string, repo: string | undefined, branch: string | undefined, options: { attach?: boolean; sessionName?: string; from?: string; env?: string[] }) => {
     // Parse --env KEY=VALUE pairs into a record
     const envVars: Record<string, string> = {};
     for (const pair of options.env ?? []) {
@@ -162,7 +163,7 @@ session
       }
       envVars[pair.slice(0, eq)] = pair.slice(eq + 1);
     }
-    await startCommand(workflow, repo, branch, options.attach === false, options.sessionName, envVars);
+    await startCommand(workflow, repo, branch, options.attach === false, options.sessionName, envVars, options.from);
   });
 
 session

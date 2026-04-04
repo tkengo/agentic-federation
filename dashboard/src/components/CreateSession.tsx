@@ -21,7 +21,7 @@ interface CreatePanelProps {
   workflows: WorkflowInfo[];
   sessions: SessionData[];
   isCreating: boolean;
-  onSubmit: (repo: string, branch: string, workflow: string) => void;
+  onSubmit: (repo: string, branch: string, workflow: string, from?: string) => void;
   onCancel: () => void;
   onStepChange: (step: Step) => void;
 }
@@ -44,6 +44,7 @@ export function CreateSession({
   const [selectedRepo, setSelectedRepo] = useState("");
   const [branch, setBranch] = useState("");
   const [branchError, setBranchError] = useState("");
+  const [branchMode, setBranchMode] = useState<"new" | "track">("new");
 
   // Filter lists by query (workflows come from filesystem, including solo)
   const workflowOptions = workflowQuery
@@ -135,7 +136,12 @@ export function CreateSession({
           goToStep("workflow");
         }
       } else if (step === "branch") {
-        if (key.escape) {
+        if (key.tab) {
+          setBranchMode((m) => (m === "new" ? "track" : "new"));
+          setBranch("");
+          setBranchError("");
+        } else if (key.escape) {
+          setBranchMode("new");
           setBranchError("");
           goToStep("repo");
         }
@@ -270,18 +276,26 @@ export function CreateSession({
           <Box flexDirection="column">
             <Box marginLeft={2}>
               <Text bold>{inputLabel}</Text>
-              {!branch && (
+              {!branch && branchMode === "new" && (
                 <Text dimColor>Enter to auto-generate</Text>
               )}
               <EmacsTextInput
-                key={step}
+                key={`${step}-${branchMode}`}
                 value={branch}
                 onChange={(text) => {
                   setBranch(text);
                   setBranchError("");
                 }}
                 onSubmit={(text) => {
-                  if (text.trim()) {
+                  if (branchMode === "track") {
+                    // Track mode: require remote branch input
+                    if (!text.trim()) return;
+                    const trimmed = text.trim();
+                    const localName = extractBranchFromRemote(trimmed);
+                    if (validateInput(selectedRepo, localName)) {
+                      onSubmit(selectedRepo, "", selectedWorkflow, trimmed);
+                    }
+                  } else if (text.trim()) {
                     const trimmed = text.trim();
                     if (validateInput(selectedRepo, trimmed)) {
                       setBranch(trimmed);
@@ -297,6 +311,18 @@ export function CreateSession({
                 }}
               />
             </Box>
+            {step === "branch" && (
+              <Box marginLeft={2} gap={1}>
+                <Text color={branchMode === "new" ? "cyan" : undefined} dimColor={branchMode !== "new"}>
+                  New
+                </Text>
+                <Text dimColor>{"\u23B8"}</Text>
+                <Text color={branchMode === "track" ? "cyan" : undefined} dimColor={branchMode !== "track"}>
+                  Track
+                </Text>
+                <Text dimColor>    Tab to switch</Text>
+              </Box>
+            )}
           </Box>
         )}
       </Box>
@@ -316,4 +342,13 @@ export function CreateSession({
       )}
     </Box>
   );
+}
+
+/** Extract branch name from remote ref (e.g., "origin/feature-xyz" -> "feature-xyz") */
+function extractBranchFromRemote(remoteBranch: string): string {
+  const slashIndex = remoteBranch.indexOf("/");
+  if (slashIndex === -1) {
+    return remoteBranch;
+  }
+  return remoteBranch.slice(slashIndex + 1);
 }

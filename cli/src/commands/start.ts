@@ -27,6 +27,7 @@ export async function startCommand(
   noAttach?: boolean,
   sessionName?: string,
   envVars?: Record<string, string>,
+  from?: string,
 ): Promise<void> {
   // Must run outside tmux
   if (process.env.TMUX) {
@@ -37,6 +38,12 @@ export async function startCommand(
   initCommand();
 
   const isStandalone = !repoName;
+
+  // --from requires repo
+  if (from && !repoName) {
+    console.error("Error: --from requires a repository name.");
+    process.exit(1);
+  }
 
   // Determine tmux session name
   let tmuxSession: string;
@@ -49,6 +56,12 @@ export async function startCommand(
     const hex = crypto.randomBytes(2).toString("hex");
     tmuxSession = `${workflowName}-${hhmm}-${hex}`;
     console.log(`Auto-generated session: ${tmuxSession}`);
+  } else if (from) {
+    // --from specified: derive branch name from remote ref if not explicitly given
+    if (!branch) {
+      branch = extractBranchFromRemote(from);
+    }
+    tmuxSession = branch;
   } else if (branch) {
     tmuxSession = branch;
   } else {
@@ -96,11 +109,20 @@ export async function startCommand(
     // Create worktree
     console.log("Fetching latest from origin...");
     execSync(`git -C '${config.repo_root}' fetch origin`, { stdio: "inherit" });
-    console.log(`Creating worktree from ${config.base_branch}...`);
-    execSync(
-      `git -C '${config.repo_root}' worktree add '${worktreePath}' -b '${branch}' ${config.base_branch}`,
-      { stdio: "inherit" }
-    );
+
+    if (from) {
+      console.log(`Creating worktree tracking ${from}...`);
+      execSync(
+        `git -C '${config.repo_root}' worktree add '${worktreePath}' -b '${branch}' --track '${from}'`,
+        { stdio: "inherit" }
+      );
+    } else {
+      console.log(`Creating worktree from ${config.base_branch}...`);
+      execSync(
+        `git -C '${config.repo_root}' worktree add '${worktreePath}' -b '${branch}' ${config.base_branch}`,
+        { stdio: "inherit" }
+      );
+    }
 
     // Symlinks
     for (const link of config.symlinks) {
@@ -424,4 +446,13 @@ export function cleanupStaleAgentLinks(): void {
   if (cleaned > 0) {
     console.log(`Cleaned up ${cleaned} stale agent symlink(s) in ~/.claude/agents/`);
   }
+}
+
+/** Extract branch name from remote ref (e.g., "origin/feature-xyz" -> "feature-xyz") */
+function extractBranchFromRemote(remoteBranch: string): string {
+  const slashIndex = remoteBranch.indexOf("/");
+  if (slashIndex === -1) {
+    return remoteBranch;
+  }
+  return remoteBranch.slice(slashIndex + 1);
 }
