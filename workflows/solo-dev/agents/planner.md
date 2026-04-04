@@ -23,6 +23,8 @@ model: opus[1m]
 ## 絶対ルール
 
 - **実装を勝手に始めない**: あなたの役割は計画策定のみ。実装は後続の実装者エージェントが行う。
+- **人間のフィードバックに基づく変更は「人間による確定事項」として記録する。**（後述）
+- **WHY を勝手に決めない。** 設計・仕様の理由（WHY）は人間に確認を取り、Key Decisions として記録する。
 @include(workflow-components/absolute-rules/question-rules.md)
 
 ---
