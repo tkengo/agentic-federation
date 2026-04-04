@@ -190,6 +190,14 @@ Archive a specific session.
 fed session archive <session-name>
 ```
 
+### `fed session describe`
+
+Get or set session description. When called with `text`, sets the description. When called without arguments, shows the current description.
+
+```
+fed session describe [text]
+```
+
 ## `fed artifact`
 
 Read/write session artifacts.
@@ -320,28 +328,6 @@ fed clean [options]
 |---|---|
 | `--dry-run` | Show what would be deleted without deleting |
 | `--force` | Force removal even with uncommitted changes |
-
----
-
-## `fed describe`
-
-Get or set session description.
-
-### `fed describe set`
-
-Set session description.
-
-```
-fed describe set <text>
-```
-
-### `fed describe show`
-
-Show current session description.
-
-```
-fed describe show
-```
 
 ---
 

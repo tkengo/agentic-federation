@@ -232,6 +232,17 @@ session
     archiveCommand(sessionName);
   });
 
+session
+  .command("describe [text]")
+  .description("Get or set session description")
+  .action((text?: string) => {
+    if (text) {
+      describeSetCommand(text);
+    } else {
+      describeShowCommand();
+    }
+  });
+
 // --- artifact ---
 const artifact = program
   .command("artifact")
@@ -332,25 +343,6 @@ program
   .option("--force", "Force removal even with uncommitted changes")
   .action((options: { dryRun?: boolean; force?: boolean }) => {
     cleanCommand(options.dryRun ?? false, options.force ?? false);
-  });
-
-// --- describe ---
-const describe = program
-  .command("describe")
-  .description("Get or set session description");
-
-describe
-  .command("set <text>")
-  .description("Set session description")
-  .action((text: string) => {
-    describeSetCommand(text);
-  });
-
-describe
-  .command("show")
-  .description("Show current session description")
-  .action(() => {
-    describeShowCommand();
   });
 
 // --- dashboard ---

@@ -18,7 +18,6 @@ For detailed options and usage of each command, see [fed-cli-detailed-reference.
 | `fed waiting-human` | Manage waiting-for-human state |
 | `fed clean` | Clean up worktrees of archived sessions |
 | `fed worktree` | Manage worktrees and their protection |
-| `fed describe` | Get or set session description |
 | `fed dashboard` | Launch interactive dashboard (Ink terminal UI) |
 | `fed workflow` | Manage workflow definitions |
 | `fed repo-script` | Run repo-defined scripts |
@@ -53,6 +52,7 @@ For detailed options and usage of each command, see [fed-cli-detailed-reference.
 | `fed session respond-workflow [value]` | Report step result to the v2 workflow engine |
 | `fed session abort-workflow` | Abort the running v2 workflow |
 | `fed session archive <session-name>` | Archive a specific session |
+| `fed session describe [text]` | Get or set session description |
 
 ### `fed artifact`
 
@@ -77,13 +77,6 @@ For detailed options and usage of each command, see [fed-cli-detailed-reference.
 | `fed waiting-human set` | Set waiting-for-human state with a reason |
 | `fed waiting-human clear` | Clear waiting-for-human state |
 | `fed waiting-human show` | Show current waiting-for-human state |
-
-### `fed describe`
-
-| Subcommand | Description |
-|---|---|
-| `fed describe set <text>` | Set session description |
-| `fed describe show` | Show current session description |
 
 ### `fed workflow`
 
