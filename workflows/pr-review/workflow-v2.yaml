@@ -35,52 +35,78 @@ windows:
       focus: 1
 
 steps:
-  # ============================================================
-  # Phase 1: PR Analysis (human-interactive)
-  # ============================================================
-  - id: analysis
-    type: human
-    agent: analyzer
-    notify: false
-    description: "人間がPR情報を渡し、Analyzerが変更概要を作成"
-    prompt: "analyzerペインにPR URL/番号を渡してください。Analyzerが分析完了後に自動でワークフローを進めます。"
+  - id: review_cycle
+    type: loop
+    until: ${{ steps.final_review.result == "done" }}
+    description: "PRレビューサイクル（人間がdoneと判断するまでループ）"
+    steps:
+      # ============================================================
+      # Phase 1: PR Analysis (human-interactive)
+      # ============================================================
+      - id: analysis
+        type: human
+        agent: analyzer
+        notify: false
+        description: "人間がPR情報を渡し、Analyzerが変更概要を作成"
+        prompt: "analyzerペインにPR URL/番号を渡してください。Analyzerが分析完了後に自動でワークフローを進めます。"
 
-  # ============================================================
-  # Phase 2: Parallel Code Review (4 perspectives)
-  # ============================================================
-  - id: code_review_parallel
-    type: parallel
-    description: "4観点の並列コードレビュー"
-    branches:
-      - id: review_diff
-        type: codex
-        agent: code-reviewer-diff
-        description: "差分特化レビュー"
-      - id: review_history
-        type: codex
-        agent: code-reviewer-history
-        description: "変更履歴・コミット観点レビュー"
-      - id: review_impact
+      # ============================================================
+      # Phase 2: Parallel Code Review (4 perspectives)
+      # ============================================================
+      - id: code_review_parallel
+        type: parallel
+        description: "4観点の並列コードレビュー"
+        branches:
+          - id: review_diff
+            type: codex
+            agent: code-reviewer-diff
+            description: "差分特化レビュー"
+            resume: true
+            resume_prompt: "PR作成者が前回のレビュー指摘に基づいて修正をpushしました。最新のpr_analysisアーティファクトを読み直し、前回の指摘が修正されているか＋新たな問題がないかを重点的にレビューしてください。"
+          - id: review_history
+            type: codex
+            agent: code-reviewer-history
+            description: "変更履歴・コミット観点レビュー"
+            resume: true
+            resume_prompt: "PR作成者が前回のレビュー指摘に基づいて修正をpushしました。最新のpr_analysisアーティファクトを読み直し、新しいコミットも含めて再レビューしてください。"
+          - id: review_impact
+            type: claude
+            agent: code-reviewer-impact
+            description: "影響範囲・リスク観点レビュー"
+            resume: true
+            resume_prompt: "PR作成者が前回のレビュー指摘に基づいて修正をpushしました。最新のpr_analysisアーティファクトを読み直し、修正による影響範囲の変化を再レビューしてください。"
+          - id: review_conventions
+            type: claude
+            agent: code-reviewer-conventions
+            description: "規約・一貫性観点レビュー"
+            resume: true
+            resume_prompt: "PR作成者が前回のレビュー指摘に基づいて修正をpushしました。最新のpr_analysisアーティファクトを読み直し、修正が規約に準拠しているか再レビューしてください。"
+
+      # ============================================================
+      # Phase 3: Integration
+      # ============================================================
+      - id: code_review_integrate
         type: claude
-        agent: code-reviewer-impact
-        description: "影響範囲・リスク観点レビュー"
-      - id: review_conventions
-        type: claude
-        agent: code-reviewer-conventions
-        description: "規約・一貫性観点レビュー"
+        agent: code-review-integrator
+        description: "レビュー結果の統合・判定"
+        resume: true
+        resume_prompt: "再レビューが完了しました。最新の4つのレビューアーティファクトを読み直し、前回の統合レポートとの差分にも言及しながら、統合レポートを更新してください。"
 
-  # ============================================================
-  # Phase 3: Integration
-  # ============================================================
-  - id: code_review_integrate
-    type: claude
-    agent: code-review-integrator
-    description: "レビュー結果の統合・判定"
+      # ============================================================
+      # Phase 4: Human Final Review + Loop Control
+      # ============================================================
+      - id: final_review
+        type: human
+        description: "人間の最終確認。continueでレビューサイクルを再実行、doneで終了"
+        prompt: "コードレビューが完了しました。code_review_integrated アーティファクトを確認してください。レビュー完了なら done、修正push後に再レビューするなら continue で応答してください。"
+        result:
+          values: [done, continue]
 
-  # ============================================================
-  # Phase 4: Human Final Review
-  # ============================================================
-  - id: final_review
-    type: human
-    prompt: "コードレビューが完了しました。code_review_integrated アーティファクトを確認してください。"
-    description: "人間の最終確認"
+      # ============================================================
+      # Loop Control
+      # ============================================================
+      - id: review_cycle_branch
+        type: branch
+        cases:
+          - if: ${{ steps.final_review.result == "done" }}
+            break: true

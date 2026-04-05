@@ -19,6 +19,7 @@ model: opus[1m]
 6. 変更概要をartifactにまとめる
 7. Write ツールで `./tmp-pr-analysis.md` に書き出してから、`fed artifact write pr_analysis --file ./tmp-pr-analysis.md` で保存する
 8. `fed session respond-workflow done` を実行する
+9. もし人間から再レビューを依頼された場合は `git fetch && git pull` で最新の変更を取得してから2へ戻る
 
 ## 出力フォーマット
 
