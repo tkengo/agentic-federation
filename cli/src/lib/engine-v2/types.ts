@@ -123,5 +123,6 @@ export interface V2State {
   status: V2Status;
   results: Record<string, V2StepResult>;
   sessions: Record<string, string>;  // stepPath -> agent session ID (Claude session_id / Codex thread_id)
+  loops: Record<string, { iteration: number }>;  // loop stepPath -> current iteration (for resume)
   history: V2HistoryEntry[];
 }

@@ -14,6 +14,9 @@ import {
   setCurrentStep,
   getSessionId,
   setSessionId,
+  setLoopIteration,
+  getLoopIteration,
+  clearLoopIteration,
 } from "./state.js";
 import { EngineLogger } from "./logger.js";
 import { EngineEventEmitter } from "./events.js";
@@ -584,20 +587,35 @@ async function executeLoop(
   // If max is not set but until is present, loop indefinitely (until condition satisfied)
   // If neither is set, safety limit of 100
   const maxIterations = step.max ?? (step.until ? Infinity : 100);
-
-  logger.stepStart(stepPath, "loop", step.description);
   const maxLabel = maxIterations === Infinity ? "∞" : String(maxIterations);
-  appendHistory(state, "loop_start", stepPath, `max=${maxLabel}`);
+
+  // Determine starting iteration for resume
+  const savedIteration = getLoopIteration(state, stepPath);
+  const startIteration = savedIteration ?? 1;
+
+  if (savedIteration) {
+    logger.info(`  Loop ${stepPath}: resuming from iteration ${savedIteration}`);
+    appendHistory(state, "loop_resume", stepPath, `iteration=${savedIteration}`);
+  } else {
+    logger.stepStart(stepPath, "loop", step.description);
+    appendHistory(state, "loop_start", stepPath, `max=${maxLabel}`);
+  }
   const startTime = Date.now();
 
   // Track loop exit reason
   let exitReason: "until_satisfied" | "break" | "max_reached" = "max_reached";
 
-  for (let iteration = 1; iteration <= maxIterations; iteration++) {
+  for (let iteration = startIteration; iteration <= maxIterations; iteration++) {
     logger.loopIteration(stepPath, iteration, maxLabel);
 
-    // Clear descendant results from previous iteration to allow re-execution
-    if (iteration > 1) {
+    // Save current iteration to state for resume
+    setLoopIteration(state, stepPath, iteration);
+    writeV2State(sessionDir, state);
+
+    // Clear descendant results from previous iteration to allow re-execution.
+    // Skip clearing on the first iteration and on the resumed iteration
+    // (keep partial results for step-level skip on resume).
+    if (iteration > 1 && iteration !== savedIteration) {
       const cleared = clearDescendantResults(state, stepPath);
       if (cleared.length > 0) {
         logger.info(`  Loop ${stepPath}: cleared ${cleared.length} descendant result(s) for re-execution`);
@@ -670,6 +688,9 @@ async function executeLoop(
     appendHistory(state, "step_complete", escalationStepPath, `result=${humanResult ?? "acknowledged"}`);
     writeV2State(sessionDir, state);
   }
+
+  // Clear loop iteration tracking after completion
+  clearLoopIteration(state, stepPath);
 
   const durationMs = Date.now() - startTime;
   appendHistory(state, "loop_complete", stepPath, `reason=${exitReason} duration=${durationMs}ms`);

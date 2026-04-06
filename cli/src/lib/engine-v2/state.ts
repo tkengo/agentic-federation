@@ -18,6 +18,7 @@ export function initV2State(sessionDir: string): V2State {
     status: "running",
     results: {},
     sessions: {},
+    loops: {},
     history: [],
   };
   fs.writeFileSync(statePath(sessionDir), JSON.stringify(state, null, 2) + "\n");
@@ -33,9 +34,12 @@ export function readV2State(sessionDir: string): V2State {
     throw new Error(`State file not found: ${fp}`);
   }
   const state = JSON.parse(fs.readFileSync(fp, "utf-8")) as V2State;
-  // Backward compatibility: ensure sessions field exists
+  // Backward compatibility: ensure sessions and loops fields exist
   if (!state.sessions) {
     state.sessions = {};
+  }
+  if (!state.loops) {
+    state.loops = {};
   }
   return state;
 }
@@ -97,6 +101,37 @@ export function clearDescendantResults(
     }
   }
   return cleared;
+}
+
+/**
+ * Save current loop iteration for resume.
+ */
+export function setLoopIteration(
+  state: V2State,
+  stepPath: string,
+  iteration: number,
+): void {
+  state.loops[stepPath] = { iteration };
+}
+
+/**
+ * Get saved loop iteration (for resume). Returns undefined if not saved.
+ */
+export function getLoopIteration(
+  state: V2State,
+  stepPath: string,
+): number | undefined {
+  return state.loops[stepPath]?.iteration;
+}
+
+/**
+ * Clear loop iteration tracking (after loop completes).
+ */
+export function clearLoopIteration(
+  state: V2State,
+  stepPath: string,
+): void {
+  delete state.loops[stepPath];
 }
 
 /**
