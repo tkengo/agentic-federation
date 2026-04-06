@@ -63,22 +63,25 @@ export function SessionRow({ session, selected, dimmed, blinkOn, colWidths }: Se
       <Text dimColor={dimmed}>{`  `}</Text>
       <Text color={highlight ? "cyan" : undefined} bold={highlight} dimColor={dimmed}>{(session.workflow ?? "solo").padEnd(colWidths.workflow)}</Text>
       <Text dimColor={dimmed}>{`  `}</Text>
-      {dimmed ? (
-        <Text dimColor>{`- ${displayStatus}`.padEnd(colWidths.status + 2)}</Text>
-      ) : (
-        <Box width={colWidths.status}>
-          <StatusBadge
-            status={displayStatus}
-            currentStep={session.tmuxAlive ? session.currentStep : null}
-            stale={stale}
-            stateMtimeMs={session.stateMtimeMs}
-            highlight={highlight}
-          />
-          {session.waitingHuman.waiting && (
-            <Text color={highlight ? "cyan" : "yellow"} bold={highlight} dimColor={!highlight && !blinkOn}>{` [!]`}</Text>
-          )}
-        </Box>
-      )}
+      <Box width={colWidths.status}>
+        <StatusBadge
+          status={displayStatus}
+          currentStep={session.tmuxAlive ? session.currentStep : null}
+          stale={stale}
+          stateMtimeMs={session.stateMtimeMs}
+          highlight={highlight}
+          dimColor={dimmed}
+        />
+        {session.waitingHuman.waiting && (
+          <Text
+            color={highlight ? "cyan" : "yellow"}
+            bold={highlight}
+            dimColor={dimmed || (!highlight && !blinkOn)}
+          >
+            {` [!]`}
+          </Text>
+        )}
+      </Box>
       <Text dimColor={dimmed}>{`  `}</Text>
       <Text color={highlight ? "cyan" : undefined} bold={highlight} dimColor={dimmed || !highlight}>{created}</Text>
       {inlineText && (

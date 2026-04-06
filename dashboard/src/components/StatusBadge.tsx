@@ -7,6 +7,7 @@ interface StatusBadgeProps {
   stale?: boolean;
   stateMtimeMs?: number;
   highlight?: boolean;
+  dimColor?: boolean;
 }
 
 // Icon and color per engine status
@@ -46,7 +47,7 @@ export function statusDisplayWidth(status: string, currentStep?: string | null, 
   return 2 + label.length + elapsed.length + waitingWidth + 2;
 }
 
-export function StatusBadge({ status, currentStep, stale, stateMtimeMs, highlight }: StatusBadgeProps) {
+export function StatusBadge({ status, currentStep, stale, stateMtimeMs, highlight, dimColor }: StatusBadgeProps) {
   const style = STATUS_STYLE[status] ?? DEFAULT_STYLE;
   const isStale = stale && !TERMINAL_STATUSES.has(status);
 
@@ -72,7 +73,7 @@ export function StatusBadge({ status, currentStep, stale, stateMtimeMs, highligh
   }
 
   return (
-    <Text color={highlight ? "cyan" : style.color} bold={highlight}>
+    <Text color={highlight ? "cyan" : style.color} bold={highlight} dimColor={dimColor}>
       {style.mark} {label}{elapsed}
     </Text>
   );
