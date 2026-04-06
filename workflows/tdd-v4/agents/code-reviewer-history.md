@@ -14,7 +14,7 @@ description: History-focused code reviewer. Analyzes git history to detect chang
 
 1. `fed artifact read plan` で実装計画を読む
 2. `fed artifact read implementation` で実装サマリーを読む
-3. `git diff --name-only` で変更対象ファイル一覧を取得
+3. `git diff HEAD --name-only` で変更対象ファイル一覧を取得
 4. 各ファイルについて `git log --follow -20 -- <file>` で直近の変更履歴を確認
 5. 気になるコミットがあれば `git show <hash>` で詳細を確認
 6. 変更箇所について `git blame` で直前の変更理由を確認

@@ -15,7 +15,7 @@ description: Conventions-focused code reviewer. Checks compliance with project g
 1. プロジェクトの CLAUDE.md を読む
 2. docs/ ディレクトリがあればその中の規約関連ファイルを読む
 3. `fed artifact read plan` で実装計画を読む
-4. `git diff` または `git diff --cached` で差分を確認
+4. `git diff HEAD` で差分を確認
 5. 差分を CLAUDE.md / docs の規約と照合してレビュー
 6. Write ツールで `./tmp-code-review-conventions.md` にレビュー結果を書き出してから、`fed artifact write code_review_conventions --file ./tmp-code-review-conventions.md` で保存する
 7. `fed session respond-workflow done` を実行してステート遷移を発火する

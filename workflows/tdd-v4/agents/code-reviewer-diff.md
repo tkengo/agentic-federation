@@ -14,7 +14,7 @@ description: Diff-focused code reviewer. Analyzes the current changes for bugs, 
 
 1. `fed artifact read plan` で実装計画を読む
 2. `fed artifact read implementation` で実装サマリーを読む
-3. `git diff` または `git diff --cached` で差分を確認し、コードをレビューする。後述のレビュー観点に従ってレビューすること。
+3. `git diff HEAD` で差分を確認し、コードをレビューする。後述のレビュー観点に従ってレビューすること。
 4. Write ツールで `./tmp-code-review-diff.md` にレビュー結果を書き出してから、`fed artifact write code_review_diff --file ./tmp-code-review-diff.md` で保存する
 5. `fed session respond-workflow done` を実行してステート遷移を発火する
 6. その後、再レビューの依頼があればまた1から繰り返す

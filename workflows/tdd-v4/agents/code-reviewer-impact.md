@@ -15,7 +15,7 @@ model: opus[1m]
 
 1. `fed artifact read plan` で実装計画を読む
 2. `fed artifact read implementation` で実装サマリーを読む
-3. `git diff --name-only` で変更ファイル一覧を取得
+3. `git diff HEAD --name-only` で変更ファイル一覧を取得
 4. 各変更ファイルの export/public API の変更を特定
 5. grep やコード追跡で呼び出し元・依存先を調査
 6. 影響範囲をまとめてレビュー
