@@ -24,7 +24,6 @@ import {
   artifactDeleteCommand,
 } from "./commands/artifact.js";
 import { promptReadCommand, promptListCommand } from "./commands/prompt.js";
-import { notifyHumanCommand } from "./commands/notify-human.js";
 import {
   waitingHumanSetCommand,
   waitingHumanClearCommand,
@@ -297,14 +296,6 @@ prompt
   .description("List available prompts")
   .action(() => {
     promptListCommand();
-  });
-
-// --- notify-human ---
-program
-  .command("notify-human <title> <message>")
-  .description("Send macOS notification to human")
-  .action((title: string, message: string) => {
-    notifyHumanCommand(title, message);
   });
 
 // --- waiting-human ---

@@ -132,7 +132,6 @@ scripts:
 | `fed artifact delete <name>` | 成果物を削除 |
 | `fed prompt read <name>` | エージェントプロンプトを読み取り |
 | `fed prompt list` | プロンプト一覧 |
-| `fed notify-human <title> <message>` | macOS 通知を送信 |
 | `fed stale pause/resume/status` | stale watcher の制御 |
 
 ### 初期化
@@ -263,7 +262,7 @@ agentic-federation/
 │   │   │   ├── stale.ts          # fed stale
 │   │   │   ├── workflow.ts       # fed workflow
 │   │   │   ├── script.ts         # fed script
-│   │   │   └── notify-human.ts   # fed notify-human
+│   │   │   └── waiting-human.ts  # fed waiting-human
 │   │   └── lib/                  # 共通ライブラリ
 │   │       ├── paths.ts          # ~/.fed/ パス定数
 │   │       ├── types.ts          # MetaJson, RepoConfig 型

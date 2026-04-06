@@ -14,7 +14,6 @@ For detailed options and usage of each command, see [fed-cli-detailed-reference.
 | `fed artifact` | Read/write session artifacts |
 | `fed notify` | Send a notification to a tmux pane |
 | `fed prompt` | Read agent prompts |
-| `fed notify-human` | Send macOS notification to human |
 | `fed waiting-human` | Manage waiting-for-human state |
 | `fed clean` | Clean up worktrees of archived sessions |
 | `fed worktree` | Manage worktrees and their protection |

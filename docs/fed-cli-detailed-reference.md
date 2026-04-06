@@ -271,16 +271,6 @@ fed prompt list
 
 ---
 
-## `fed notify-human`
-
-Send macOS notification to human.
-
-```
-fed notify-human <title> <message>
-```
-
----
-
 ## `fed waiting-human`
 
 Manage waiting-for-human state.
