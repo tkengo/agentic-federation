@@ -50,11 +50,6 @@ Each JSONL file has:
 - Line 1: metadata (tool, pane, turn count)
 - Lines 2+: conversation turns (role, content, tool_calls)
 
-Alternatively, if the session is active, use:
-```bash
-fed conv show <filename> --session <session-name>
-```
-
 ## Tips
 
 - `conversation_summary.md` contains the first user message from each pane, which usually describes the task

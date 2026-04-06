@@ -377,32 +377,6 @@ fed repo-script run <name>
 
 ---
 
-## `fed conv`
-
-View collected conversations from AI tools.
-
-### `fed conv list`
-
-List collected conversation files.
-
-```
-fed conv list
-```
-
-### `fed conv show`
-
-Show a conversation in human-readable format.
-
-```
-fed conv show [options] <name>
-```
-
-| Option | Description |
-|---|---|
-| `--raw` | Output raw JSONL instead of formatted text |
-
----
-
 ## `fed config`
 
 Manage fed configuration (`~/.fed/config.json`).

@@ -46,7 +46,6 @@ import { recoverCommand } from "./commands/recover.js";
 import { workflowEngineCommand } from "./commands/workflow-engine.js";
 import { workflowRespondCommand } from "./commands/workflow-respond.js";
 import { workflowAbortCommand } from "./commands/workflow-abort.js";
-import { convListCommand, convShowCommand } from "./commands/conv.js";
 import { configGetCommand, configSetCommand, configShowCommand } from "./commands/config.js";
 import {
   filesSaveCommand,
@@ -381,26 +380,6 @@ repoScript
   .description("Run a script")
   .action((name: string) => {
     repoScriptRunCommand(name);
-  });
-
-// --- conv ---
-const conv = program
-  .command("conv")
-  .description("View collected conversations from AI tools");
-
-conv
-  .command("list")
-  .description("List collected conversation files")
-  .action(() => {
-    convListCommand();
-  });
-
-conv
-  .command("show <name>")
-  .description("Show a conversation in human-readable format")
-  .option("--raw", "Output raw JSONL instead of formatted text")
-  .action((name: string, options: { raw?: boolean }) => {
-    convShowCommand(name, options.raw);
   });
 
 // --- config ---

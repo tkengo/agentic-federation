@@ -20,7 +20,6 @@ For detailed options and usage of each command, see [fed-cli-detailed-reference.
 | `fed dashboard` | Launch interactive dashboard (Ink terminal UI) |
 | `fed workflow` | Manage workflow definitions |
 | `fed repo-script` | Run repo-defined scripts |
-| `fed conv` | View collected conversations from AI tools |
 | `fed config` | Manage fed configuration (`~/.fed/config.json`) |
 | `fed files` | Manage knowledge base files |
 
@@ -90,13 +89,6 @@ For detailed options and usage of each command, see [fed-cli-detailed-reference.
 | `fed repo-script list` | List available scripts |
 | `fed repo-script show <name>` | Show script details |
 | `fed repo-script run <name>` | Run a script |
-
-### `fed conv`
-
-| Subcommand | Description |
-|---|---|
-| `fed conv list` | List collected conversation files |
-| `fed conv show <name>` | Show a conversation in human-readable format |
 
 ### `fed config`
 
