@@ -62,6 +62,7 @@ export function runCodexStep(options: CodexRunnerOptions): RunnerHandle {
         "-",  // Read prompt from stdin
         "--json",
         "--dangerously-bypass-approvals-and-sandbox",
+        "-c", "shell_environment_policy.inherit='all'",
       ];
       prompt = step.resume_prompt
         ?? "Continue from where you left off. Re-read artifacts for updated context.";
@@ -72,6 +73,7 @@ export function runCodexStep(options: CodexRunnerOptions): RunnerHandle {
         "exec",
         "--json",
         "--dangerously-bypass-approvals-and-sandbox",
+        "-c", "shell_environment_policy.inherit='all'",
         "-C", worktreeDir,
         "-",
       ];
