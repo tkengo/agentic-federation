@@ -153,21 +153,22 @@ steps:
                 prompt: "テスト受入でエスカレーション。"
 
   # ============================================================
-  # Phase 4: Implementation + Quality Check
+  # Phase 4+5: Implementation + Code Review
   # ============================================================
-  - id: implementation
-    type: claude
-    agent: implementer
-    description: "テストを満たす本実装"
-
-  # ============================================================
-  # Phase 5: Code Review
-  # ============================================================
-  - id: code_review_cycle
+  - id: implement_review_cycle
     type: loop
-    max: 5
+    max: 6
     until: ${{ steps.code_review_integrate.result == "approved" }}
     steps:
+      # Implementation (first: full implementation, subsequent: review feedback response)
+      - id: implementation
+        type: claude
+        agent: implementer
+        description: "テストを満たす本実装 / レビューFBに基づくコード修正"
+        resume: true
+        resume_prompt: "コードに対するレビューフィードバックが届きました。「コードレビューフィードバックへの対応」セクションに従って対応してください。"
+
+      # Parallel code review from 4 perspectives
       - id: code_review_parallel
         type: parallel
         description: "4観点の並列コードレビュー"
@@ -197,6 +198,7 @@ steps:
             resume: true
             resume_prompt: "コードが修正されました。規約・一貫性観点で再レビューしてください。"
 
+      # Review integration and judgment
       - id: code_review_integrate
         type: claude
         agent: code-review-integrator
@@ -206,6 +208,7 @@ steps:
         result:
           values: [approved, request_changes, escalate]
 
+      # Branch judgment
       - id: code_review_branch
         type: branch
         cases:
@@ -215,15 +218,7 @@ steps:
             steps:
               - id: code_review_escalation
                 type: human
-                prompt: "コードレビューでエスカレーション。"
-          - else:
-            steps:
-              - id: code_revision
-                type: claude
-                agent: implementer
-                description: "レビューFBに基づくコード修正"
-                resume: true
-                resume_prompt: "コードに対する新しいレビューフィードバックが届きました。最新のレビューアーティファクトを読み直して、指摘事項に対応してください。"
+                prompt: "コードレビューでエスカレーション。code_review_integratedアーティファクトを確認してください。"
 
   # ============================================================
   # Phase 6: Post-processing
