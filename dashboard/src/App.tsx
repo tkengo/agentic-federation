@@ -20,8 +20,8 @@ import { useProtectedWorktrees } from "./hooks/useProtectedWorktrees.js";
 import { useSessionWatcher } from "./hooks/useSessionWatcher.js";
 import { useTerminalSize } from "./hooks/useTerminalSize.js";
 import { switchToTmuxSession, listTmuxSessions } from "./utils/tmux.js";
-import { REPOS_DIR } from "./utils/types.js";
-import type { SessionData, RepoInfo, WorkflowInfo } from "./utils/types.js";
+import { REPOS_DIR, LOGS_DIR } from "./utils/types.js";
+import type { SessionData, RepoInfo, WorkflowInfo, LogFileInfo } from "./utils/types.js";
 
 type Screen = "splash" | "list" | "create" | "palette" | "add-repo" | "detail" | "repo-detail";
 
@@ -97,6 +97,35 @@ function AppInner() {
   const refreshRepos = useCallback(() => {
     setRepos(loadRepos());
   }, [loadRepos]);
+
+  // Load log files from ~/.fed/logs/
+  const loadLogs = useCallback((): LogFileInfo[] => {
+    try {
+      if (!fs.existsSync(LOGS_DIR)) return [];
+      return fs
+        .readdirSync(LOGS_DIR)
+        .filter((f) => f.endsWith(".log"))
+        .map((f) => {
+          const fullPath = path.join(LOGS_DIR, f);
+          const stat = fs.statSync(fullPath);
+          return {
+            name: f,
+            date: f.replace(/\.log$/, ""),
+            size: stat.size,
+            path: fullPath,
+          };
+        })
+        .sort((a, b) => b.date.localeCompare(a.date));
+    } catch {
+      return [];
+    }
+  }, []);
+
+  const [logs, setLogs] = useState<LogFileInfo[]>(loadLogs);
+
+  const refreshLogs = useCallback(() => {
+    setLogs(loadLogs());
+  }, [loadLogs]);
 
   // Detail screen: which repo to show
   const [detailRepoName, setDetailRepoName] = useState<string | null>(null);
@@ -314,6 +343,7 @@ function AppInner() {
             sessions={sessions}
             protectedWorktrees={protectedWorktrees}
             repos={repos}
+            logs={logs}
             workflows={workflows}
             cleanableCount={cleanableCount}
             active={screen === "list"}
@@ -322,6 +352,7 @@ function AppInner() {
             refresh={refresh}
             refreshProtected={refreshProtected}
             refreshRepos={refreshRepos}
+            refreshLogs={refreshLogs}
             onNavigate={(target) => {
               if (target === "create") setCreateStep("workflow");
               setScreen(target);

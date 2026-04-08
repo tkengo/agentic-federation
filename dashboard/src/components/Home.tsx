@@ -5,6 +5,7 @@ import { execSync, spawn } from "node:child_process";
 import { SessionList } from "./SessionList.js";
 import { ProtectedList } from "./ProtectedList.js";
 import { RepoList } from "./RepoList.js";
+import { LogList } from "./LogList.js";
 import { TabBar, type TabId } from "./TabBar.js";
 import { BOTTOM_PANEL_HEIGHT } from "./BottomPanel.js";
 import { HEADER_HEIGHT_FULL } from "./Header.js";
@@ -12,7 +13,7 @@ import { computeScrollOffset } from "../utils/scroll.js";
 import { useKeyboard } from "../hooks/useKeyboard.js";
 import { useFooter } from "../contexts/FooterContext.js";
 import { switchToTmuxSession, createOrAttachRepoSession } from "../utils/tmux.js";
-import type { SessionData, ProtectedWorktreeData, RepoInfo, WorkflowInfo } from "../utils/types.js";
+import type { SessionData, ProtectedWorktreeData, RepoInfo, LogFileInfo, WorkflowInfo } from "../utils/types.js";
 
 const TAB_BAR_HEIGHT = 2;
 const FOOTER_HEIGHT = 2;
@@ -21,6 +22,7 @@ interface HomeProps {
   sessions: SessionData[];
   protectedWorktrees: ProtectedWorktreeData[];
   repos: RepoInfo[];
+  logs: LogFileInfo[];
   workflows: WorkflowInfo[];
   cleanableCount: number;
   active: boolean;
@@ -29,6 +31,7 @@ interface HomeProps {
   refresh: () => void;
   refreshProtected: () => void;
   refreshRepos: () => void;
+  refreshLogs: () => void;
   onNavigate: (target: "create" | "palette" | "add-repo") => void;
   onDetailSession: (sessionName: string) => void;
   onDetailRepo: (repoName: string) => void;
@@ -43,6 +46,7 @@ export function Home({
   sessions,
   protectedWorktrees,
   repos,
+  logs,
   workflows,
   cleanableCount,
   active,
@@ -51,6 +55,7 @@ export function Home({
   refresh,
   refreshProtected,
   refreshRepos,
+  refreshLogs,
   onNavigate,
   onDetailSession,
   onDetailRepo,
@@ -64,7 +69,7 @@ export function Home({
 
   // --- Dynamic tab order (hide empty optional tabs) ---
   const TAB_ORDER: TabId[] = React.useMemo(() => {
-    const tabs: TabId[] = ["sessions", "repos"];
+    const tabs: TabId[] = ["sessions", "repos", "logs"];
     if (protectedWorktrees.length > 0) tabs.push("protected");
     return tabs;
   }, [protectedWorktrees.length]);
@@ -83,6 +88,7 @@ export function Home({
   const [sessionSelectedIndex, setSessionSelectedIndex] = useState(0);
   const [repoSelectedIndex, setRepoSelectedIndex] = useState(0);
   const [protectedSelectedIndex, setProtectedSelectedIndex] = useState(0);
+  const [logSelectedIndex, setLogSelectedIndex] = useState(0);
 
   // Confirmation / async states
   const [confirmingKill, setConfirmingKill] = useState(false);
@@ -116,6 +122,7 @@ export function Home({
   // --- Per-tab max indices ---
   const sessionMaxIndex = Math.max(0, sessions.length - 1);
   const repoMaxIndex = Math.max(0, repos.length - 1);
+  const logMaxIndex = Math.max(0, logs.length - 1);
   const protectedMaxIndex = Math.max(0, protectedWorktrees.length - 1);
 
   // Clamp indices
@@ -124,6 +131,9 @@ export function Home({
   }
   if (repoSelectedIndex > repoMaxIndex && repoMaxIndex >= 0) {
     setRepoSelectedIndex(repoMaxIndex);
+  }
+  if (logSelectedIndex > logMaxIndex && logMaxIndex >= 0) {
+    setLogSelectedIndex(logMaxIndex);
   }
   if (protectedSelectedIndex > protectedMaxIndex && protectedMaxIndex >= 0) {
     setProtectedSelectedIndex(protectedMaxIndex);
@@ -154,6 +164,7 @@ export function Home({
   // --- Scroll offsets ---
   const sessionScrollOffset = computeScrollOffset(sessionSelectedIndex, sessions.length, maxVisible - 1);
   const repoScrollOffset = computeScrollOffset(repoSelectedIndex, repos.length, maxVisible);
+  const logScrollOffset = computeScrollOffset(logSelectedIndex, logs.length, maxVisible - 1);
   const protectedScrollOffset = computeScrollOffset(protectedSelectedIndex, protectedWorktrees.length, maxVisible - 1);
 
   // --- Report selected session to parent ---
@@ -183,6 +194,21 @@ export function Home({
   }, [clearOverride]);
 
   // --- Actions ---
+  const openLogInNvim = useCallback(() => {
+    const log = logs[logSelectedIndex];
+    if (!log) return;
+    try {
+      execSync(`nvim '${log.path}'`, { stdio: "inherit" });
+      if (process.stdin.isTTY && process.stdin.setRawMode) {
+        process.stdin.setRawMode(true);
+      }
+      process.stdout.write("\x1b[2J\x1b[H");
+      refreshLogs();
+    } catch {
+      showMessage(`Failed to open ${log.name}`);
+    }
+  }, [logs, logSelectedIndex, refreshLogs, showMessage]);
+
   const switchToSession = useCallback(() => {
     if (!selectedSession) return;
 
@@ -325,6 +351,8 @@ export function Home({
           setSessionSelectedIndex((i) => (i <= 0 ? sessionMaxIndex : i - 1));
         } else if (activeTab === "repos") {
           setRepoSelectedIndex((i) => (i <= 0 ? repoMaxIndex : i - 1));
+        } else if (activeTab === "logs") {
+          setLogSelectedIndex((i) => (i <= 0 ? logMaxIndex : i - 1));
         } else if (activeTab === "protected") {
           setProtectedSelectedIndex((i) => (i <= 0 ? protectedMaxIndex : i - 1));
         }
@@ -334,6 +362,8 @@ export function Home({
           setSessionSelectedIndex((i) => (i >= sessionMaxIndex ? 0 : i + 1));
         } else if (activeTab === "repos") {
           setRepoSelectedIndex((i) => (i >= repoMaxIndex ? 0 : i + 1));
+        } else if (activeTab === "logs") {
+          setLogSelectedIndex((i) => (i >= logMaxIndex ? 0 : i + 1));
         } else if (activeTab === "protected") {
           setProtectedSelectedIndex((i) => (i >= protectedMaxIndex ? 0 : i + 1));
         }
@@ -343,6 +373,8 @@ export function Home({
           switchToSession();
         } else if (activeTab === "repos") {
           openRepoTmuxSession(repoSelectedIndex);
+        } else if (activeTab === "logs") {
+          openLogInNvim();
         }
       },
       onStop: () => {
@@ -451,6 +483,7 @@ export function Home({
         tabs={[
           { id: "sessions", label: "Sessions", count: sessions.length },
           { id: "repos", label: "Repositories", count: repos.length },
+          { id: "logs", label: "Logs", count: logs.length },
           ...(protectedWorktrees.length > 0
             ? [{ id: "protected" as TabId, label: "Protected", count: protectedWorktrees.length }]
             : []),
@@ -479,6 +512,16 @@ export function Home({
           renameValue={renameValue}
           onRenameChange={setRenameValue}
           onRenameSubmit={handleRenameSubmit}
+        />
+      )}
+
+      {activeTab === "logs" && (
+        <LogList
+          logs={logs}
+          dimmed={!active}
+          selectedIndex={!active ? undefined : logSelectedIndex}
+          maxVisible={maxVisible}
+          scrollOffset={logScrollOffset}
         />
       )}
 

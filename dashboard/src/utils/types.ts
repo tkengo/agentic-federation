@@ -18,10 +18,19 @@ export const SESSIONS_DIR = path.join(FED_HOME, "sessions");
 export const ACTIVE_DIR = path.join(FED_HOME, "active");
 export const ARCHIVE_DIR = path.join(FED_HOME, "archive");
 export const REPOS_DIR = path.join(FED_HOME, "repos");
+export const LOGS_DIR = path.join(FED_HOME, "logs");
 
 export const PROTECTED_WORKTREES_FILE = path.join(FED_HOME, "protected-worktrees.json");
 
 export const STALE_THRESHOLD_SEC = 3600;
+
+// Log file info for dashboard display
+export interface LogFileInfo {
+  name: string;     // "2026-04-08.log"
+  date: string;     // "2026-04-08"
+  size: number;     // bytes
+  path: string;     // full path (~/.fed/logs/2026-04-08.log)
+}
 
 // Waiting-for-human state
 export interface WaitingHumanData {
