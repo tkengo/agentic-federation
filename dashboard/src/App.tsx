@@ -246,23 +246,17 @@ function AppInner() {
         if (basePath && basePath !== "~/fed/repos") {
           args.push(`'${basePath}'`);
         }
-        execSync(args.join(" "), { stdio: "inherit" });
-        if (process.stdin.isTTY && process.stdin.setRawMode) {
-          process.stdin.setRawMode(true);
-        }
-        process.stdout.write("\x1b[2J\x1b[H");
+        execSync(args.join(" "), { stdio: ["ignore", "pipe", "pipe"], encoding: "utf-8" });
         refreshRepos();
         showMessage("Repository added successfully");
-      } catch {
-        if (process.stdin.isTTY && process.stdin.setRawMode) {
-          process.stdin.setRawMode(true);
-        }
-        process.stdout.write("\x1b[2J\x1b[H");
-        showMessage("Failed to add repository");
+      } catch (err: unknown) {
+        const e = err as { stderr?: string; message?: string };
+        const detail = (e.stderr ?? "").trim().split("\n").pop() || "";
+        showError(detail ? `Failed to add repository: ${detail}` : "Failed to add repository");
       }
       setScreen("list");
     },
-    [showMessage, refreshRepos]
+    [showMessage, showError, refreshRepos]
   );
 
   // Add a local repo via fed repo add-local
@@ -273,23 +267,17 @@ function AppInner() {
         if (basePath && basePath !== "~/fed/repos") {
           args.push(`'${basePath}'`);
         }
-        execSync(args.join(" "), { stdio: "inherit" });
-        if (process.stdin.isTTY && process.stdin.setRawMode) {
-          process.stdin.setRawMode(true);
-        }
-        process.stdout.write("\x1b[2J\x1b[H");
+        execSync(args.join(" "), { stdio: ["ignore", "pipe", "pipe"], encoding: "utf-8" });
         refreshRepos();
         showMessage("Local repository added successfully");
-      } catch {
-        if (process.stdin.isTTY && process.stdin.setRawMode) {
-          process.stdin.setRawMode(true);
-        }
-        process.stdout.write("\x1b[2J\x1b[H");
-        showMessage("Failed to add local repository");
+      } catch (err: unknown) {
+        const e = err as { stderr?: string; message?: string };
+        const detail = (e.stderr ?? "").trim().split("\n").pop() || "";
+        showError(detail ? `Failed to add local repository: ${detail}` : "Failed to add local repository");
       }
       setScreen("list");
     },
-    [showMessage, refreshRepos]
+    [showMessage, showError, refreshRepos]
   );
 
   // Global Ctrl+C double-press to quit

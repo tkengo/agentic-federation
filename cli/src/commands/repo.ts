@@ -26,12 +26,30 @@ export function repoAddCommand(cloneUrl: string, basePath?: string, baseBranch?:
   console.log(`  Workspace:  ${workspace}`);
   console.log(`  Clone dest: ${cloneDest}`);
 
+  // Abort if clone destination already exists to prevent accidental data loss.
+  if (fs.existsSync(cloneDest)) {
+    console.error(`\nError: clone destination already exists: ${cloneDest}`);
+    console.error(`Remove it manually and retry: rm -rf '${cloneDest}'`);
+    process.exit(1);
+  }
+
   // Create workspace directory
   fs.mkdirSync(workspace, { recursive: true });
 
   // Clone the repo
   console.log(`\nCloning...`);
-  execSync(`git clone '${cloneUrl}' '${cloneDest}'`, { stdio: "inherit" });
+  try {
+    execSync(`git clone '${cloneUrl}' '${cloneDest}'`, { stdio: "inherit" });
+  } catch {
+    // Clean up the partially cloned directory created by THIS attempt
+    console.error(`\nClone failed. Cleaning up: ${cloneDest}`);
+    try {
+      fs.rmSync(cloneDest, { recursive: true, force: true });
+    } catch {
+      // Ignore cleanup errors
+    }
+    process.exit(1);
+  }
 
   // Save config in new format
   const config: NewRepoConfig = {
