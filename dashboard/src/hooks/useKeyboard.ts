@@ -15,6 +15,7 @@ export interface KeyboardActions {
   onProtect?: () => void;
   onPalette?: () => void;
   onSpace?: () => void;
+  onRename?: () => void;
 }
 
 export function useKeyboard(actions: KeyboardActions, active = true) {
@@ -50,6 +51,8 @@ export function useKeyboard(actions: KeyboardActions, active = true) {
         actions.onPalette?.();
       } else if (input === " ") {
         actions.onSpace?.();
+      } else if (input === "r") {
+        actions.onRename?.();
       } else if (input === "q") {
         actions.onQuit?.();
       } else if (key.escape) {

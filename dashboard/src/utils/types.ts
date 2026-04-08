@@ -52,7 +52,8 @@ export type FooterOverride =
   | { type: "confirmScript"; name: string }
   | { type: "confirmDeleteSession"; name: string }
   | { type: "confirmUnprotect"; name: string }
-  | { type: "creating" };
+  | { type: "creating" }
+  | { type: "renaming"; name: string };
 
 // Workflow info for dashboard display
 export interface WorkflowInfo {

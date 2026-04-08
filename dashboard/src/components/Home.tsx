@@ -91,6 +91,10 @@ export function Home({
   const [confirmingUnprotect, setConfirmingUnprotect] = useState(false);
   const [cleaning, setCleaning] = useState(false);
 
+  // Rename state
+  const [renamingRepo, setRenamingRepo] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+
   // --- Tab switching ---
   const goNextTab = useCallback(() => {
     setActiveTab((cur) => {
@@ -167,10 +171,12 @@ export function Home({
       setOverride({ type: "confirmClean", count: cleanableCount });
     } else if (confirmingKill && selectedSession) {
       setOverride({ type: "confirmKill", name: selectedSession.name });
+    } else if (renamingRepo) {
+      setOverride({ type: "renaming", name: renamingRepo });
     } else {
       clearOverride();
     }
-  }, [cleaning, confirmingUnprotect, confirmingClean, confirmingKill, cleanableCount, selectedSession, selectedProtected, setOverride, clearOverride]);
+  }, [cleaning, confirmingUnprotect, confirmingClean, confirmingKill, renamingRepo, cleanableCount, selectedSession, selectedProtected, setOverride, clearOverride]);
 
   useEffect(() => {
     return () => { clearOverride(); };
@@ -254,6 +260,25 @@ export function Home({
       refresh();
     });
   }, [refresh, setOverride, clearOverride, showMessage, showError]);
+
+  const handleRenameSubmit = useCallback((newName: string) => {
+    if (!renamingRepo || !newName.trim() || newName.trim() === renamingRepo) {
+      setRenamingRepo(null);
+      setRenameValue("");
+      return;
+    }
+    try {
+      execSync(`fed repo rename '${renamingRepo}' '${newName.trim()}'`, { stdio: "pipe" });
+      showMessage(`Renamed: ${renamingRepo} → ${newName.trim()}`);
+      refreshRepos();
+    } catch (e: unknown) {
+      const err = e as { stderr?: Buffer };
+      const msg = err.stderr?.toString().trim() || `Failed to rename ${renamingRepo}`;
+      showError(msg);
+    }
+    setRenamingRepo(null);
+    setRenameValue("");
+  }, [renamingRepo, showMessage, showError, refreshRepos]);
 
   const openRepoTmuxSession = useCallback((repoIndex: number) => {
     const repo = repos[repoIndex];
@@ -348,8 +373,15 @@ export function Home({
           onDetailRepo(repos[repoSelectedIndex]!.name);
         }
       },
+      onRename: () => {
+        if (activeTab === "repos" && repos[repoSelectedIndex]) {
+          const repo = repos[repoSelectedIndex]!;
+          setRenamingRepo(repo.name);
+          setRenameValue(repo.name);
+        }
+      },
     },
-    active && !confirmingKill && !confirmingClean && !confirmingUnprotect
+    active && !confirmingKill && !confirmingClean && !confirmingUnprotect && !renamingRepo
   );
 
   // Kill confirmation handler
@@ -401,6 +433,17 @@ export function Home({
     { isActive: active && confirmingUnprotect }
   );
 
+  // Rename cancel handler
+  useInput(
+    (_input, key) => {
+      if (key.escape) {
+        setRenamingRepo(null);
+        setRenameValue("");
+      }
+    },
+    { isActive: active && !!renamingRepo }
+  );
+
   return (
     <Box flexDirection="column" flexGrow={1}>
       <TabBar
@@ -432,6 +475,10 @@ export function Home({
           selectedIndex={!active ? undefined : repoSelectedIndex}
           maxVisible={maxVisible}
           scrollOffset={repoScrollOffset}
+          renamingRepo={renamingRepo}
+          renameValue={renameValue}
+          onRenameChange={setRenameValue}
+          onRenameSubmit={handleRenameSubmit}
         />
       )}
 
