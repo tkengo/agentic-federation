@@ -87,6 +87,12 @@ export function setStepResult(
 /**
  * Clear all descendant step results under the given path prefix.
  * Used by loop iterations to allow re-execution of child steps.
+ *
+ * Also removes container completion markers (parallel_complete, loop_complete)
+ * from history so that descendant parallel/loop steps are re-executed in
+ * subsequent loop iterations. These markers are checked by executeParallel and
+ * executeLoop to skip already-completed containers on engine resume, but they
+ * must not prevent re-execution when a parent loop starts a new iteration.
  */
 export function clearDescendantResults(
   state: V2State,
@@ -100,6 +106,16 @@ export function clearDescendantResults(
       cleared.push(key);
     }
   }
+
+  // Remove container completion markers for descendant paths so that
+  // parallel and loop steps re-execute on the next loop iteration.
+  state.history = state.history.filter(
+    h => !(
+      (h.event === "parallel_complete" || h.event === "loop_complete") &&
+      h.step.startsWith(prefix)
+    )
+  );
+
   return cleared;
 }
 
