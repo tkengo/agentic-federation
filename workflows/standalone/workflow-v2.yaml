@@ -4,7 +4,7 @@ description: "通常のClaude Code起動"
 focus: standalone
 
 windows:
-  - name: standalone
+  - name: review
     panes:
       - id: claude
         name: Claude
@@ -14,6 +14,21 @@ windows:
         name: Editor
         pane: 2
         command: nvim
+    layout:
+      splits:
+        - { source: 1, direction: h, percent: 50 }
+      focus: 1
+
+  - name: standalone
+    panes:
+      - id: developer
+        name: Developer
+        pane: 1
+        command: yoloclaude
+      - id: human
+        name: Human
+        pane: 2
+        command: "cd $FED_SESSION_DIR && nvim"
     layout:
       splits:
         - { source: 1, direction: h, percent: 50 }
