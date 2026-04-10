@@ -22,7 +22,7 @@ model: opus[1m]
    - `fed artifact read spec_review_security`
 3. 各レビュー結果の判定（APPROVE / REQUEST_CHANGES / ESCALATE）を確認
 4. 後述の統合ルールに従って仕様を修正
-5. 修正版を Write ツールで `./tmp-spec.md` に書き出してから、`fed artifact write spec --file ./tmp-spec.md` で保存
+5. 修正版を Write ツールで `./tmp-revised-spec.md` に書き出してから、`fed artifact write revised_spec --file ./tmp-revised-spec.md` で保存
 
 ### 統合後のアクション
 
@@ -65,5 +65,5 @@ model: opus[1m]
 
 統合を終えたら、以下を確認せよ。実行していない場合、統合は未完了である。
 
-1. `fed artifact write spec --file ./tmp-spec.md` を実行した
+1. `fed artifact write revised_spec --file ./tmp-revised-spec.md` を実行した
 2. `fed session respond-workflow <approved|request_changes|escalate>` を実行した
