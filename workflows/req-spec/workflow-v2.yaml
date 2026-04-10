@@ -34,36 +34,6 @@ windows:
         - { source: 1, direction: h, percent: 50 }
       focus: 1
 
-  - name: reviewers
-    panes:
-      - id: spec_revisor
-        name: "Spec Revisor"
-        pane: 1
-        command: yoloclaude
-      - id: tech_reviewer
-        name: "Tech Reviewer"
-        pane: 2
-        command: yolocodex
-      - id: ux_reviewer
-        name: "UX Reviewer"
-        pane: 3
-        command: yolocodex
-      - id: trend_researcher
-        name: "Trend Researcher"
-        pane: 4
-        command: yolocodex
-      - id: security_reviewer
-        name: "Security Reviewer"
-        pane: 5
-        command: yolocodex
-    layout:
-      splits:
-        - { source: 1, direction: v, percent: 50 }
-        - { source: 1, direction: h, percent: 66 }
-        - { source: 2, direction: h, percent: 50 }
-        - { source: 4, direction: h, percent: 50 }
-      focus: 1
-
 steps:
   # ============================================================
   # Main loop: restart from top on human_final_review feedback
