@@ -163,7 +163,7 @@ export function Home({
 
   // --- Scroll offsets ---
   const sessionScrollOffset = computeScrollOffset(sessionSelectedIndex, sessions.length, maxVisible - 1);
-  const repoScrollOffset = computeScrollOffset(repoSelectedIndex, repos.length, maxVisible);
+  const repoScrollOffset = computeScrollOffset(repoSelectedIndex, repos.length, maxVisible - 1);
   const logScrollOffset = computeScrollOffset(logSelectedIndex, logs.length, maxVisible - 1);
   const protectedScrollOffset = computeScrollOffset(protectedSelectedIndex, protectedWorktrees.length, maxVisible - 1);
 
