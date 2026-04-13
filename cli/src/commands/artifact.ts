@@ -30,6 +30,31 @@ export function artifactReadCommand(name: string, nvim?: boolean): void {
   process.stdout.write(fs.readFileSync(filePath, "utf-8"));
 }
 
+/** Rotate existing artifact to a versioned backup (e.g. spec.md -> spec_v1.md). */
+function rotateArtifact(dir: string, fileName: string): void {
+  const filePath = path.join(dir, fileName);
+  if (!fs.existsSync(filePath)) return;
+
+  const ext = path.extname(fileName);
+  const base = fileName.slice(0, fileName.length - ext.length);
+
+  // Find the highest existing version number
+  const versionPattern = new RegExp(
+    `^${base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}_v(\\d+)${ext.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`,
+  );
+  let maxVersion = 0;
+  for (const f of fs.readdirSync(dir)) {
+    const m = f.match(versionPattern);
+    if (m) {
+      maxVersion = Math.max(maxVersion, parseInt(m[1], 10));
+    }
+  }
+
+  const versionedName = `${base}_v${maxVersion + 1}${ext}`;
+  fs.renameSync(filePath, path.join(dir, versionedName));
+  console.error(`Versioned: ${fileName} -> ${versionedName}`);
+}
+
 export function artifactWriteCommand(
   name: string,
   options: { file?: string; keep?: boolean },
@@ -40,6 +65,9 @@ export function artifactWriteCommand(
   fs.mkdirSync(dir, { recursive: true });
 
   const filePath = path.join(dir, resolved);
+
+  // Rotate existing artifact to versioned backup before overwriting
+  rotateArtifact(dir, resolved);
 
   if (options.file) {
     if (!fs.existsSync(options.file)) {
