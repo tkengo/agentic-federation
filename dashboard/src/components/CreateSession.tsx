@@ -293,7 +293,7 @@ export function CreateSession({
                     const trimmed = text.trim();
                     const localName = extractBranchFromRemote(trimmed);
                     if (validateInput(selectedRepo, localName)) {
-                      onSubmit(selectedRepo, "", selectedWorkflow, trimmed);
+                      onSubmit(selectedRepo, localName, selectedWorkflow, trimmed);
                     }
                   } else if (text.trim()) {
                     const trimmed = text.trim();
