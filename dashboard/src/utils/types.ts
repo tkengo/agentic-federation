@@ -10,6 +10,7 @@ export interface MetaJson {
   tmux_session: string;
   session_dir: string;
   created_at: string;
+  from?: string;
 }
 
 // Mirror of cli/src/lib/paths.ts

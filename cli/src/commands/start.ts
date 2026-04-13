@@ -163,6 +163,7 @@ export async function startCommand(
     tmux_session: tmuxSession,
     session_dir: "",
     created_at: new Date().toISOString(),
+    ...(from ? { from } : {}),
   };
   const sessionPath = createSessionDir(repoName ?? "_standalone", meta);
   const cwd = worktreePath || sessionPath;
