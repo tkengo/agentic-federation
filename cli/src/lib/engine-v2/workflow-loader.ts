@@ -31,8 +31,17 @@ export function loadV2Workflow(filePath: string): V2Workflow {
     throw new Error("Workflow must have a 'name' field");
   }
 
-  if (!Array.isArray(workflow.steps) || workflow.steps.length === 0) {
-    throw new Error("Workflow must have at least one step");
+  // Steps are required unless engine is explicitly disabled
+  const engineEnabled = workflow.engine !== false;
+  if (engineEnabled) {
+    if (!Array.isArray(workflow.steps) || workflow.steps.length === 0) {
+      throw new Error("Workflow must have at least one step");
+    }
+  } else {
+    // engine: false — steps are optional, default to empty array
+    if (!workflow.steps) {
+      (workflow as { steps: V2Step[] }).steps = [];
+    }
   }
 
   // Validate windows array

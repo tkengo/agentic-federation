@@ -192,10 +192,14 @@ export async function startCommand(
   fs.writeFileSync(path.join(sessionPath, "workflow-v2.yaml"), rawYaml);
 
   // Validate the expanded workflow
-  loadV2Workflow(path.join(sessionPath, "workflow-v2.yaml"));
+  const v2Workflow = loadV2Workflow(path.join(sessionPath, "workflow-v2.yaml"));
+  const engineEnabled = v2Workflow.engine !== false;
+  const windows = v2Workflow.windows ?? [];
 
-  // Initialize v2 state
-  initV2State(sessionPath);
+  // Initialize v2 state (only when engine is enabled)
+  if (engineEnabled) {
+    initV2State(sessionPath);
+  }
 
   // Compose and link agent instructions
   syncCommands();
@@ -203,32 +207,47 @@ export async function startCommand(
   const composedAgents = syncAgents(workflowName, tmuxSession, sessionPath, config, meta);
   linkAgents(composedAgents);
 
-  // Create tmux session with [engine] window
+  // Create tmux session
   console.log("Creating tmux session...");
-  tmux.newSession(tmuxSession, cwd, "engine");
 
-  // Apply environment variables (repo config env + CLI --env)
-  applyEnvironmentVars(tmuxSession, config?.env, envVars);
+  if (engineEnabled) {
+    // Engine mode: create with [engine] window, then add user windows
+    tmux.newSession(tmuxSession, cwd, "engine");
+    applyEnvironmentVars(tmuxSession, config?.env, envVars);
+    tmux.sendKeys(`${tmuxSession}:engine.1`, `export FED_SESSION=${tmuxSession} FED_SESSION_DIR=${sessionPath}`);
+    tmux.sendKeys(`${tmuxSession}:engine.1`, `fed session start-engine ${tmuxSession}`);
 
-  // Set per-pane env vars for engine window
-  tmux.sendKeys(`${tmuxSession}:engine.1`, `export FED_SESSION=${tmuxSession} FED_SESSION_DIR=${sessionPath}`);
+    for (const win of windows) {
+      console.log(`Creating window: ${win.name}...`);
+      tmux.newWindow(tmuxSession, win.name, cwd);
+      createV2WindowLayout(tmuxSession, win, cwd, sessionPath);
+    }
+  } else {
+    // No-engine mode: create with first user window directly
+    const firstWin = windows[0];
+    if (!firstWin) {
+      console.error("Error: engine: false workflow must define at least one window.");
+      process.exit(1);
+    }
+    tmux.newSession(tmuxSession, cwd, firstWin.name);
+    applyEnvironmentVars(tmuxSession, config?.env, envVars);
+    createV2WindowLayout(tmuxSession, firstWin, cwd, sessionPath);
 
-  // Start engine process in the engine pane
-  tmux.sendKeys(`${tmuxSession}:engine.1`, `fed session start-engine ${tmuxSession}`);
-
-  // Create user-defined windows from workflow definition
-  const v2Workflow = loadV2Workflow(path.join(sessionPath, "workflow-v2.yaml"));
-  const windows = v2Workflow.windows ?? [];
-
-  for (const win of windows) {
-    console.log(`Creating window: ${win.name}...`);
-    tmux.newWindow(tmuxSession, win.name, cwd);
-    createV2WindowLayout(tmuxSession, win, cwd, sessionPath);
+    // Create remaining windows
+    for (let i = 1; i < windows.length; i++) {
+      const win = windows[i];
+      console.log(`Creating window: ${win.name}...`);
+      tmux.newWindow(tmuxSession, win.name, cwd);
+      createV2WindowLayout(tmuxSession, win, cwd, sessionPath);
+    }
   }
 
   // Focus the specified window (default to first user window, or engine)
-  const focusWindow = v2Workflow.focus ?? windows[0]?.name ?? "engine";
-  tmux.selectWindow(`${tmuxSession}:${focusWindow}`);
+  const defaultFocus = engineEnabled ? (windows[0]?.name ?? "engine") : windows[0]?.name;
+  const focusWindow = v2Workflow.focus ?? defaultFocus;
+  if (focusWindow) {
+    tmux.selectWindow(`${tmuxSession}:${focusWindow}`);
+  }
 
   // Customize tmux status bar
   tmux.setOption(tmuxSession, "status-style", "bg=colour22,fg=white");
@@ -238,13 +257,17 @@ export async function startCommand(
   tmux.setOption(tmuxSession, "status-right", ` ⚡fed ▸ ${label} `);
 
   console.log("");
-  console.log("=== Engine Ready ===");
+  console.log(engineEnabled ? "=== Engine Ready ===" : "=== Session Ready ===");
   console.log("Windows:");
-  console.log("  1. engine (workflow engine)");
-  for (let i = 0; i < windows.length; i++) {
-    const win = windows[i];
+  let winIndex = 1;
+  if (engineEnabled) {
+    console.log(`  ${winIndex}. engine (workflow engine)`);
+    winIndex++;
+  }
+  for (const win of windows) {
     const paneIds = win.panes.map(p => p.id).join(", ");
-    console.log(`  ${i + 2}. ${win.name} (${paneIds})`);
+    console.log(`  ${winIndex}. ${win.name} (${paneIds})`);
+    winIndex++;
   }
   console.log("");
 

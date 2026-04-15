@@ -1,5 +1,6 @@
 name: standalone
 description: "通常のClaude Code起動"
+engine: false
 
 focus: standalone
 
@@ -33,10 +34,3 @@ windows:
       splits:
         - { source: 1, direction: h, percent: 50 }
       focus: 1
-
-steps:
-  - id: working
-    type: human
-    notify: false
-    prompt: "作業が完了したら done で応答してください。"
-    description: "通常作業"

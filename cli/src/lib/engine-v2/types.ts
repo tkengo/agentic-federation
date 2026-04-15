@@ -90,6 +90,7 @@ export interface V2ParallelBranch {
 export interface V2Workflow {
   name: string;
   description?: string;
+  engine?: boolean; // Set to false to skip engine window/process (default: true)
   focus?: string;
   windows?: V2Window[];
   steps: V2Step[];

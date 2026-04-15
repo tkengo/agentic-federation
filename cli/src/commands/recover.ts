@@ -67,31 +67,50 @@ export function recoverCommand(sessionName: string | undefined, noAttach?: boole
     }
   }
 
-  // Create tmux session with engine window
-  console.log("Creating tmux session...");
-  tmux.newSession(tmuxSession, cwd, "engine");
-
-  // Apply environment variables
-  applyEnvironmentVars(tmuxSession, repoEnv);
-
-  // Set per-pane env vars for engine window
-  tmux.sendKeys(`${tmuxSession}:engine.1`, `export FED_SESSION=${tmuxSession} FED_SESSION_DIR=${sessionPath}`);
-
-  // NOTE: Engine is NOT started — human must run `fed session start-engine`
-
   // Rebuild user-defined windows from workflow definition
   const v2Workflow = loadV2Workflow(workflowYamlPath);
+  const engineEnabled = v2Workflow.engine !== false;
   const windows = v2Workflow.windows ?? [];
 
-  for (const win of windows) {
-    console.log(`Creating window: ${win.name}...`);
-    tmux.newWindow(tmuxSession, win.name, cwd);
-    createV2WindowLayout(tmuxSession, win, cwd, sessionPath);
+  console.log("Creating tmux session...");
+
+  if (engineEnabled) {
+    // Engine mode: create with engine window
+    tmux.newSession(tmuxSession, cwd, "engine");
+    applyEnvironmentVars(tmuxSession, repoEnv);
+    tmux.sendKeys(`${tmuxSession}:engine.1`, `export FED_SESSION=${tmuxSession} FED_SESSION_DIR=${sessionPath}`);
+    // NOTE: Engine is NOT started — human must run `fed session start-engine`
+
+    for (const win of windows) {
+      console.log(`Creating window: ${win.name}...`);
+      tmux.newWindow(tmuxSession, win.name, cwd);
+      createV2WindowLayout(tmuxSession, win, cwd, sessionPath);
+    }
+  } else {
+    // No-engine mode: create with first user window
+    const firstWin = windows[0];
+    if (!firstWin) {
+      console.error("Error: engine: false workflow must define at least one window.");
+      process.exit(1);
+    }
+    tmux.newSession(tmuxSession, cwd, firstWin.name);
+    applyEnvironmentVars(tmuxSession, repoEnv);
+    createV2WindowLayout(tmuxSession, firstWin, cwd, sessionPath);
+
+    for (let i = 1; i < windows.length; i++) {
+      const win = windows[i];
+      console.log(`Creating window: ${win.name}...`);
+      tmux.newWindow(tmuxSession, win.name, cwd);
+      createV2WindowLayout(tmuxSession, win, cwd, sessionPath);
+    }
   }
 
   // Focus the specified window (default to first user window, or engine)
-  const focusWindow = v2Workflow.focus ?? windows[0]?.name ?? "engine";
-  tmux.selectWindow(`${tmuxSession}:${focusWindow}`);
+  const defaultFocus = engineEnabled ? (windows[0]?.name ?? "engine") : windows[0]?.name;
+  const focusWindow = v2Workflow.focus ?? defaultFocus;
+  if (focusWindow) {
+    tmux.selectWindow(`${tmuxSession}:${focusWindow}`);
+  }
 
   // Customize tmux status bar
   tmux.setOption(tmuxSession, "status-style", "bg=colour22,fg=white");
@@ -102,8 +121,10 @@ export function recoverCommand(sessionName: string | undefined, noAttach?: boole
 
   console.log("");
   console.log("=== Session Recovered ===");
-  console.log("Engine is NOT running. Start it with:");
-  console.log("  fed session start-engine");
+  if (engineEnabled) {
+    console.log("Engine is NOT running. Start it with:");
+    console.log("  fed session start-engine");
+  }
   console.log("");
 
   if (noAttach) {
