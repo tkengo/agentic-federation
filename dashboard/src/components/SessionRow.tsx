@@ -39,10 +39,13 @@ export function SessionRow({ session, selected, dimmed, blinkOn, colWidths }: Se
   // Override status when tmux session is dead
   const displayStatus = session.tmuxAlive ? session.status : "disconnected";
 
-  // Determine inline text after CREATED: waiting reason takes priority over description
+  // Determine inline text after CREATED:
+  // - Selected + waiting: show waiting reason (actionable info)
+  // - Otherwise: show description, fallback to waiting reason if no description
   const isWaiting = session.waitingHuman.waiting && !!session.waitingHuman.reason;
-  const inlineText = isWaiting
-    ? truncate(session.waitingHuman.reason!, DESC_INLINE_MAX)
+  const showWaitingReason = isWaiting && (selected || !session.description);
+  const inlineText = showWaitingReason
+    ? "⏳ " + truncate(session.waitingHuman.reason!, DESC_INLINE_MAX - 3)
     : session.description
       ? truncate(session.description, DESC_INLINE_MAX)
       : null;
@@ -90,9 +93,9 @@ export function SessionRow({ session, selected, dimmed, blinkOn, colWidths }: Se
       <Text color={highlight ? "cyan" : undefined} bold={highlight} dimColor={dimmed || !highlight}>{created}</Text>
       {inlineText && (
         <Text
-          color={highlight ? "cyan" : (isWaiting ? "yellow" : undefined)}
+          color={highlight ? "cyan" : (showWaitingReason ? "yellow" : undefined)}
           bold={highlight}
-          dimColor={!highlight && !isWaiting}
+          dimColor={!highlight && !showWaitingReason}
         >
           {`  ${inlineText}`}
         </Text>
