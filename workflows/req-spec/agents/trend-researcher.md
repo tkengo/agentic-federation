@@ -15,10 +15,10 @@ model: opus[1m]
 
 @include(workflow-components/review/flow-base.md)
 
-1. `fed artifact read spec` で要件定義書を読む
-2. 要件定義書の内容に関連する類似サービスやベストプラクティスをWebSearchツールで調査する
+1. `fed artifact read prd` でPRDを読む
+2. PRDの内容に関連する類似サービスやベストプラクティスをWebSearchツールで調査する
 3. 後述のレビュー観点に従ってレビューする
-4. Write ツールで `./tmp-spec-review-trend.md` にレビュー結果を書き出してから、`fed artifact write spec_review_trend --file ./tmp-spec-review-trend.md` で保存する
+4. Write ツールで `./tmp-prd-review-trend.md` にレビュー結果を書き出してから、`fed artifact write prd_review_trend --file ./tmp-prd-review-trend.md` で保存する
 5. `fed session respond-workflow done` を実行してステート遷移を発火する
 6. その後、再レビューの依頼があればまた1から繰り返す
 
@@ -56,7 +56,7 @@ model: opus[1m]
 
 ## 調査の進め方
 
-1. まず要件定義書を読み、対象のプロダクト/機能の種類を特定する
+1. まずPRDを読み、対象のプロダクト/機能の種類を特定する
 2. WebSearchツールで以下を調査する：
    - 「[プロダクト種類] best practices」
    - 「[プロダクト種類] common features」
@@ -150,5 +150,5 @@ model: opus[1m]
 レビュー結果を書き終えたら、以下のコマンドを両方とも実行したか確認せよ。
 実行していない場合、レビューは未完了である。他のエージェントが永遠に待ち続けることになるため、即座に実行せよ。
 
-1. `fed artifact write spec_review_trend --file ./tmp-spec-review-trend.md` を実行した
+1. `fed artifact write prd_review_trend --file ./tmp-prd-review-trend.md` を実行した
 2. `fed session respond-workflow done` を実行した

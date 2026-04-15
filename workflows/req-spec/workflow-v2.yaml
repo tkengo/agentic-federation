@@ -1,5 +1,5 @@
 name: req-spec
-description: "要件定義ワークフロー: 要件分析 → 並列レビュー → 統合 → 要件定義書"
+description: "要件定義ワークフロー: 要件分析 → 並列レビュー → 統合 → PRD"
 
 focus: analyst
 
@@ -50,8 +50,8 @@ steps:
         type: human
         agent: analyst
         notify: false
-        description: "人間と対話しながら要件を分析・整理し、ドラフト仕様を作成"
-        prompt: "analystペインで要件分析を行ってください。人間がドラフトを承認したらanalystが自動でワークフローを進めます。"
+        description: "人間と対話しながら要件を分析・整理し、ドラフトPRDを作成"
+        prompt: "analystペインで要件分析を行ってください。人間がドラフトPRDを承認したらanalystが自動でワークフローを進めます。"
 
       # ============================================================
       # Phase 2: Spec Review + Revision Loop
@@ -64,7 +64,7 @@ steps:
           # Parallel spec review by 4 reviewers
           - id: spec_review
             type: parallel
-            description: "4観点の並列仕様レビュー"
+            description: "4観点の並列PRDレビュー"
             branches:
               - id: tech_review
                 type: codex
@@ -87,7 +87,7 @@ steps:
           - id: spec_revision
             type: claude
             agent: spec-revisor
-            description: "レビューフィードバックに基づく仕様修正・統合"
+            description: "レビューフィードバックに基づくPRD修正・統合"
             result:
               values: [approved, request_changes, escalate]
 
@@ -101,15 +101,15 @@ steps:
                 steps:
                   - id: review_escalation
                     type: human
-                    prompt: "仕様レビューでエスカレーション。spec関連アーティファクトを確認してください。"
+                    prompt: "PRDレビューでエスカレーション。PRD関連アーティファクトを確認してください。"
 
       # ============================================================
       # Phase 3: Human Final Review
       # ============================================================
       - id: human_final_review
         type: human
-        prompt: "仕様レビューが完了しました。最終仕様を確認してください。approved / feedback で応答してください。"
-        description: "人間の最終承認"
+        prompt: "PRDレビューが完了しました。最終PRDを確認してください。approved / feedback で応答してください。"
+        description: "人間のPRD最終承認"
         result:
           values: [approved, feedback]
 
