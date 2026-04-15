@@ -1,0 +1,249 @@
+name: tdd-v4-team
+description: "TDD development pipeline for team collaboration with plan PR review (engine v2)"
+
+focus: plan
+
+windows:
+  - name: review
+    panes:
+      - id: terminal
+        name: Terminal
+        pane: 1
+        command: null
+      - id: editor
+        name: Editor
+        pane: 2
+        command: nvim
+    layout:
+      splits:
+        - { source: 1, direction: h, percent: 50 }
+      focus: 1
+
+  - name: plan
+    panes:
+      - id: planner
+        name: Planner
+        pane: 1
+        command: "yoloclaude --agent __fed-tdd-v4-team-$FED_SESSION-planner"
+      - id: human
+        name: Human
+        pane: 2
+        command: "cd $FED_SESSION_DIR && nvim"
+    layout:
+      splits:
+        - { source: 1, direction: h, percent: 50 }
+      focus: 1
+
+steps:
+  # ============================================================
+  # Phase 1: Planning (human-interactive)
+  # ============================================================
+  # Planning + human review in one step.
+  # Planner and human interact in Claude Code CLI until human approves.
+  # Planner calls `fed session respond-workflow done` when human gives approval.
+  - id: planning
+    type: human
+    agent: planner
+    notify: false
+    description: "人間と対話しながら計画を策定・レビュー・承認まで"
+    prompt: "plannerペインで計画を策定してください。人間が承認したらplannerが自動でワークフローを進めます。"
+
+  # ============================================================
+  # Phase 2: Plan PR (team review via pull request)
+  # ============================================================
+  # Instead of AI plan review, export the plan to the repo and create a PR
+  # for team members to review.
+  - id: plan_export
+    type: claude
+    agent: plan-exporter
+    description: "計画をリポジトリの docs/plans/ に書き出し"
+
+  - id: plan_commit_push
+    type: human
+    prompt: "計画ファイルが docs/plans/ に配置されました。内容を確認し、commit & push してください。完了したら: fed session respond-workflow done"
+    description: "人間が計画ファイルを commit & push"
+
+  - id: plan_pr_create
+    type: claude
+    agent: plan-pr-creator
+    description: "計画の概要・要件・完了条件からPRを作成"
+
+  - id: plan_pr_review
+    type: human
+    prompt: "PRを作成しました。チームメンバーのレビューを待ってください。レビュー完了後: fed session respond-workflow done"
+    description: "チームメンバーによるPRレビュー待ち"
+
+  # ============================================================
+  # Phase 3: Test Implementation & Review
+  # ============================================================
+  - id: test_phase
+    type: loop
+    max: 5
+    until: ${{ steps.test_acceptance.result == "accepted" }}
+    steps:
+      - id: test_impl
+        type: claude
+        agent: test-implementer
+        description: "計画の擬似コードに基づくテスト実装"
+        resume: true
+        resume_prompt: "テスト受入で差し戻されました。最新のフィードバックアーティファクトを読み直して、テストを改善してください。"
+
+      - id: test_review_cycle
+        type: loop
+        max: 5
+        until: ${{ steps.test_review.result == "approved" }}
+        steps:
+          - id: test_review
+            type: codex
+            agent: test-reviewer
+            description: "テストコードの品質レビュー"
+            resume: true
+            resume_prompt: "テストコードが修正されました。前回の指摘事項が対応されているか確認し、再レビューしてください。"
+            result:
+              values: [approved, request_changes, escalate]
+
+          - id: test_review_branch
+            type: branch
+            cases:
+              - if: ${{ steps.test_review.result == "approved" }}
+                break: true
+              - if: ${{ steps.test_review.result == "escalate" }}
+                steps:
+                  - id: test_review_escalation
+                    type: human
+                    prompt: "テストレビューでエスカレーション。"
+              - else:
+                steps:
+                  - id: test_revision
+                    type: claude
+                    agent: test-implementer
+                    description: "フィードバックに基づくテスト修正"
+                    resume: true
+                    resume_prompt: "テストコードに対する新しいレビューフィードバックが届きました。最新のレビューアーティファクトを読み直して、指摘事項に対応してください。"
+
+      - id: test_acceptance
+        type: claude
+        agent: test-acceptor
+        description: "テスト受入判断"
+        resume: true
+        resume_prompt: "テストが修正されました。最新のテストコードを確認し、再度受入判断してください。"
+        result:
+          values: [accepted, rejected, escalate]
+
+      - id: test_acceptance_branch
+        type: branch
+        cases:
+          - if: ${{ steps.test_acceptance.result == "accepted" }}
+            break: true
+          - if: ${{ steps.test_acceptance.result == "escalate" }}
+            steps:
+              - id: test_acceptance_escalation
+                type: human
+                prompt: "テスト受入でエスカレーション。"
+
+  # ============================================================
+  # Phase 4+5: Implementation + Code Review
+  # ============================================================
+  - id: implement_review_cycle
+    type: loop
+    max: 6
+    until: ${{ steps.code_review_integrate.result == "approved" }}
+    steps:
+      # Implementation (first: full implementation, subsequent: review feedback response)
+      - id: implementation
+        type: claude
+        agent: implementer
+        description: "テストを満たす本実装 / レビューFBに基づくコード修正"
+        resume: true
+        resume_prompt: "コードに対するレビューフィードバックが届きました。「コードレビューフィードバックへの対応」セクションに従って対応してください。"
+
+      # Parallel code review from 4 perspectives
+      - id: code_review_parallel
+        type: parallel
+        description: "4観点の並列コードレビュー"
+        branches:
+          - id: review_diff
+            type: codex
+            agent: code-reviewer-diff
+            description: "差分特化レビュー"
+            resume: true
+            resume_prompt: "コードが修正されました。前回の指摘事項が対応されているか確認し、再レビューしてください。"
+          - id: review_history
+            type: codex
+            agent: code-reviewer-history
+            description: "変更履歴・コミット観点レビュー"
+            resume: true
+            resume_prompt: "コードが修正されました。変更履歴・コミット観点で再レビューしてください。"
+          - id: review_impact
+            type: claude
+            agent: code-reviewer-impact
+            description: "影響範囲・リスク観点レビュー"
+            resume: true
+            resume_prompt: "コードが修正されました。影響範囲・リスク観点で再レビューしてください。"
+          - id: review_conventions
+            type: claude
+            agent: code-reviewer-conventions
+            description: "規約・一貫性観点レビュー"
+            resume: true
+            resume_prompt: "コードが修正されました。規約・一貫性観点で再レビューしてください。"
+
+      # Review integration and judgment
+      - id: code_review_integrate
+        type: claude
+        agent: code-review-integrator
+        description: "レビュー結果の統合・判定"
+        resume: true
+        resume_prompt: "新しいレビューラウンドの結果が出揃いました。最新のレビューアーティファクトを読み直して、統合判定してください。"
+        result:
+          values: [approved, request_changes, escalate]
+
+      # Branch judgment
+      - id: code_review_branch
+        type: branch
+        cases:
+          - if: ${{ steps.code_review_integrate.result == "approved" }}
+            break: true
+          - if: ${{ steps.code_review_integrate.result == "escalate" }}
+            steps:
+              - id: code_review_escalation
+                type: human
+                prompt: "コードレビューでエスカレーション。code_review_integratedアーティファクトを確認してください。"
+
+  # ============================================================
+  # Phase 6: Post-processing
+  # ============================================================
+  - id: post_processing
+    type: parallel
+    description: "知見抽出・エビデンス収集"
+    branches:
+      - id: learnings
+        type: claude
+        agent: learnings
+        description: "知見抽出"
+      - id: evidence
+        type: claude
+        agent: frontend-evidence
+        description: "エビデンス収集"
+
+  # ============================================================
+  # Phase 7: Human Final Review
+  # ============================================================
+  - id: final_review
+    type: human
+    prompt: "全工程が完了しました。成果物を確認してください。approved / fix で応答してください。"
+    description: "人間の最終承認"
+    result:
+      values: [approved, fix]
+
+  - id: final_review_branch
+    type: branch
+    cases:
+      - if: ${{ steps.final_review.result == "approved" }}
+        steps: []
+      - if: ${{ steps.final_review.result == "fix" }}
+        steps:
+          - id: fixing
+            type: human
+            agent: fixer
+            prompt: "人間とfixerが対話しながら修正。完了したら: fed session respond-workflow done"
+            description: "人間とfixerエージェントが対話しながらコード修正"
