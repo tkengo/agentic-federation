@@ -1,1 +1,0 @@
-../../tdd-v4/agents/test-acceptor.md

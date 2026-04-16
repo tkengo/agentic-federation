@@ -154,20 +154,32 @@ export async function workflowEngineCommand(
   console.error = () => {};
   console.warn = () => {};
 
-  const app = render(
-    React.createElement(EngineApp, {
-      emitter,
-      initialSteps,
-      workflowName: workflow.name,
-      sessionDir: sessionPath,
-    }),
-    { patchConsole: false },
-  );
+  let app: ReturnType<typeof render>;
+  try {
+    app = render(
+      React.createElement(EngineApp, {
+        emitter,
+        initialSteps,
+        workflowName: workflow.name,
+        sessionDir: sessionPath,
+      }),
+      { patchConsole: false },
+    );
+  } catch (err) {
+    restoreStdout();
+    Object.assign(console, savedConsole);
+    console.error("Failed to render engine dashboard:", err instanceof Error ? err.message : String(err));
+    process.exit(1);
+  }
 
   try {
     await runEngine(sessionPath, emitter);
-  } catch {
-    // Engine handles its own error logging
+  } catch (err) {
+    restoreStdout();
+    Object.assign(console, savedConsole);
+    app.unmount();
+    console.error("Engine crashed:", err instanceof Error ? err.message : String(err));
+    process.exit(1);
   }
 
   // Keep the dashboard alive so user can see final state.
