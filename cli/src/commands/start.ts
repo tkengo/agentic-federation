@@ -485,7 +485,7 @@ function extractBranchFromRemote(remoteBranch: string): string {
   return remoteBranch.slice(slashIndex + 1);
 }
 
-/** Sanitize a string for use as tmux session name (replace / with -) */
+/** Sanitize a string for use as tmux session name (replace / and . with -) */
 function sanitizeForTmux(name: string): string {
-  return name.replace(/\//g, "-");
+  return name.replace(/[/.]/g, "-");
 }
