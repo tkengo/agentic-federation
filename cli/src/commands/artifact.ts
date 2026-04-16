@@ -117,6 +117,18 @@ export function artifactListCommand(): void {
   }
 }
 
+export function artifactPathCommand(name: string): void {
+  const sessionDir = requireSessionDir();
+  const filePath = path.join(artifactsDir(sessionDir), resolveArtifactName(name));
+
+  if (!fs.existsSync(filePath)) {
+    console.error(`Error: Artifact '${name}' does not exist yet.`);
+    process.exit(1);
+  }
+
+  process.stdout.write(filePath);
+}
+
 export function artifactDeleteCommand(name: string): void {
   const sessionDir = requireSessionDir();
   const filePath = path.join(artifactsDir(sessionDir), resolveArtifactName(name));

@@ -59,6 +59,7 @@ For detailed options and usage of each command, see [fed-cli-detailed-reference.
 | `fed artifact read <name>` | Read an artifact to stdout |
 | `fed artifact write <name>` | Write an artifact from stdin or file |
 | `fed artifact list` | List available artifacts |
+| `fed artifact path <name>` | Print the absolute file path of an artifact |
 | `fed artifact delete <name>` | Delete an artifact |
 
 ### `fed prompt`

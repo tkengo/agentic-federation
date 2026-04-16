@@ -21,6 +21,7 @@ import {
   artifactReadCommand,
   artifactWriteCommand,
   artifactListCommand,
+  artifactPathCommand,
   artifactDeleteCommand,
 } from "./commands/artifact.js";
 import { promptReadCommand, promptListCommand } from "./commands/prompt.js";
@@ -271,6 +272,13 @@ artifact
   .description("List available artifacts")
   .action(() => {
     artifactListCommand();
+  });
+
+artifact
+  .command("path <name>")
+  .description("Print the absolute file path of an artifact")
+  .action((name: string) => {
+    artifactPathCommand(name);
   });
 
 artifact

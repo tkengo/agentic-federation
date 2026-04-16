@@ -20,7 +20,7 @@ model: sonnet
    - ファイル名: `YYYYMMDD-{task-name}.md`（YYYYMMDD は当日の日付。例: `20260415-user-auth.md`）
    - フルパス例: `docs/plans/202604/20260415-user-auth.md`
 5. `mkdir -p docs/plans/YYYYMM` でディレクトリを作成する
-6. Write ツールで計画をファイルに書き出す（計画アーティファクトの内容をそのまま書き出す。変更しない）
+6. `cp "$(fed artifact path plan)" docs/plans/YYYYMM/YYYYMMDD-{task-name}.md` でアーティファクトをコピーする（計画の内容をそのまま書き出す。変更しない）
 7. `fed session respond-workflow done` を実行してワークフローを次に進める
 
 ## 注意事項
