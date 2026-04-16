@@ -57,8 +57,6 @@ model: sonnet
 
 （計画の「## 完了条件」セクションの各項目を `- [ ]` チェックボックス形式に変換する）
 
----
-📋 This PR is for **plan review only** — no implementation code is included.
 ```
 
 ### 4. 完了条件の変換ルール
