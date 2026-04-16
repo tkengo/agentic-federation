@@ -16,7 +16,7 @@ model: sonnet
 
 - 現在のブランチが main/master でないこと
 - 未コミットの変更がないこと（`git status --porcelain` で確認）
-- ブランチがリモートに push 済みであること（`git log @{u}..HEAD` でリモートとの差分を確認。upstream が未設定の場合も未 push とみなす）
+- ブランチがリモートに push 済みであること（`git log origin/$(git branch --show-current)..HEAD` でリモートとの差分を確認）
 - 現在のブランチに既存のPRがないこと（`gh pr view --json url` で確認。既に存在する場合はそのURLを表示して終了）
 
 ### 2. 計画の読み取りとセクション抽出
