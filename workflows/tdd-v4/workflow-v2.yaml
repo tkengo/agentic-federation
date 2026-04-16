@@ -90,67 +90,34 @@ steps:
   - id: test_phase
     type: loop
     max: 5
-    until: ${{ steps.test_acceptance.result == "accepted" }}
+    until: ${{ steps.test_review.result == "approved" }}
     steps:
       - id: test_impl
         type: claude
         agent: test-implementer
-        description: "計画の擬似コードに基づくテスト実装"
+        description: "計画に基づくテスト実装 / レビューFBに基づくテスト修正"
         resume: true
-        resume_prompt: "テスト受入で差し戻されました。最新のフィードバックアーティファクトを読み直して、テストを改善してください。"
+        resume_prompt: "テストレビューからフィードバックが届きました。`fed artifact read test_review` でレビュー結果を読み、「テスト修正のフロー」に従って指摘事項を修正してください。"
 
-      - id: test_review_cycle
-        type: loop
-        max: 5
-        until: ${{ steps.test_review.result == "approved" }}
-        steps:
-          - id: test_review
-            type: codex
-            agent: test-reviewer
-            description: "テストコードの品質レビュー"
-            resume: true
-            resume_prompt: "テストコードが修正されました。前回の指摘事項が対応されているか確認し、再レビューしてください。"
-            result:
-              values: [approved, request_changes, escalate]
-
-          - id: test_review_branch
-            type: branch
-            cases:
-              - if: ${{ steps.test_review.result == "approved" }}
-                break: true
-              - if: ${{ steps.test_review.result == "escalate" }}
-                steps:
-                  - id: test_review_escalation
-                    type: human
-                    prompt: "テストレビューでエスカレーション。"
-              - else:
-                steps:
-                  - id: test_revision
-                    type: claude
-                    agent: test-implementer
-                    description: "フィードバックに基づくテスト修正"
-                    resume: true
-                    resume_prompt: "テストコードに対する新しいレビューフィードバックが届きました。最新のレビューアーティファクトを読み直して、指摘事項に対応してください。"
-
-      - id: test_acceptance
-        type: claude
-        agent: test-acceptor
-        description: "テスト受入判断"
+      - id: test_review
+        type: codex
+        agent: test-reviewer
+        description: "テストコードの品質レビュー"
         resume: true
-        resume_prompt: "テストが修正されました。最新のテストコードを確認し、再度受入判断してください。"
+        resume_prompt: "テストコードが修正されました。前回の指摘事項が対応されているか確認し、再レビューしてください。"
         result:
-          values: [accepted, rejected, escalate]
+          values: [approved, request_changes, escalate]
 
-      - id: test_acceptance_branch
+      - id: test_review_branch
         type: branch
         cases:
-          - if: ${{ steps.test_acceptance.result == "accepted" }}
+          - if: ${{ steps.test_review.result == "approved" }}
             break: true
-          - if: ${{ steps.test_acceptance.result == "escalate" }}
+          - if: ${{ steps.test_review.result == "escalate" }}
             steps:
-              - id: test_acceptance_escalation
+              - id: test_review_escalation
                 type: human
-                prompt: "テスト受入でエスカレーション。"
+                prompt: "テストレビューでエスカレーション。"
 
   # ============================================================
   # Phase 4+5: Implementation + Code Review
