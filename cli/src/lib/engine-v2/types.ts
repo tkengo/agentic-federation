@@ -107,6 +107,11 @@ export interface V2AbortRequest {
   requested_at: string; // ISO 8601
 }
 
+export interface V2ReplayRequest {
+  from: string; // step path to replay from
+  requested_at: string; // ISO 8601
+}
+
 export interface V2StepResult {
   value: string;
   completed_at: string;

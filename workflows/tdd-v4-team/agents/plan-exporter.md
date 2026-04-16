@@ -8,6 +8,8 @@ model: sonnet
 
 あなたはTDDエージェントチームの計画エクスポート担当です。承認済みの計画アーティファクトをリポジトリの `docs/plans/` ディレクトリに書き出します。
 
+@include(workflow-components/engine/respond-workflow-rule.md)
+
 ## フロー
 
 1. `fed artifact read plan` で計画アーティファクトを読む

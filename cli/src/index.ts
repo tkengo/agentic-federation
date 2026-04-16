@@ -203,16 +203,19 @@ session
   .command("start-engine [session-name]")
   .description("Start the v2 workflow engine (resumes from last completed step)")
   .option("--reset", "Reset state and start from the beginning")
-  .action(async (sessionName?: string, options?: { reset?: boolean }) => {
-    await workflowEngineCommand(sessionName, options?.reset);
+  .option("--from <step>", "Clear results from the specified step onwards and resume from there")
+  .action(async (sessionName?: string, options?: { reset?: boolean; from?: string }) => {
+    await workflowEngineCommand(sessionName, options?.reset, options?.from);
   });
 
 session
   .command("respond-workflow [value]")
   .description("Report step result to the v2 workflow engine")
   .option("--step <path>", "Step path (auto-detected from FED_STEP)")
-  .action(async (value: string | undefined, options: { step?: string }) => {
-    await workflowRespondCommand(value, options.step);
+  .option("--replay <step>", "Replay from a specific step (sends replay request to running engine)")
+  .option("--abort [mode]", "Abort the running engine (default: immediate, or 'graceful')")
+  .action(async (value: string | undefined, options: { step?: string; replay?: string; abort?: string | boolean }) => {
+    await workflowRespondCommand(value, options.step, options.replay, options.abort);
   });
 
 session

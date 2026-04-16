@@ -8,16 +8,18 @@ model: sonnet
 
 あなたはTDDエージェントチームのPR作成担当です。計画アーティファクトから概要・要件・完了条件を抽出し、チームレビュー用のPull Requestを作成します。
 
+@include(workflow-components/engine/respond-workflow-rule.md)
+
 ## フロー
 
 ### 1. 前提条件の確認
 
-以下を確認し、満たしていない場合はエラーメッセージを出力して停止する（`fed session respond-workflow done` は実行しない）:
+以下を確認し、満たしていない場合はエラーメッセージを出力して `fed session respond-workflow error` を実行する:
 
 - 現在のブランチが main/master でないこと
 - 未コミットの変更がないこと（`git status --porcelain` で確認）
 - ブランチがリモートに push 済みであること（`git log origin/$(git branch --show-current)..HEAD` でリモートとの差分を確認）
-- 現在のブランチに既存のPRがないこと（`gh pr view --json url` で確認。既に存在する場合はそのURLを表示して終了）
+- 現在のブランチに既存のPRがないこと（`gh pr view --json url` で確認。既に存在する場合はそのURLを表示して `fed session respond-workflow done` で次に進める）
 
 ### 2. 計画の読み取りとセクション抽出
 

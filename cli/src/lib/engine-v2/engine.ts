@@ -27,6 +27,8 @@ import { runShellStep } from "./runners/shell.js";
 import type { RunnerHandle } from "./runners/types.js";
 import { evaluateCondition, type ExprContext } from "./expr.js";
 import { readAbortRequest, consumeAbortRequest, clearAbortRequest } from "./abort.js";
+import { readReplayRequest, consumeReplayRequest, clearReplayRequest } from "./replay.js";
+import { collectStepPaths } from "./workflow-loader.js";
 import { isNetworkAvailable } from "./network.js";
 import type { V2Step, V2State, V2BranchCase } from "./types.js";
 
@@ -39,6 +41,13 @@ class EngineAbortError extends Error {
   constructor(public readonly mode: "immediate" | "graceful") {
     super(`Engine aborted (${mode})`);
     this.name = "EngineAbortError";
+  }
+}
+
+class EngineReplayError extends Error {
+  constructor(public readonly from: string) {
+    super(`Engine replay from ${from}`);
+    this.name = "EngineReplayError";
   }
 }
 
@@ -74,79 +83,139 @@ export async function runEngine(sessionDir: string, emitter?: EngineEventEmitter
     state = initV2State(sessionDir);
   }
 
-  // Clear any stale abort request from a previous run
+  // Clear any stale requests from a previous run
   clearAbortRequest(sessionDir);
+  clearReplayRequest(sessionDir);
 
+  const allStepPaths = collectStepPaths(workflow);
   const engineStartTime = Date.now();
 
-  try {
-    await executeBlock(workflow.steps, "", sessionDir, state, meta, logger);
+  // Main execution loop — replays restart from the top (completed steps are skipped)
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    try {
+      await executeBlock(workflow.steps, "", sessionDir, state, meta, logger);
 
-    // All steps completed
-    setStatus(state, "completed");
-    setCurrentStep(state, null);
-    appendHistory(state, "engine_complete", "", "All steps completed");
-    writeV2State(sessionDir, state);
-
-    logger.engineComplete(Date.now() - engineStartTime);
-  } catch (err) {
-    if (err instanceof EngineAbortError) {
-      consumeAbortRequest(sessionDir);
-      const abortedStep = state.current_step;
-      // Clear the aborted step's result so it re-runs on resume
-      if (abortedStep && state.results[abortedStep]) {
-        delete state.results[abortedStep];
-      }
-      setStatus(state, "aborted");
+      // All steps completed
+      setStatus(state, "completed");
       setCurrentStep(state, null);
-      appendHistory(state, "engine_aborted", abortedStep ?? "", `mode=${err.mode}`);
+      appendHistory(state, "engine_complete", "", "All steps completed");
       writeV2State(sessionDir, state);
 
-      logger.engineAborted(err.mode);
-      return;
-    }
-    if (err === BREAK_LOOP) {
-      // Should not reach here at top level
-      logger.error("Unexpected break at top level");
-    }
-    const message = err instanceof Error ? err.message : String(err);
-    setStatus(state, "failed");
-    appendHistory(state, "engine_error", state.current_step ?? "", message);
-    writeV2State(sessionDir, state);
+      logger.engineComplete(Date.now() - engineStartTime);
+      break;
+    } catch (err) {
+      if (err instanceof EngineReplayError) {
+        consumeReplayRequest(sessionDir);
+        const targetPath = err.from;
+        const targetIndex = allStepPaths.indexOf(targetPath);
+        const pathsToClear = targetIndex >= 0 ? allStepPaths.slice(targetIndex) : [targetPath];
 
-    logger.engineFailed(message);
-    process.exit(1);
-  } finally {
-    logger.close();
-  }
+        // Clear results, sessions, loops for affected steps
+        let cleared = 0;
+        for (const p of pathsToClear) {
+          if (state.results[p]) { delete state.results[p]; cleared++; }
+          if (state.sessions[p]) { delete state.sessions[p]; }
+          if (state.loops[p]) { delete state.loops[p]; }
+        }
+
+        // Clear container completion markers from history
+        state.history = state.history.filter(
+          h => !(
+            (h.event === "parallel_complete" || h.event === "loop_complete") &&
+            pathsToClear.includes(h.step)
+          )
+        );
+
+        // Clear respond files for affected steps
+        const respondDir = path.join(sessionDir, "respond");
+        if (fs.existsSync(respondDir)) {
+          for (const p of pathsToClear) {
+            const safeStepPath = p.replace(/[./]/g, "_");
+            const respondFile = path.join(respondDir, `${safeStepPath}.respond`);
+            if (fs.existsSync(respondFile)) { fs.unlinkSync(respondFile); }
+          }
+        }
+
+        setStatus(state, "running");
+        setCurrentStep(state, null);
+        appendHistory(state, "replay_from", targetPath, `cleared=${cleared} steps`);
+        writeV2State(sessionDir, state);
+
+        logger.info(`Replaying from step: ${targetPath} (cleared ${cleared} result(s))`);
+        emitter?.emit("replay", { type: "replay", from: targetPath });
+        continue;
+      }
+      if (err instanceof EngineAbortError) {
+        consumeAbortRequest(sessionDir);
+        const abortedStep = state.current_step;
+        // Clear the aborted step's result so it re-runs on resume
+        if (abortedStep && state.results[abortedStep]) {
+          delete state.results[abortedStep];
+        }
+        setStatus(state, "aborted");
+        setCurrentStep(state, null);
+        appendHistory(state, "engine_aborted", abortedStep ?? "", `mode=${err.mode}`);
+        writeV2State(sessionDir, state);
+
+        logger.engineAborted(err.mode);
+        break;
+      }
+      if (err === BREAK_LOOP) {
+        // Should not reach here at top level
+        logger.error("Unexpected break at top level");
+      }
+      const message = err instanceof Error ? err.message : String(err);
+      setStatus(state, "failed");
+      appendHistory(state, "engine_error", state.current_step ?? "", message);
+      writeV2State(sessionDir, state);
+
+      logger.engineFailed(message);
+      process.exit(1);
+    }
+  } // end while
+
+  logger.close();
 }
 
 /**
- * Wait for a runner to complete, polling for abort requests.
+ * Wait for a runner to complete, polling for abort and replay requests.
  * For immediate abort: kills the child process and throws EngineAbortError.
+ * For replay: kills the child process and throws EngineReplayError.
  * For graceful abort: lets the step finish, then the caller checks after completion.
  */
 async function waitWithAbortCheck(handle: RunnerHandle, sessionDir: string): Promise<number> {
   return new Promise<number>((resolve, reject) => {
     let settled = false;
 
-    const abortChecker = setInterval(() => {
-      const req = readAbortRequest(sessionDir);
-      if (req && req.mode === "immediate") {
-        clearInterval(abortChecker);
+    const requestChecker = setInterval(() => {
+      // Check abort
+      const abortReq = readAbortRequest(sessionDir);
+      if (abortReq && abortReq.mode === "immediate") {
+        clearInterval(requestChecker);
         handle.kill();
         settled = true;
         reject(new EngineAbortError("immediate"));
+        return;
+      }
+      // Check replay
+      const replayReq = readReplayRequest(sessionDir);
+      if (replayReq) {
+        clearInterval(requestChecker);
+        handle.kill();
+        settled = true;
+        reject(new EngineReplayError(replayReq.from));
+        return;
       }
     }, 500);
 
     handle.promise.then(
       (exitCode) => {
-        clearInterval(abortChecker);
+        clearInterval(requestChecker);
         if (!settled) resolve(exitCode);
       },
       (err) => {
-        clearInterval(abortChecker);
+        clearInterval(requestChecker);
         if (!settled) reject(err);
       },
     );
@@ -154,10 +223,14 @@ async function waitWithAbortCheck(handle: RunnerHandle, sessionDir: string): Pro
 }
 
 /**
- * Check for graceful abort request after a step completes.
- * Throws EngineAbortError if a graceful (or immediate) abort was requested.
+ * Check for graceful abort or replay request after a step completes.
+ * Throws EngineAbortError or EngineReplayError if requested.
  */
 function checkGracefulAbort(sessionDir: string): void {
+  const replayReq = readReplayRequest(sessionDir);
+  if (replayReq) {
+    throw new EngineReplayError(replayReq.from);
+  }
   const req = readAbortRequest(sessionDir);
   if (req) {
     throw new EngineAbortError(req.mode);
@@ -168,7 +241,7 @@ function checkGracefulAbort(sessionDir: string): void {
  * Execute an async function with network-aware retry.
  * If fn throws and network is down, waits for recovery and retries.
  * If fn throws and network is up, re-throws the original error.
- * EngineAbortError is always re-thrown immediately.
+ * EngineAbortError and EngineReplayError are always re-thrown immediately.
  */
 async function withNetworkRetry<T>(
   fn: () => Promise<T>,
@@ -182,6 +255,7 @@ async function withNetworkRetry<T>(
       return await fn();
     } catch (err) {
       if (err instanceof EngineAbortError) throw err;
+      if (err instanceof EngineReplayError) throw err;
 
       if (await isNetworkAvailable()) throw err;
 
@@ -540,6 +614,17 @@ async function executeActionStep(
 
   // Record result
   const durationMs = Date.now() - startTime;
+
+  // claude/codex steps must call `fed session respond-workflow` before exiting.
+  // If they exit 0 without a respond file, treat it as an error.
+  if (!resultValue && (step.type === "claude" || step.type === "codex")) {
+    logger.stepFailed(stepPath, "Agent exited without calling respond-workflow", durationMs);
+    logger.setCurrentStep(null);
+    throw new Error(
+      `Step "${stepPath}" (${step.type}) completed without respond-workflow. ` +
+      `The agent must call \`fed session respond-workflow <value>\` before exiting.`
+    );
+  }
 
   if (resultValue) {
     if (step.result?.values && !step.result.values.includes(resultValue)) {

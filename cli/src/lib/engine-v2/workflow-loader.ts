@@ -124,6 +124,74 @@ function validateWindows(windows: V2Window[]): void {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Step path utilities
+// ---------------------------------------------------------------------------
+
+/**
+ * Collect all step paths from a workflow in document order.
+ * Includes container steps (loop, branch, parallel) and their children.
+ */
+export function collectStepPaths(workflow: V2Workflow): string[] {
+  const paths: string[] = [];
+  collectFromSteps(workflow.steps, "", paths);
+  return paths;
+}
+
+function collectFromSteps(steps: V2Step[], parentPath: string, paths: string[]): void {
+  for (let i = 0; i < steps.length; i++) {
+    const step = steps[i];
+    const name = step.id ?? `step_${i}`;
+    const stepPath = parentPath ? `${parentPath}.${name}` : name;
+    paths.push(stepPath);
+
+    if (step.type === "loop" && step.steps) {
+      collectFromSteps(step.steps, stepPath, paths);
+    }
+    if (step.type === "branch" && step.cases) {
+      for (const c of step.cases) {
+        if (c.steps) {
+          collectFromSteps(c.steps, stepPath, paths);
+        }
+      }
+    }
+    if (step.type === "parallel" && step.branches) {
+      for (const b of step.branches) {
+        const branchPath = `${stepPath}.${b.id}`;
+        paths.push(branchPath);
+      }
+    }
+  }
+}
+
+/**
+ * Find a step path by ID or full path.
+ * Tries exact match first, then matches the last segment of each path.
+ * Returns null if not found. Throws if ambiguous.
+ */
+export function resolveStepPath(allPaths: string[], target: string): string | null {
+  // Exact match
+  if (allPaths.includes(target)) return target;
+
+  // Match by last segment (step ID)
+  const matches = allPaths.filter(p => {
+    const lastSegment = p.split(".").pop();
+    return lastSegment === target;
+  });
+
+  if (matches.length === 1) return matches[0];
+  if (matches.length > 1) {
+    throw new Error(
+      `Ambiguous step ID "${target}". Matches: ${matches.join(", ")}. Use the full step path to disambiguate.`
+    );
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Step validation
+// ---------------------------------------------------------------------------
+
 function validateStep(step: V2Step, path: string, seenIds: Set<string>): void {
   if (!step.type || !VALID_STEP_TYPES.has(step.type)) {
     throw new Error(

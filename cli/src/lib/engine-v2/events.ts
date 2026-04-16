@@ -71,6 +71,11 @@ export interface WaitingNetworkEvent {
   message: string;
 }
 
+export interface ReplayEvent {
+  type: "replay";
+  from: string;
+}
+
 export type EngineEvent =
   | EngineStartEvent
   | EngineCompleteEvent
@@ -82,7 +87,8 @@ export type EngineEvent =
   | StepLogEvent
   | LoopIterationEvent
   | WaitingHumanEvent
-  | WaitingNetworkEvent;
+  | WaitingNetworkEvent
+  | ReplayEvent;
 
 // ---------------------------------------------------------------------------
 // Typed event emitter
@@ -100,6 +106,7 @@ export interface EngineEventMap {
   loop_iteration: [LoopIterationEvent];
   waiting_human: [WaitingHumanEvent];
   waiting_network: [WaitingNetworkEvent];
+  replay: [ReplayEvent];
   event: [EngineEvent]; // catch-all for any event
 }
 

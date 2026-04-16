@@ -46,7 +46,7 @@ For detailed options and usage of each command, see [fed-cli-detailed-reference.
 | `fed session stop [session-name]` | Stop a session |
 | `fed session list` | List sessions |
 | `fed session status [session-name]` | Show current workflow step status |
-| `fed session start-engine [session-name]` | Start the v2 workflow engine (resumes from last completed step) |
+| `fed session start-engine [session-name]` | Start the v2 workflow engine (resumes from last completed step). `--from <step>` to replay from a specific step. |
 | `fed session respond-workflow [value]` | Report step result to the v2 workflow engine |
 | `fed session abort-workflow` | Abort the running v2 workflow |
 | `fed session archive <session-name>` | Archive a specific session |

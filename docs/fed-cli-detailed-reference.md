@@ -148,7 +148,7 @@ fed session status [session-name]
 
 ### `fed session start-engine`
 
-Start the v2 workflow engine. By default, resumes from the last completed step (completed steps are skipped). Use `--reset` to reinitialize state and start from the beginning.
+Start the v2 workflow engine. By default, resumes from the last completed step (completed steps are skipped). Use `--reset` to reinitialize state and start from the beginning. Use `--from <step>` to replay from a specific step (clears results for that step and all subsequent steps).
 
 ```
 fed session start-engine [session-name]
@@ -157,10 +157,11 @@ fed session start-engine [session-name]
 | Option | Description |
 |---|---|
 | `--reset` | Reset state and start from the beginning |
+| `--from <step>` | Clear results from the specified step onwards and resume from there. Accepts a step ID (e.g., `plan_pr_create`) or a full dot-delimited path (e.g., `test_phase.test_impl`). Cannot be used with `--reset`. |
 
 ### `fed session respond-workflow`
 
-Report step result to the v2 workflow engine.
+Report step result to the v2 workflow engine. Also supports replaying and aborting.
 
 ```
 fed session respond-workflow [value]
@@ -169,6 +170,8 @@ fed session respond-workflow [value]
 | Option | Description |
 |---|---|
 | `--step <path>` | Step path (auto-detected from `FED_STEP` env var) |
+| `--replay <step>` | Replay from a specific step. Sends a replay request to the running engine, which clears results from that step onwards and re-executes. The engine does not need to be restarted. |
+| `--abort [mode]` | Abort the running engine. Default is `immediate` (kills current step). Pass `graceful` to wait for the current step to finish. |
 
 ### `fed session abort-workflow`
 

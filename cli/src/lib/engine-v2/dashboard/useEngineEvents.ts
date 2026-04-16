@@ -192,6 +192,23 @@ export function useEngineEvents(
       markDirty();
     };
 
+    const onReplay = (e: { from: string }) => {
+      // Reset affected steps (from target onwards) to not_started
+      const allPaths = stepsRef.current.map(s => s.stepPath);
+      const targetIndex = allPaths.findIndex(p => p === e.from || p.split(".").pop() === e.from);
+      if (targetIndex >= 0) {
+        stepsRef.current = stepsRef.current.map((s, i) => {
+          if (i >= targetIndex && s.status !== "not_started") {
+            return { ...s, status: "not_started" as StepStatus, result: undefined, durationMs: undefined, iterationLabel: undefined };
+          }
+          return s;
+        });
+      }
+      engineStatusRef.current = "running";
+      appendLog(e.from, `⟲ Replaying from this step`);
+      markDirty();
+    };
+
     emitter.on("step_start", onStepStart);
     emitter.on("step_complete", onStepComplete);
     emitter.on("step_failed", onStepFailed);
@@ -202,6 +219,7 @@ export function useEngineEvents(
     emitter.on("engine_complete", onEngineComplete);
     emitter.on("engine_failed", onEngineFailed);
     emitter.on("engine_aborted", onEngineAborted);
+    emitter.on("replay", onReplay);
 
     return () => {
       emitter.removeAllListeners();
