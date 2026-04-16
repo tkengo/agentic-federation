@@ -131,4 +131,5 @@ export interface V2State {
   sessions: Record<string, string>;  // stepPath -> agent session ID (Claude session_id / Codex thread_id)
   loops: Record<string, { iteration: number }>;  // loop stepPath -> current iteration (for resume)
   history: V2HistoryEntry[];
+  replay_from?: string;  // Step path to skip to during replay (cleared when target is reached)
 }

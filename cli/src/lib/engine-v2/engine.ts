@@ -139,6 +139,7 @@ export async function runEngine(sessionDir: string, emitter?: EngineEventEmitter
 
         setStatus(state, "running");
         setCurrentStep(state, null);
+        state.replay_from = targetPath;
         appendHistory(state, "replay_from", targetPath, `cleared=${cleared} steps`);
         writeV2State(sessionDir, state);
 
@@ -370,6 +371,23 @@ async function executeStep(
   meta: MetaJson,
   logger: EngineLogger,
 ): Promise<boolean> {
+  // Replay mode: skip steps before the replay target
+  if (state.replay_from) {
+    if (stepPath === state.replay_from) {
+      // Reached the target — clear replay mode and execute normally
+      logger.info(`Replay target reached: ${stepPath}`);
+      delete state.replay_from;
+      writeV2State(sessionDir, state);
+    } else if (state.replay_from.startsWith(stepPath + ".")) {
+      // This is a container that holds the replay target — enter it
+      // (fall through to the switch below which handles the container type)
+    } else {
+      // Step is before the target — skip
+      logger.info(`Skipping (replay): ${stepPath}`);
+      return false;
+    }
+  }
+
   // Skip already-completed action steps (for resume after crash)
   if (isActionStep(step.type) && state.results[stepPath]) {
     logger.info(`Skipping completed step: ${stepPath} (result=${state.results[stepPath].value})`);
@@ -661,12 +679,16 @@ async function executeLoop(
   }
 
   // Skip if loop was already completed in a previous run
-  const loopCompleted = state.history.some(
-    h => h.event === "loop_complete" && h.step === stepPath
-  );
-  if (loopCompleted) {
-    logger.info(`Skipping completed loop: ${stepPath}`);
-    return false;
+  // But not if we're replaying into a sub-step inside this loop
+  const isReplayParent = state.replay_from?.startsWith(stepPath + ".");
+  if (!isReplayParent) {
+    const loopCompleted = state.history.some(
+      h => h.event === "loop_complete" && h.step === stepPath
+    );
+    if (loopCompleted) {
+      logger.info(`Skipping completed loop: ${stepPath}`);
+      return false;
+    }
   }
 
   // If max is not set but until is present, loop indefinitely (until condition satisfied)
@@ -852,12 +874,16 @@ async function executeParallel(
   }
 
   // Skip if parallel was already completed in a previous run
-  const parallelCompleted = state.history.some(
-    h => h.event === "parallel_complete" && h.step === stepPath
-  );
-  if (parallelCompleted) {
-    logger.info(`Skipping completed parallel: ${stepPath}`);
-    return false;
+  // But not if we're replaying into a branch inside this parallel
+  const isReplayParentParallel = state.replay_from?.startsWith(stepPath + ".");
+  if (!isReplayParentParallel) {
+    const parallelCompleted = state.history.some(
+      h => h.event === "parallel_complete" && h.step === stepPath
+    );
+    if (parallelCompleted) {
+      logger.info(`Skipping completed parallel: ${stepPath}`);
+      return false;
+    }
   }
 
   logger.stepStart(stepPath, "parallel", step.description);
