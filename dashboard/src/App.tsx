@@ -215,9 +215,9 @@ function AppInner() {
         if (code === 0) {
           // Extract auto-generated branch name from CLI output if branch was empty
           const autoMatch = stdout.match(/Auto-generated (?:branch|session): (.+)/);
-          // Sanitize for tmux: replace '/' with '-' to match CLI's sanitizeForTmux
+          // Sanitize for tmux: replace '/' and '.' with '-' to match CLI's sanitizeForTmux
           const rawLabel = branch || autoMatch?.[1] || "auto";
-          const sessionLabel = rawLabel.replace(/\//g, "-");
+          const sessionLabel = rawLabel.replace(/[/.]/g, "-");
           setFocusSessionName(sessionLabel);
           showMessage(`Created session: ${sessionLabel}`);
           // Defer tmux switch to let Ink flush pending renders
