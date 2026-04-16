@@ -30,7 +30,7 @@ model: sonnet
 
 ### 3. PRの作成
 
-抽出した内容からPRのtitleとbodyを構成し、`gh pr create` で作成する。
+抽出した内容からPRのtitleとbodyを構成し、`gh pr create --draft` でdraft PRとして作成する。
 
 #### PRタイトル
 
