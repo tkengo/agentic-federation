@@ -113,6 +113,7 @@ export async function workflowEngineCommand(
 
     state.status = "running";
     state.current_step = null;
+    state.replay_from = targetPath;
     appendHistory(state, "replay_from", targetPath, `cleared=${cleared} steps`);
     writeV2State(sessionPath, state);
 
