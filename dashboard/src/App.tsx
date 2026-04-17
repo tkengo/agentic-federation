@@ -310,6 +310,7 @@ function AppInner() {
   }
 
   const isDetail = screen === "detail" || screen === "repo-detail";
+  const hasBottomPanel = screen === "palette" || screen === "add-repo" || screen === "create";
 
   return (
     <Box flexDirection="column" width={columns} height={rows}>
@@ -339,6 +340,7 @@ function AppInner() {
             active={screen === "list"}
             columns={columns}
             rows={rows}
+            hasBottomPanel={hasBottomPanel}
             refresh={refresh}
             refreshProtected={refreshProtected}
             refreshRepos={refreshRepos}
@@ -393,8 +395,8 @@ function AppInner() {
           />
         )}
 
-        {/* Bottom panel - fixed height, always present on home screen */}
-        {!isDetail && (
+        {/* Bottom panel - only shown when a panel screen is active */}
+        {hasBottomPanel && (
           <BottomPanel>
             {screen === "palette" && (
               <CommandPalette

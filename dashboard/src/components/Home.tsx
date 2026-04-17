@@ -32,6 +32,7 @@ interface HomeProps {
   refreshProtected: () => void;
   refreshRepos: () => void;
   refreshLogs: () => void;
+  hasBottomPanel: boolean;
   onNavigate: (target: "create" | "palette" | "add-repo") => void;
   onDetailSession: (sessionName: string) => void;
   onDetailRepo: (repoName: string) => void;
@@ -56,6 +57,7 @@ export function Home({
   refreshProtected,
   refreshRepos,
   refreshLogs,
+  hasBottomPanel,
   onNavigate,
   onDetailSession,
   onDetailRepo,
@@ -117,7 +119,7 @@ export function Home({
   }, [TAB_ORDER]);
 
   // --- maxVisible ---
-  const maxVisible = rows - HEADER_HEIGHT_FULL - TAB_BAR_HEIGHT - BOTTOM_PANEL_HEIGHT - FOOTER_HEIGHT;
+  const maxVisible = rows - HEADER_HEIGHT_FULL - TAB_BAR_HEIGHT - FOOTER_HEIGHT - (hasBottomPanel ? BOTTOM_PANEL_HEIGHT : 0);
 
   // --- Per-tab max indices ---
   const sessionMaxIndex = Math.max(0, sessions.length - 1);
