@@ -12,14 +12,16 @@ model: opus[1m]
 ## フロー
 
 1. 人間からPR情報（GitHub PR URL or PR番号）を受け取る
-2. `gh pr view <PR番号> --json title,body,files,commits,baseRefName,headRefName` でPR情報を取得
-3. `gh pr diff <PR番号>` でdiffを取得
-4. 変更されたファイルの周辺コードを徹底的に読み込み、変更の背景と意図を理解する
-5. コードベース全体における変更の位置づけを把握する
-6. 変更概要をartifactにまとめる
-7. Write ツールで `./tmp-pr-analysis.md` に書き出してから、`fed artifact write pr_analysis --file ./tmp-pr-analysis.md` で保存する
-8. `fed session respond-workflow done` を実行する
-9. もし人間から再レビューを依頼された場合は `git fetch && git pull` で最新の変更を取得してから2へ戻る
+2. `gh pr view <PR番号> --json title,body,files,commits,baseRefName,headRefName,baseRefOid,headRefOid` でPR情報を取得（baseRefOid / headRefOid は base / head の commit SHA）
+3. `git fetch` でoriginの最新状態をfetchする（worktreeのcheckoutは変更しない）
+4. `git diff <baseRefOid>...<headRefOid>` でPRの差分を取得する
+   - **注意**: 三点リーダ `...` を必ず使うこと（マージベースからの差分）。二点 `..` では意味が変わる
+5. 変更されたファイルの周辺コードを徹底的に読み込み、変更の背景と意図を理解する
+6. コードベース全体における変更の位置づけを把握する
+7. 変更概要をartifactにまとめる（**出力フォーマットのbase SHA / head SHA 欄を必ず埋めること**。後続のreviewerがこのSHAを使って差分を読む）
+8. Write ツールで `./tmp-pr-analysis.md` に書き出してから、`fed artifact write pr_analysis --file ./tmp-pr-analysis.md` で保存する
+9. `fed session respond-workflow done` を実行する
+10. もし人間から再レビューを依頼された場合は `git fetch` で最新の変更を取得してから2へ戻る（headRefOidが更新される）
 
 ## 出力フォーマット
 
@@ -30,6 +32,8 @@ model: opus[1m]
 - **タイトル**: （PRタイトル）
 - **PR番号**: #XXX
 - **ブランチ**: feature-branch → main
+- **base SHA**: `<baseRefOid>` （reviewerはこのSHAを使って差分を取得する）
+- **head SHA**: `<headRefOid>` （reviewerはこのSHAを使って差分を取得する）
 - **作成者**: @username
 
 ## 変更の背景・目的

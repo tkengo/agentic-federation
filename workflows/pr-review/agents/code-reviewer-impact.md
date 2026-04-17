@@ -13,10 +13,10 @@ model: opus[1m]
 
 @include(workflow-components/review/flow-base.md)
 
-1. `fed artifact read pr_analysis` でPR分析レポートを読み、PR番号を確認する
-2. `gh pr view <PR番号> --json files -q '.files[].path'` で変更ファイル一覧を取得
-   - **注意**: `git diff --name-only` や `git diff main...HEAD --name-only` は使わないこと。ローカルの `main` は古い場合があり、PR外のファイルまで一覧に含まれてしまう。必ず `gh pr view` を使うこと。
-3. 各変更ファイルの export/public API の変更を特定（差分の中身は `gh pr diff <PR番号>` で取得）
+1. `fed artifact read pr_analysis` でPR分析レポートを読み、**base SHA** と **head SHA** を確認する
+2. `git diff --name-only <base_sha>...<head_sha>` で変更ファイル一覧を取得
+   - **注意**: 必ず `pr_analysis` に記録されたSHAを使い、三点リーダ `...` で指定すること。ブランチ名指定（例: `git diff main...HEAD --name-only`）は使わないこと。SHA固定なら analyzer が fetch したタイミングのファイル一覧が再現できる
+3. 各変更ファイルの export/public API の変更を特定（差分の中身は `git diff <base_sha>...<head_sha>` で取得）
 4. grep やコード追跡で呼び出し元・依存先を調査
 5. 影響範囲をまとめてレビュー
 6. Write ツールで `./tmp-code-review-impact.md` にレビュー結果を書き出してから、`fed artifact write code_review_impact --file ./tmp-code-review-impact.md` で保存する
