@@ -14,8 +14,9 @@ description: Conventions-focused code reviewer. Checks compliance with project g
 
 1. プロジェクトの CLAUDE.md を読む
 2. docs/ ディレクトリがあればその中の規約関連ファイルを読む
-3. `fed artifact read pr_analysis` でPR分析レポートを読む
-4. `git diff` または `git diff --cached` で差分を確認
+3. `fed artifact read pr_analysis` でPR分析レポートを読み、PR番号を確認する
+4. `gh pr diff <PR番号>` でPRの差分を取得する
+   - **注意**: `git diff` / `git diff --cached` / `git diff main...HEAD` は使わないこと。ローカルの `main` は古い場合があり、PR外の変更まで差分に含まれてしまう。必ず `gh pr diff <PR番号>` を使うこと。
 5. 差分を CLAUDE.md / docs の規約と照合してレビュー
 6. Write ツールで `./tmp-code-review-conventions.md` にレビュー結果を書き出してから、`fed artifact write code_review_conventions --file ./tmp-code-review-conventions.md` で保存する
 7. `fed session respond-workflow done` を実行してステート遷移を発火する

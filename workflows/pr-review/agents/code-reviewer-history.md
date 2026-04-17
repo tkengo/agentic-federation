@@ -12,8 +12,9 @@ description: History-focused code reviewer. Analyzes git history to detect chang
 
 @include(workflow-components/review/flow-base.md)
 
-1. `fed artifact read pr_analysis` でPR分析レポートを読む
-2. `git diff --name-only` で変更対象ファイル一覧を取得
+1. `fed artifact read pr_analysis` でPR分析レポートを読み、PR番号を確認する
+2. `gh pr view <PR番号> --json files -q '.files[].path'` で変更対象ファイル一覧を取得
+   - **注意**: `git diff --name-only` や `git diff main...HEAD --name-only` は使わないこと。ローカルの `main` は古い場合があり、PR外のファイルまで一覧に含まれてしまう。必ず `gh pr view` を使うこと。
 3. 各ファイルについて `git log --follow -20 -- <file>` で直近の変更履歴を確認
 4. 気になるコミットがあれば `git show <hash>` で詳細を確認
 5. 変更箇所について `git blame` で直前の変更理由を確認

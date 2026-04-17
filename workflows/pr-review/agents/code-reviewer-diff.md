@@ -12,8 +12,9 @@ description: Diff-focused code reviewer. Analyzes the current changes for bugs, 
 
 @include(workflow-components/review/flow-base.md)
 
-1. `fed artifact read pr_analysis` でPR分析レポートを読む
-2. `git diff` または `git diff --cached` で差分を確認し、コードをレビューする。後述のレビュー観点に従ってレビューすること。
+1. `fed artifact read pr_analysis` でPR分析レポートを読み、PR番号を確認する
+2. `gh pr diff <PR番号>` でPRの差分を取得し、コードをレビューする。後述のレビュー観点に従ってレビューすること。
+   - **注意**: `git diff` / `git diff --cached` / `git diff main...HEAD` は使わないこと。ローカルの `main` は古い場合があり、PR外の変更まで差分に含まれてしまう。必ず `gh pr diff <PR番号>` を使うこと。
 3. Write ツールで `./tmp-code-review-diff.md` にレビュー結果を書き出してから、`fed artifact write code_review_diff --file ./tmp-code-review-diff.md` で保存する
 4. `fed session respond-workflow done` を実行してステート遷移を発火する
 
