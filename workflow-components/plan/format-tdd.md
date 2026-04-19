@@ -61,13 +61,15 @@
 
 **重要: 既存テストとの重複を避ける。** 計画作成時に既存テストを調査し、既にカバーされている観点は除外する。
 
-| テストファイル | テスト内容 | テストしたい振る舞い |
-|---|---|---|
-| `path/to/existing_test.py`（既存修正） | 既存テスト名の変更内容 | [1.1] 対応する振る舞いの要約 |
-| `path/to/existing_test.py`（追記） | input1="valid", input2=10 → 期待される結果 | [1.2] 対応する振る舞いの要約 |
-| `path/to/existing_test.py`（追記） | input1="" → ValidationError | [1.2] 対応する振る舞いの要約 |
-| `path/to/new_test.py`（新規） | input=MAX_LIMIT → 正常処理 | [2.1] 対応する振る舞いの要約 |
-| `path/to/new_test.py`（新規） | input=MAX_LIMIT+1 → ValidationError | [2.1] 対応する振る舞いの要約 |
+**重要: 各行の先頭に通し番号（`#`）を付ける。** レビュー時に「3番のテストが〜」のように特定のシナリオを参照しやすくするため。番号はテーブル全体で1から連番で振る（テストファイルごとのリセットはしない）。
+
+| # | テストファイル | テスト内容 | テストしたい振る舞い |
+|---|---|---|---|
+| 1 | `path/to/existing_test.py`（既存修正） | 既存テスト名の変更内容 | [1.1] 対応する振る舞いの要約 |
+| 2 | `path/to/existing_test.py`（追記） | input1="valid", input2=10 → 期待される結果 | [1.2] 対応する振る舞いの要約 |
+| 3 | `path/to/existing_test.py`（追記） | input1="" → ValidationError | [1.2] 対応する振る舞いの要約 |
+| 4 | `path/to/new_test.py`（新規） | input=MAX_LIMIT → 正常処理 | [2.1] 対応する振る舞いの要約 |
+| 5 | `path/to/new_test.py`（新規） | input=MAX_LIMIT+1 → ValidationError | [2.1] 対応する振る舞いの要約 |
 
 ## 修正対象ファイル一覧
 
