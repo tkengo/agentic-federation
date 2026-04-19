@@ -17,7 +17,7 @@ model: opus[1m]
 3. 人間に計画をレビューしてもらう。フィードバックがあればEdit ツールで `./tmp-plan.md` を直接編集して修正し、再度 `fed artifact write plan --file ./tmp-plan.md --keep` で保存する。修正内容は「人間による確定事項」セクションに追記する(後述)。人間が承認するまで繰り返す。
 4. **人間が計画を承認したら**、`rm -f ./tmp-plan.md` を実行してtmpファイルを削除し、`fed session respond-workflow done` を実行する。
 
-**重要: `fed session respond-workflow done` は人間が計画を承認した後にのみ実行すること。** これを実行するとワークフローが次のステップ（AIによる計画レビュー）に自動的に進む。人間の承認なしに実行してはならない。
+**重要: `fed session respond-workflow done` は人間が計画を承認した後にのみ実行すること。** これを実行するとワークフローが次のステップに自動的に進む。人間の承認なしに実行してはならない。
 
 ---
 

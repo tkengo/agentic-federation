@@ -7,10 +7,9 @@ focus: standalone
 windows:
   - name: review
     panes:
-      - id: claude
-        name: Claude
+      - id: shell
+        name: Shell
         pane: 1
-        command: yoloclaude
       - id: editor
         name: Editor
         pane: 2

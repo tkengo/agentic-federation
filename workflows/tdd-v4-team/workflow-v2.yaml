@@ -60,7 +60,7 @@ steps:
 
   - id: plan_commit_push
     type: human
-    prompt: "計画ファイルが docs/plans/ に配置されました。内容を確認し、commit & push してください。完了したら: fed session respond-workflow done"
+    prompt: "計画ファイルを確認し commit & pushしたら fed session respond-workflow done"
     description: "人間が計画ファイルを commit & push"
 
   - id: plan_pr_create
@@ -70,7 +70,7 @@ steps:
 
   - id: plan_pr_review
     type: human
-    prompt: "PRを作成しました。チームメンバーのレビューを待ってください。レビュー完了後: fed session respond-workflow done"
+    prompt: "チームメンバーのレビューが完了したら fed session respond-workflow done"
     description: "チームメンバーによるPRレビュー待ち"
 
   # ============================================================
