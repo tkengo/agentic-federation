@@ -148,7 +148,7 @@ steps:
             resume: true
             resume_prompt: "コードが修正されました。影響範囲・リスク観点で再レビューしてください。"
           - id: review_conventions
-            type: claude
+            type: codex
             agent: code-reviewer-conventions
             description: "規約・一貫性観点レビュー"
             resume: true
