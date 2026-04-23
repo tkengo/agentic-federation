@@ -96,6 +96,7 @@ export function Home({
   const [confirmingKill, setConfirmingKill] = useState(false);
   const [confirmingClean, setConfirmingClean] = useState(false);
   const [confirmingDeleteSession, setConfirmingDeleteSession] = useState(false);
+  const [confirmingDeleteRepo, setConfirmingDeleteRepo] = useState(false);
   const [confirmingUnprotect, setConfirmingUnprotect] = useState(false);
   const [cleaning, setCleaning] = useState(false);
 
@@ -175,6 +176,7 @@ export function Home({
   }, [selectedSession, onSelectedSessionChange]);
 
   // --- Footer overrides ---
+  const selectedRepo = repos[repoSelectedIndex];
   useEffect(() => {
     if (cleaning) {
       setOverride({ type: "cleaning" });
@@ -184,12 +186,14 @@ export function Home({
       setOverride({ type: "confirmClean", count: cleanableCount });
     } else if (confirmingKill && selectedSession) {
       setOverride({ type: "confirmKill", name: selectedSession.name });
+    } else if (confirmingDeleteRepo && selectedRepo) {
+      setOverride({ type: "confirmDeleteRepo", name: selectedRepo.name });
     } else if (renamingRepo) {
       setOverride({ type: "renaming", name: renamingRepo });
     } else {
       clearOverride();
     }
-  }, [cleaning, confirmingUnprotect, confirmingClean, confirmingKill, renamingRepo, cleanableCount, selectedSession, selectedProtected, setOverride, clearOverride]);
+  }, [cleaning, confirmingUnprotect, confirmingClean, confirmingKill, confirmingDeleteRepo, renamingRepo, cleanableCount, selectedSession, selectedProtected, selectedRepo, setOverride, clearOverride]);
 
   useEffect(() => {
     return () => { clearOverride(); };
@@ -308,6 +312,19 @@ export function Home({
     setRenameValue("");
   }, [renamingRepo, showMessage, showError, refreshRepos]);
 
+  const deleteRepo = useCallback(() => {
+    if (!selectedRepo) return;
+    try {
+      execSync(`fed repo delete '${selectedRepo.name}' --force`, { stdio: "pipe" });
+      showMessage(`Deleted: ${selectedRepo.name}`);
+      refreshRepos();
+    } catch (e: unknown) {
+      const err = e as { stderr?: Buffer };
+      const msg = err.stderr?.toString().trim() || `Failed to delete ${selectedRepo.name}`;
+      showError(msg);
+    }
+  }, [selectedRepo, showMessage, showError, refreshRepos]);
+
   const openRepoTmuxSession = useCallback((repoIndex: number) => {
     const repo = repos[repoIndex];
     if (!repo) return;
@@ -380,7 +397,11 @@ export function Home({
         }
       },
       onStop: () => {
-        if (activeTab === "sessions" && selectedSession) setConfirmingKill(true);
+        if (activeTab === "sessions" && selectedSession) {
+          setConfirmingKill(true);
+        } else if (activeTab === "repos" && selectedRepo) {
+          setConfirmingDeleteRepo(true);
+        }
       },
       onClean: () => {
         if (cleanableCount > 0) setConfirmingClean(true);
@@ -415,7 +436,7 @@ export function Home({
         }
       },
     },
-    active && !confirmingKill && !confirmingClean && !confirmingUnprotect && !renamingRepo
+    active && !confirmingKill && !confirmingClean && !confirmingUnprotect && !confirmingDeleteRepo && !renamingRepo
   );
 
   // Kill confirmation handler
@@ -445,6 +466,19 @@ export function Home({
       }
     },
     { isActive: active && confirmingClean }
+  );
+
+  // Delete repo confirmation handler
+  useInput(
+    (_input) => {
+      if (_input === "y" || _input === "Y") {
+        setConfirmingDeleteRepo(false);
+        deleteRepo();
+      } else {
+        setConfirmingDeleteRepo(false);
+      }
+    },
+    { isActive: active && confirmingDeleteRepo }
   );
 
   // Unprotect confirmation handler

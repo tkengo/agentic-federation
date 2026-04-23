@@ -61,6 +61,7 @@ export type FooterOverride =
   | { type: "confirmKill"; name: string }
   | { type: "confirmScript"; name: string }
   | { type: "confirmDeleteSession"; name: string }
+  | { type: "confirmDeleteRepo"; name: string }
   | { type: "confirmUnprotect"; name: string }
   | { type: "creating" }
   | { type: "renaming"; name: string };

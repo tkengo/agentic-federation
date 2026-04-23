@@ -39,6 +39,12 @@ export function Footer() {
         Delete session &quot;{override.name}&quot;? [y]Yes  [any key]Cancel
       </Text>
     );
+  } else if (override?.type === "confirmDeleteRepo") {
+    content = (
+      <Text color="yellow">
+        Delete repository &quot;{override.name}&quot; (config + workspace)? [y]Yes  [any key]Cancel
+      </Text>
+    );
   } else if (override?.type === "confirmUnprotect") {
     content = (
       <Text color="yellow">
