@@ -140,23 +140,7 @@ steps:
                 prompt: "コードレビューでエスカレーション。code_review_integratedアーティファクトを確認してください。"
 
   # ============================================================
-  # Phase 4: Post-processing
-  # ============================================================
-  - id: post_processing
-    type: parallel
-    description: "知見抽出・エビデンス収集"
-    branches:
-      - id: learnings
-        type: claude
-        agent: learnings
-        description: "知見抽出"
-      - id: evidence
-        type: claude
-        agent: frontend-evidence
-        description: "エビデンス収集"
-
-  # ============================================================
-  # Phase 5: Human Final Review
+  # Phase 4: Human Final Review
   # ============================================================
   - id: final_review
     type: human
@@ -175,5 +159,6 @@ steps:
           - id: fixing
             type: human
             agent: fixer
+            notify: false
             prompt: "人間とfixerが対話しながら修正。完了したら: fed session respond-workflow done"
             description: "人間とfixerエージェントが対話しながらコード修正"
