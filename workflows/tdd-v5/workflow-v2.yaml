@@ -24,7 +24,7 @@ windows:
       - id: planner
         name: Planner
         pane: 1
-        command: "yoloclaude --agent __fed-tdd-v4-team-$FED_SESSION-planner"
+        command: "yoloclaude --agent __fed-tdd-v5-$FED_SESSION-planner"
       - id: human
         name: Human
         pane: 2
