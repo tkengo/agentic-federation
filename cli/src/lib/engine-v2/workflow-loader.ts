@@ -71,7 +71,6 @@ export function loadV2Workflow(filePath: string): V2Workflow {
  */
 function validateWindows(windows: V2Window[]): void {
   const seenWindowNames = new Set<string>();
-  const seenPaneIds = new Set<string>();
 
   for (let i = 0; i < windows.length; i++) {
     const win = windows[i];
@@ -94,6 +93,8 @@ function validateWindows(windows: V2Window[]): void {
       throw new Error(`${prefix}: must have at least one pane`);
     }
 
+    // Pane ids must be unique within a window (not across windows).
+    const seenPaneIds = new Set<string>();
     for (let j = 0; j < win.panes.length; j++) {
       const pane = win.panes[j];
       const panePrefix = `${prefix}.panes[${j}]`;

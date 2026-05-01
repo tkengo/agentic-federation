@@ -40,7 +40,7 @@ windows:
         name: Fixer
         pane: 1
         command: "yoloclaude --agent __fed-tdd-v5-$FED_SESSION-fixer"
-      - id: human
+      - id: humanfix
         name: Human
         pane: 2
         command: "cd $FED_SESSION_DIR && nvim"
