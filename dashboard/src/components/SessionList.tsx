@@ -4,6 +4,7 @@ import { SessionRow } from "./SessionRow.js";
 import { ScrollableRows } from "./ScrollableRows.js";
 import { statusDisplayWidth } from "./StatusBadge.js";
 import { useBlink } from "../hooks/useBlink.js";
+import { computeScrollOffset } from "../utils/scroll.js";
 import { STALE_THRESHOLD_SEC } from "../utils/types.js";
 import type { SessionData } from "../utils/types.js";
 
@@ -12,17 +13,18 @@ interface SessionListProps {
   dimmed?: boolean;
   selectedIndex?: number;
   maxVisible: number;
-  scrollOffset: number;
 }
 
-export function SessionList({ sessions, dimmed, selectedIndex, maxVisible, scrollOffset }: SessionListProps) {
+type RenderedItem =
+  | { kind: "spacer" }
+  | { kind: "group"; repo: string; count: number }
+  | { kind: "row"; session: SessionData; sessionIndex: number };
+
+export function SessionList({ sessions, dimmed, selectedIndex, maxVisible }: SessionListProps) {
   const anyWaiting = sessions.some((s) => s.waitingHuman.waiting);
   const blinkOn = useBlink(500, anyWaiting);
 
   const colWidths = {
-    repo: Math.max(4, ...sessions.map((s) =>
-      s.meta.repo ? s.meta.repo.length : s.name.length
-    )),
     session: Math.max(7, ...sessions.map((s) => s.name.length)),
     workflow: Math.max(8, ...sessions.map((s) => (s.workflow ?? "solo").length)),
     status: Math.max(6, ...sessions.map((s) => {
@@ -42,29 +44,80 @@ export function SessionList({ sessions, dimmed, selectedIndex, maxVisible, scrol
     );
   }
 
+  // Build groups by repo, preserving the existing sort order (repo asc, branch asc)
+  const groups: { repo: string; rows: { session: SessionData; sessionIndex: number }[] }[] = [];
+  sessions.forEach((session, idx) => {
+    const repo = session.meta.repo || session.name;
+    const last = groups[groups.length - 1];
+    if (last && last.repo === repo) {
+      last.rows.push({ session, sessionIndex: idx });
+    } else {
+      groups.push({ repo, rows: [{ session, sessionIndex: idx }] });
+    }
+  });
+
+  // Flatten into a single list of rendered items so scrolling can treat
+  // headers and spacers uniformly with session rows.
+  const renderedItems: RenderedItem[] = [];
+  groups.forEach((group, gi) => {
+    if (gi > 0) renderedItems.push({ kind: "spacer" });
+    renderedItems.push({ kind: "group", repo: group.repo, count: group.rows.length });
+    for (const r of group.rows) {
+      renderedItems.push({ kind: "row", session: r.session, sessionIndex: r.sessionIndex });
+    }
+  });
+
+  // Find rendered index of the selected session for scroll computation
+  const renderedSelectedIndex =
+    selectedIndex === undefined
+      ? 0
+      : Math.max(0, renderedItems.findIndex((it) => it.kind === "row" && it.sessionIndex === selectedIndex));
+
+  const visibleRows = Math.max(1, maxVisible - 1); // subtract column header row
+  const scrollOffset = computeScrollOffset(renderedSelectedIndex, renderedItems.length, visibleRows);
+
   return (
     <Box flexDirection="column" paddingX={1}>
       {/* Column header */}
       <Box>
         <Text dimColor>
-          {`    ${"REPO".padEnd(colWidths.repo)}  ${"SESSION".padEnd(colWidths.session)}  ${"WORKFLOW".padEnd(colWidths.workflow)}  ${"STATUS".padEnd(colWidths.status + 2)}  CREATED`}
+          {`    ${"SESSION".padEnd(colWidths.session)}  ${"WORKFLOW".padEnd(colWidths.workflow)}  ${"STATUS".padEnd(colWidths.status + 2)}  CREATED`}
         </Text>
       </Box>
 
       <ScrollableRows
-        items={sessions}
-        maxVisible={maxVisible - 1} // subtract column header row
+        items={renderedItems}
+        maxVisible={visibleRows}
         scrollOffset={scrollOffset}
-        keyExtractor={(s) => s.name}
-        renderRow={(session, i) => (
-          <SessionRow
-            session={session}
-            selected={!dimmed && selectedIndex === i}
-            dimmed={dimmed}
-            colWidths={colWidths}
-            blinkOn={anyWaiting ? blinkOn : true}
-          />
-        )}
+        keyExtractor={(item, idx) => {
+          if (item.kind === "row") return `row-${item.session.name}`;
+          if (item.kind === "group") return `group-${item.repo}-${idx}`;
+          return `spacer-${idx}`;
+        }}
+        renderRow={(item) => {
+          if (item.kind === "spacer") {
+            return <Text>{" "}</Text>;
+          }
+          if (item.kind === "group") {
+            return (
+              <Box>
+                <Text color={dimmed ? undefined : "magenta"} bold dimColor={dimmed}>
+                  {`  ${item.repo}`}
+                </Text>
+                <Text dimColor>{`  (${item.count})`}</Text>
+              </Box>
+            );
+          }
+          return (
+            <SessionRow
+              session={item.session}
+              selected={!dimmed && selectedIndex === item.sessionIndex}
+              dimmed={dimmed}
+              colWidths={colWidths}
+              blinkOn={anyWaiting ? blinkOn : true}
+            />
+          );
+        }}
       />
     </Box>
   );

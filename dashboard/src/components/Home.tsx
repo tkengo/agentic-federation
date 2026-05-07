@@ -165,7 +165,8 @@ export function Home({
       : undefined;
 
   // --- Scroll offsets ---
-  const sessionScrollOffset = computeScrollOffset(sessionSelectedIndex, sessions.length, maxVisible - 1);
+  // SessionList computes its own scroll offset because rendered rows include
+  // group headers and spacers that shift positions away from the sessions array.
   const repoScrollOffset = computeScrollOffset(repoSelectedIndex, repos.length, maxVisible - 1);
   const logScrollOffset = computeScrollOffset(logSelectedIndex, logs.length, maxVisible - 1);
   const protectedScrollOffset = computeScrollOffset(protectedSelectedIndex, protectedWorktrees.length, maxVisible - 1);
@@ -533,7 +534,6 @@ export function Home({
           dimmed={!active}
           selectedIndex={!active ? undefined : sessionSelectedIndex}
           maxVisible={maxVisible}
-          scrollOffset={sessionScrollOffset}
         />
       )}
 

@@ -11,7 +11,6 @@ interface SessionRowProps {
   dimmed?: boolean;
   blinkOn: boolean;
   colWidths: {
-    repo: number;
     session: number;
     workflow: number;
     status: number;
@@ -53,13 +52,7 @@ export function SessionRow({ session, selected, dimmed, blinkOn, colWidths }: Se
   return (
     <Box>
       <Text color={highlight ? "cyan" : undefined} bold={highlight} dimColor={dimmed}>
-        {` ${cursor} `}
-      </Text>
-      <Text color={highlight ? "cyan" : undefined} bold={highlight} dimColor={dimmed}>
-        {(session.meta.repo
-          ? session.meta.repo
-          : session.name
-        ).padEnd(colWidths.repo)}
+        {` ${cursor}  `}
       </Text>
       {session.meta.from ? (
         <Text color={highlight ? "cyan" : "magenta"} bold={highlight} dimColor={dimmed}>{"⇣ "}</Text>
