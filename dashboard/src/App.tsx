@@ -309,7 +309,7 @@ function AppInner() {
         break;
       case "delete":
         setScreen("list");
-        setPendingHomeAction("stop");
+        setPendingHomeAction("stop-confirm");
         break;
       case "openDetail":
         setDetailSessionName(session.name);

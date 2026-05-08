@@ -351,6 +351,9 @@ export function Home({
       case "stop":
         killSession();
         break;
+      case "stop-confirm":
+        if (selectedSession) setConfirmingKill(true);
+        break;
       case "clean":
         runClean();
         break;

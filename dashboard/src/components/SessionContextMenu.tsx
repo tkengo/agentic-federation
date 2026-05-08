@@ -28,7 +28,7 @@ interface SessionContextMenuProps {
 
 const BASE_MAIN_ITEMS: { id: MenuItem["id"]; label: string; shortcut: string; color?: string }[] = [
   { id: "attach", label: "Attach to session", shortcut: "a" },
-  { id: "delete", label: "Delete session", shortcut: "d", color: "red" },
+  { id: "delete", label: "Delete session", shortcut: "d" },
   { id: "openDetail", label: "Open detail", shortcut: "i" },
   { id: "copyName", label: "Copy session name", shortcut: "y" },
   { id: "copyWorktree", label: "Copy worktree path", shortcut: "Y" },
