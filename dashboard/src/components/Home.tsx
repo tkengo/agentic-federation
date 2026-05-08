@@ -427,7 +427,7 @@ export function Home({
       },
       onSpace: () => {
         if (activeTab === "sessions" && selectedSession) {
-          onDetailSession(selectedSession.name);
+          onNavigate("session-menu");
         } else if (activeTab === "repos" && repos[repoSelectedIndex]) {
           onDetailRepo(repos[repoSelectedIndex]!.name);
         }
