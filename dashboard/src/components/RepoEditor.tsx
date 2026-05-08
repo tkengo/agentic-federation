@@ -47,8 +47,13 @@ type Row =
   | { type: "array_add"; arrayKey: ArrayKey; rowKey: string }
   | { type: "action"; id: "open-nvim"; label: string; icon: string; rowKey: string };
 
+// Presets for base_branch quick-select
+const BRANCH_PRESETS = ["main", "origin/main"] as const;
+type BranchPresetIdx = 0 | 1 | 2; // 2 = custom
+
 type EditingState =
   | { kind: "scalar"; key: ScalarKey }
+  | { kind: "branch_select"; preset: BranchPresetIdx }
   | { kind: "array_edit"; arrayKey: ArrayKey; index: number }
   | { kind: "array_new"; arrayKey: ArrayKey };
 
@@ -141,6 +146,18 @@ export function RepoEditor({
   function startEdit() {
     if (!selectedRow) return;
     if (selectedRow.type === "scalar") {
+      if (selectedRow.scalarKey === "base_branch") {
+        const current = (config.base_branch as string | undefined) ?? "";
+        const presetIdx = BRANCH_PRESETS.indexOf(current as typeof BRANCH_PRESETS[number]);
+        if (presetIdx >= 0) {
+          setEditValue("");
+          setEditing({ kind: "branch_select", preset: presetIdx as BranchPresetIdx });
+        } else {
+          setEditValue(current);
+          setEditing({ kind: "branch_select", preset: 2 });
+        }
+        return;
+      }
       const current = (config[selectedRow.scalarKey] as string | undefined) ?? "";
       setEditValue(current);
       setEditing({ kind: "scalar", key: selectedRow.scalarKey });
@@ -174,6 +191,15 @@ export function RepoEditor({
         next[k] = value;
       }
       saveConfig(next, `Updated ${field.label}`);
+    } else if (editing.kind === "branch_select") {
+      if (editing.preset === 0 || editing.preset === 1) {
+        next.base_branch = BRANCH_PRESETS[editing.preset];
+      } else if (value === "") {
+        delete next.base_branch;
+      } else {
+        next.base_branch = value;
+      }
+      saveConfig(next, "Updated base_branch");
     } else if (editing.kind === "array_edit") {
       const arr = ((next[editing.arrayKey] as string[] | undefined) ?? []).slice();
       if (value === "") {
@@ -244,7 +270,7 @@ export function RepoEditor({
       setSelectableIdx((s) => Math.max(0, s - 1));
     } else if (key.downArrow || input === "j" || (key.ctrl && input === "n")) {
       setSelectableIdx((s) => Math.min(selectableRowIndices.length - 1, s + 1));
-    } else if (key.return) {
+    } else if (key.return || key.tab) {
       startEdit();
     } else if (input === "a") {
       startAddOnCurrentArray();
@@ -253,9 +279,42 @@ export function RepoEditor({
     }
   }, { isActive: active && editing === null });
 
-  // Edit-mode escape handler. EmacsTextInput passes Esc through (returns early).
+  // Edit-mode handlers (run alongside EmacsTextInput's own useInput).
+  // EmacsTextInput passes Esc/Tab/Up/Down through (returns early), so we can
+  // handle them here without interfering with text input.
   useInput((_input, key) => {
-    if (key.escape) cancelEdit();
+    if (!editing) return;
+    if (key.escape) {
+      cancelEdit();
+      return;
+    }
+    if (editing.kind === "branch_select") {
+      if (key.leftArrow) {
+        setEditing({ ...editing, preset: Math.max(0, editing.preset - 1) as BranchPresetIdx });
+        return;
+      }
+      if (key.rightArrow) {
+        setEditing({ ...editing, preset: Math.min(2, editing.preset + 1) as BranchPresetIdx });
+        return;
+      }
+      if (key.return && editing.preset !== 2) {
+        commitEdit();
+        return;
+      }
+      if (key.tab && editing.preset !== 2) {
+        commitEdit();
+        return;
+      }
+      // For preset === 2, EmacsTextInput owns Enter (onSubmit). Tab passes through
+      // EmacsTextInput, so we commit here to keep Tab=Enter behavior.
+      if (key.tab && editing.preset === 2) {
+        commitEdit();
+        return;
+      }
+    } else if (key.tab) {
+      // Tab in scalar/array editing: commit (Tab=Enter behavior).
+      commitEdit();
+    }
   }, { isActive: active && editing !== null });
 
   const renderRow = (row: Row, realIndex: number): React.ReactNode => {
@@ -278,6 +337,35 @@ export function RepoEditor({
       const field = SCALAR_FIELDS.find((f) => f.key === row.scalarKey)!;
       const current = (config[row.scalarKey] as string | undefined) ?? "";
       const label = field.label.padEnd(SCALAR_LABEL_WIDTH);
+
+      // base_branch uses segmented preset selector instead of plain text input
+      if (row.scalarKey === "base_branch" && editing?.kind === "branch_select") {
+        const preset = editing.preset;
+        const seg = (idx: BranchPresetIdx, body: React.ReactNode) => (
+          <Text color={preset === idx ? "cyan" : undefined} bold={preset === idx}>
+            {preset === idx ? "◉ " : "○ "}{body}
+          </Text>
+        );
+        return (
+          <Box>
+            <Text color={cursorColor} bold={isSelected}>{cursor}{label}  </Text>
+            {seg(0, "main")}
+            <Text>   </Text>
+            {seg(1, "origin/main")}
+            <Text>   </Text>
+            {seg(2, <>custom{preset === 2 ? ": " : ""}</>)}
+            {preset === 2 && (
+              <EmacsTextInput
+                value={editValue}
+                onChange={setEditValue}
+                onSubmit={commitEdit}
+                focus={true}
+              />
+            )}
+          </Box>
+        );
+      }
+
       const isEditingHere = editing?.kind === "scalar" && editing.key === row.scalarKey;
       return (
         <Box>
@@ -369,9 +457,11 @@ export function RepoEditor({
       <Box flexGrow={1} />
       <Box>
         <Text dimColor>
-          {editing
-            ? "Enter:save  Esc:cancel"
-            : "j/k:nav  Enter:edit  a:add  d:del  Esc/Space:back"}
+          {editing?.kind === "branch_select"
+            ? "←/→:select  Enter/Tab:save  Esc:cancel"
+            : editing
+              ? "Enter/Tab:save  Esc:cancel"
+              : "j/k:nav  Enter/Tab:edit  a:add  d:del  Esc/Space:back"}
         </Text>
       </Box>
     </Box>
