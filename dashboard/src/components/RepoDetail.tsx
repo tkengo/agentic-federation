@@ -103,7 +103,7 @@ export function RepoDetail({
 
   // Layout
   const contentWidth = columns - 4;
-  const detailWidth = Math.max(36, Math.min(60, Math.floor(contentWidth * 0.45)));
+  const detailWidth = Math.max(52, Math.min(80, Math.floor(contentWidth * 0.55)));
   const previewWidth = Math.max(20, contentWidth - detailWidth - 1);
   const infoLines = 3; // name + repoRoot + blank
   const panelHeight = Math.max(6, rows - headerHeight - 2 - infoLines);
