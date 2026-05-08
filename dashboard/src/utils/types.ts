@@ -64,7 +64,8 @@ export type FooterOverride =
   | { type: "confirmDeleteRepo"; name: string }
   | { type: "confirmUnprotect"; name: string }
   | { type: "creating" }
-  | { type: "renaming"; name: string };
+  | { type: "renaming"; name: string }
+  | { type: "runningScript"; name: string };
 
 // Workflow info for dashboard display
 export interface WorkflowInfo {

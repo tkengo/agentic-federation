@@ -344,12 +344,14 @@ function AppInner() {
         const scriptName = action.scriptName;
         setScreen("list");
         try {
+          setOverride({ type: "runningScript", name: scriptName });
           const proc = spawn(
             "fed",
             ["repo-script", "run", scriptName, "--session", session.meta.tmux_session],
             { stdio: "ignore", detached: false }
           );
           proc.on("exit", (code) => {
+            clearOverride();
             if (code === 0) {
               showMessage(`Script done: ${scriptName}`);
             } else {
@@ -358,16 +360,17 @@ function AppInner() {
             refresh();
           });
           proc.on("error", () => {
+            clearOverride();
             showError(`Failed to run script: ${scriptName}`);
           });
-          showMessage(`Running script: ${scriptName}…`);
         } catch {
+          clearOverride();
           showError(`Failed to run script: ${scriptName}`);
         }
         break;
       }
     }
-  }, [activeSession, showMessage, showError, refresh]);
+  }, [activeSession, showMessage, showError, setOverride, clearOverride, refresh]);
 
   // Global Ctrl+C double-press to quit
   useInput(

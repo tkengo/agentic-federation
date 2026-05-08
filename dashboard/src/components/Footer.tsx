@@ -15,6 +15,12 @@ export function Footer() {
         <Spinner /> Cleaning worktrees...
       </Text>
     );
+  } else if (override?.type === "runningScript") {
+    content = (
+      <Text color="yellow">
+        <Spinner /> Running script: {override.name}...
+      </Text>
+    );
   } else if (override?.type === "confirmClean") {
     content = (
       <Text color="yellow">
