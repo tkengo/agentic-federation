@@ -133,11 +133,9 @@ function collectArchiveSessions(): Row[] {
   return rows;
 }
 
-// Print a formatted table of session rows
-function printTable(rows: Row[], showSource: boolean): void {
+// Print sessions grouped by repo, mirroring the dashboard layout
+function printGroupedTable(rows: Row[], showSource: boolean): void {
   const headers = {
-    repo: "REPO",
-    branch: "BRANCH",
     session: "SESSION",
     workflow: "WORKFLOW",
     status: "STATUS",
@@ -145,8 +143,6 @@ function printTable(rows: Row[], showSource: boolean): void {
     created: "CREATED",
   };
   const widths = {
-    repo: Math.max(headers.repo.length, ...rows.map((r) => r.repo.length)),
-    branch: Math.max(headers.branch.length, ...rows.map((r) => r.branch.length)),
     session: Math.max(headers.session.length, ...rows.map((r) => r.session.length)),
     workflow: Math.max(headers.workflow.length, ...rows.map((r) => r.workflow.length)),
     status: Math.max(headers.status.length, ...rows.map((r) => r.status.length)),
@@ -155,32 +151,43 @@ function printTable(rows: Row[], showSource: boolean): void {
   };
 
   let header =
-    `  ${headers.repo.padEnd(widths.repo)}  ` +
-    `${headers.branch.padEnd(widths.branch)}  ` +
-    `${headers.session.padEnd(widths.session)}  ` +
+    `    ${headers.session.padEnd(widths.session)}  ` +
     `${headers.workflow.padEnd(widths.workflow)}  ` +
     `${headers.status.padEnd(widths.status)}`;
   if (showSource) header += `  ${headers.source.padEnd(widths.source)}`;
   header += `  ${headers.created}`;
   console.log(header);
 
+  // Build groups by repo, preserving input order (already sorted repo asc, branch asc)
+  const groups: { repo: string; rows: Row[] }[] = [];
   for (const row of rows) {
-    let line =
-      `  ${row.repo.padEnd(widths.repo)}  ` +
-      `${row.branch.padEnd(widths.branch)}  ` +
-      `${row.session.padEnd(widths.session)}  ` +
-      `${row.workflow.padEnd(widths.workflow)}  ` +
-      `${row.status.padEnd(widths.status)}`;
-    if (showSource) line += `  ${row.source.padEnd(widths.source)}`;
-    line += `  ${row.created}`;
-    if (row.description) {
-      const truncated = row.description.length > 50
-        ? row.description.slice(0, 49) + "…"
-        : row.description;
-      line += `  ${truncated}`;
+    const last = groups[groups.length - 1];
+    if (last && last.repo === row.repo) {
+      last.rows.push(row);
+    } else {
+      groups.push({ repo: row.repo, rows: [row] });
     }
-    console.log(line);
   }
+
+  groups.forEach((group, gi) => {
+    if (gi > 0) console.log();
+    console.log(`  ${group.repo} (${group.rows.length})`);
+    for (const row of group.rows) {
+      let line =
+        `    ${row.session.padEnd(widths.session)}  ` +
+        `${row.workflow.padEnd(widths.workflow)}  ` +
+        `${row.status.padEnd(widths.status)}`;
+      if (showSource) line += `  ${row.source.padEnd(widths.source)}`;
+      line += `  ${row.created}`;
+      if (row.description) {
+        const truncated = row.description.length > 50
+          ? row.description.slice(0, 49) + "…"
+          : row.description;
+        line += `  ${truncated}`;
+      }
+      console.log(line);
+    }
+  });
 }
 
 export function listCommand(options?: {
@@ -196,7 +203,7 @@ export function listCommand(options?: {
   if (showActive) allRows.push(...collectActiveSessions());
   if (showArchive) allRows.push(...collectArchiveSessions());
 
-  // Sort by createdAt descending (newest first)
+  // Apply limit based on createdAt desc (newest first), then re-sort for grouping
   allRows.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const rows = allRows.slice(0, limit);
 
@@ -206,9 +213,16 @@ export function listCommand(options?: {
     return;
   }
 
+  // Sort grouped output by repo asc, branch asc (matches dashboard)
+  rows.sort((a, b) => {
+    const repoCompare = a.repo.localeCompare(b.repo, undefined, { sensitivity: "base" });
+    if (repoCompare !== 0) return repoCompare;
+    return a.branch.localeCompare(b.branch, undefined, { sensitivity: "base" });
+  });
+
   // Show SOURCE column only when both active and archive are included
   const showSource = showActive && showArchive;
-  printTable(rows, showSource);
+  printGroupedTable(rows, showSource);
 
   if (allRows.length > limit) {
     console.log(`\n  Showing ${limit} of ${allRows.length} sessions (use --limit to show more)`);
