@@ -10,6 +10,9 @@ import { SessionDetail } from "./components/SessionDetail.js";
 import { RepoDetail } from "./components/RepoDetail.js";
 import { CreateSession } from "./components/CreateSession.js";
 import { CommandPalette } from "./components/CommandPalette.js";
+import { SessionContextMenu } from "./components/SessionContextMenu.js";
+import type { SessionContextAction } from "./components/SessionContextMenu.js";
+import { useScripts } from "./components/DetailPanel.js";
 import { Footer } from "./components/Footer.js";
 import { Splash } from "./components/Splash.js";
 import { AddRepo } from "./components/AddRepo.js";
@@ -23,7 +26,7 @@ import { switchToTmuxSession, listTmuxSessions } from "./utils/tmux.js";
 import { REPOS_DIR, LOGS_DIR } from "./utils/types.js";
 import type { SessionData, RepoInfo, WorkflowInfo, LogFileInfo } from "./utils/types.js";
 
-type Screen = "splash" | "list" | "create" | "palette" | "add-repo" | "detail" | "repo-detail";
+type Screen = "splash" | "list" | "create" | "palette" | "add-repo" | "detail" | "repo-detail" | "session-menu";
 
 // Outer shell: wraps with FooterProvider so children can use useFooter()
 export function App() {
@@ -68,6 +71,13 @@ function AppInner() {
       setDetailSessionName(null);
     }
   }, [screen, detailSessionName, detailSession]);
+
+  // Auto-back if active session disappears while session menu is open
+  useEffect(() => {
+    if (screen === "session-menu" && !activeSession) {
+      setScreen("list");
+    }
+  }, [screen, activeSession]);
 
   // Load repos from ~/.fed/repos/ with config details and tmux session status
   const loadRepos = useCallback((): RepoInfo[] => {
@@ -282,6 +292,83 @@ function AppInner() {
     [showMessage, showError, refreshRepos]
   );
 
+  // Scripts available for the active session (used by SessionContextMenu)
+  const activeSessionScripts = useScripts(activeSession?.sessionDir ?? "");
+
+  // Handle actions chosen from the SessionContextMenu
+  const handleSessionMenuAction = useCallback((action: SessionContextAction) => {
+    if (!activeSession) {
+      setScreen("list");
+      return;
+    }
+    const session = activeSession;
+    switch (action.kind) {
+      case "attach":
+        setScreen("list");
+        setPendingHomeAction("attach");
+        break;
+      case "delete":
+        setScreen("list");
+        setPendingHomeAction("stop");
+        break;
+      case "openDetail":
+        setDetailSessionName(session.name);
+        setScreen("detail");
+        break;
+      case "copyName":
+        try {
+          execSync("pbcopy", { input: session.name });
+          showMessage(`Copied: ${session.name}`);
+        } catch {
+          showError("Failed to copy session name");
+        }
+        setScreen("list");
+        break;
+      case "copyWorktree": {
+        const worktree = session.meta.worktree;
+        if (!worktree) {
+          showError("No worktree path for this session");
+          setScreen("list");
+          break;
+        }
+        try {
+          execSync("pbcopy", { input: worktree });
+          showMessage(`Copied: ${worktree}`);
+        } catch {
+          showError("Failed to copy worktree path");
+        }
+        setScreen("list");
+        break;
+      }
+      case "runScript": {
+        const scriptName = action.scriptName;
+        setScreen("list");
+        try {
+          const proc = spawn(
+            "fed",
+            ["repo-script", "run", scriptName, "--session", session.meta.tmux_session],
+            { stdio: "ignore", detached: false }
+          );
+          proc.on("exit", (code) => {
+            if (code === 0) {
+              showMessage(`Script done: ${scriptName}`);
+            } else {
+              showError(`Script failed: ${scriptName} (exit ${code ?? "?"})`);
+            }
+            refresh();
+          });
+          proc.on("error", () => {
+            showError(`Failed to run script: ${scriptName}`);
+          });
+          showMessage(`Running script: ${scriptName}…`);
+        } catch {
+          showError(`Failed to run script: ${scriptName}`);
+        }
+        break;
+      }
+    }
+  }, [activeSession, showMessage, showError, refresh]);
+
   // Global Ctrl+C double-press to quit
   useInput(
     (input, key) => {
@@ -310,7 +397,7 @@ function AppInner() {
   }
 
   const isDetail = screen === "detail" || screen === "repo-detail";
-  const hasBottomPanel = screen === "palette" || screen === "add-repo" || screen === "create";
+  const hasBottomPanel = screen === "palette" || screen === "add-repo" || screen === "create" || screen === "session-menu";
 
   return (
     <Box flexDirection="column" width={columns} height={rows}>
@@ -435,6 +522,19 @@ function AppInner() {
                 onSubmit={createSession}
                 onCancel={() => setScreen("list")}
                 onStepChange={setCreateStep}
+              />
+            )}
+            {screen === "session-menu" && activeSession && (
+              <SessionContextMenu
+                sessionLabel={
+                  activeSession.meta.repo
+                    ? `${activeSession.meta.repo}/${activeSession.meta.branch}`
+                    : activeSession.name
+                }
+                scripts={activeSessionScripts}
+                hasWorktree={!!activeSession.meta.worktree}
+                onClose={() => setScreen("list")}
+                onAction={handleSessionMenuAction}
               />
             )}
           </BottomPanel>

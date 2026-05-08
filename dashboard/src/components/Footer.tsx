@@ -24,7 +24,7 @@ export function Footer() {
   } else if (override?.type === "confirmKill") {
     content = (
       <Text color="yellow">
-        Stop session &quot;{override.name}&quot;? [y]Yes  [any key]Cancel
+        Delete session &quot;{override.name}&quot;? [y]Yes  [any key]Cancel
       </Text>
     );
   } else if (override?.type === "confirmScript") {

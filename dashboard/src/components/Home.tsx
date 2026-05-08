@@ -33,7 +33,7 @@ interface HomeProps {
   refreshRepos: () => void;
   refreshLogs: () => void;
   hasBottomPanel: boolean;
-  onNavigate: (target: "create" | "palette" | "add-repo") => void;
+  onNavigate: (target: "create" | "palette" | "add-repo" | "session-menu") => void;
   onDetailSession: (sessionName: string) => void;
   onDetailRepo: (repoName: string) => void;
   onSelectedSessionChange: (session: SessionData | undefined) => void;
@@ -244,10 +244,10 @@ export function Home({
     if (!selectedSession) return;
     try {
       execSync(`fed session stop '${selectedSession.name}'`, { stdio: "ignore" });
-      showMessage(`Stopped: ${selectedSession.name}`);
+      showMessage(`Deleted: ${selectedSession.name}`);
       refresh();
     } catch {
-      showMessage(`Failed to stop ${selectedSession.name}`);
+      showMessage(`Failed to delete ${selectedSession.name}`);
     }
   }, [selectedSession, showMessage, refresh]);
 
@@ -434,6 +434,11 @@ export function Home({
           const repo = repos[repoSelectedIndex]!;
           setRenamingRepo(repo.name);
           setRenameValue(repo.name);
+        }
+      },
+      onMenu: () => {
+        if (activeTab === "sessions" && selectedSession) {
+          onNavigate("session-menu");
         }
       },
     },
