@@ -1,17 +1,16 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { Box, Text, useInput } from "ink";
 import fs from "node:fs";
 import path from "node:path";
 import { execSync } from "node:child_process";
-import { DetailPanel } from "./DetailPanel.js";
 import { PreviewPanel } from "./PreviewPanel.js";
-import { useKeyboard } from "../hooks/useKeyboard.js";
+import { RepoEditor } from "./RepoEditor.js";
+import type { RepoConfigJson } from "./RepoEditor.js";
 import { useFooter } from "../contexts/FooterContext.js";
 import { shortenHome } from "../utils/format.js";
 import { REPOS_DIR } from "../utils/types.js";
 import type { RepoInfo } from "../utils/types.js";
 import type { PreviewData } from "../hooks/usePreviewContent.js";
-import type { ScriptEntry } from "./DetailPanel.js";
 
 interface RepoDetailProps {
   repo: RepoInfo;
@@ -30,15 +29,41 @@ export function RepoDetail({
   refreshRepos,
   onBack,
 }: RepoDetailProps) {
-  const { showMessage } = useFooter();
+  const { showMessage, showError } = useFooter();
+
+  // Bumped after each save to force config + preview re-read
+  const [version, setVersion] = useState(0);
 
   // Preview scroll state
   const [previewScroll, setPreviewScroll] = useState(0);
 
-  // Config file path
+  // Editor reports edit-mode so we can disable conflicting key bindings
+  // (EmacsTextInput uses Ctrl+U for kill-line, which would otherwise also
+  // scroll the preview).
+  const [editorEditing, setEditorEditing] = useState(false);
+
   const configPath = path.join(REPOS_DIR, `${repo.name}.json`);
 
-  // Read config file content for preview
+  // Read config from disk (re-runs when version bumps)
+  const config: RepoConfigJson | null = useMemo(() => {
+    try {
+      const raw = fs.readFileSync(configPath, "utf-8");
+      const parsed = JSON.parse(raw);
+      // Spread first so unknown fields are preserved, then normalize typed fields
+      return {
+        ...parsed,
+        repo_name: parsed.repo_name ?? repo.name,
+        base_path: parsed.base_path ?? "",
+        setup_scripts: Array.isArray(parsed.setup_scripts) ? parsed.setup_scripts : [],
+        symlinks: Array.isArray(parsed.symlinks) ? parsed.symlinks : [],
+        copy_files: Array.isArray(parsed.copy_files) ? parsed.copy_files : [],
+      };
+    } catch {
+      return null;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [configPath, repo.name, version]);
+
   const previewData: PreviewData = useMemo(() => {
     try {
       const content = fs.readFileSync(configPath, "utf-8");
@@ -54,32 +79,37 @@ export function RepoDetail({
         type: "script" as const,
       };
     }
-  }, [configPath, repo.name]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [configPath, repo.name, version]);
 
-  const emptyScripts: ScriptEntry[] = [];
+  const handleConfigSaved = useCallback(() => {
+    setVersion((v) => v + 1);
+    refreshRepos();
+  }, [refreshRepos]);
 
-  // Open config in nvim
-  const openConfig = () => {
+  // Open config in nvim (kept as an action menu item)
+  const openInNvim = useCallback(() => {
     try {
       execSync(`nvim '${configPath}'`, { stdio: "inherit" });
       if (process.stdin.isTTY && process.stdin.setRawMode) {
         process.stdin.setRawMode(true);
       }
       process.stdout.write("\x1b[2J\x1b[H");
-      refreshRepos();
+      handleConfigSaved();
     } catch {
-      showMessage(`Failed to open ${repo.name}.json`);
+      showError(`Failed to open ${repo.name}.json`);
     }
-  };
+  }, [configPath, repo.name, showError, handleConfigSaved]);
 
-  // Keyboard: Enter=edit, Space/Esc=back
-  useKeyboard({
-    onEnter: openConfig,
-    onSpace: onBack,
-    onBack: onBack,
-  }, true);
+  // Layout
+  const contentWidth = columns - 4;
+  const detailWidth = Math.max(36, Math.min(60, Math.floor(contentWidth * 0.45)));
+  const previewWidth = Math.max(20, contentWidth - detailWidth - 1);
+  const infoLines = 3; // name + repoRoot + blank
+  const panelHeight = Math.max(6, rows - headerHeight - 2 - infoLines);
 
-  // Preview scroll (Ctrl+U / Ctrl+D)
+  // Preview scroll (Ctrl+U / Ctrl+D) — kept on the parent so it works
+  // regardless of editor focus
   useInput(
     (input, key) => {
       const contentHeight = Math.max(1, panelHeight - 2);
@@ -90,34 +120,35 @@ export function RepoDetail({
         setPreviewScroll((s) => Math.min(maxScroll, s + contentHeight));
       }
     },
-    { isActive: true }
+    { isActive: !editorEditing }
   );
-
-  // Layout calculations (same pattern as SessionDetail)
-  const contentWidth = columns - 4;
-  const detailWidth = Math.max(30, Math.min(55, Math.floor(contentWidth * 0.35)));
-  const previewWidth = Math.max(20, contentWidth - detailWidth - 1);
-  // info lines: repo name(1) + repoRoot(1) + blank(1)
-  const infoLines = 3;
-  const panelHeight = Math.max(5, rows - headerHeight - 2 - infoLines);
 
   return (
     <Box flexDirection="column" flexGrow={1} paddingX={1}>
-      {/* Repo info */}
       <Text bold color="cyan">{repo.name}</Text>
       <Text dimColor>{shortenHome(repo.repoRoot)}</Text>
       <Text>{" "}</Text>
 
-      {/* Detail + Preview panels */}
       <Box flexDirection="row" height={panelHeight} gap={1}>
-        <DetailPanel
-          width={detailWidth}
-          height={panelHeight}
-          mode="browse"
-          scripts={emptyScripts}
-          selectedIndex={0}
-          maxVisible={Math.max(5, panelHeight - 2)}
-        />
+        {config ? (
+          <RepoEditor
+            configPath={configPath}
+            config={config}
+            width={detailWidth}
+            height={panelHeight}
+            active={true}
+            onBack={onBack}
+            onConfigSaved={handleConfigSaved}
+            onOpenInNvim={openInNvim}
+            onMessage={showMessage}
+            onError={showError}
+            onEditingChange={setEditorEditing}
+          />
+        ) : (
+          <Box width={detailWidth} height={panelHeight} borderStyle="round" paddingX={1}>
+            <Text color="red">Failed to read {repo.name}.json</Text>
+          </Box>
+        )}
         <PreviewPanel
           preview={previewData}
           width={previewWidth}
