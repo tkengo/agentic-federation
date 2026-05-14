@@ -47,7 +47,7 @@ export function SessionList({ sessions, dimmed, selectedIndex, maxVisible }: Ses
   // Build groups by repo, preserving the existing sort order (repo asc, branch asc)
   const groups: { repo: string; rows: { session: SessionData; sessionIndex: number }[] }[] = [];
   sessions.forEach((session, idx) => {
-    const repo = session.meta.repo || session.name;
+    const repo = session.meta.repo || "standalone";
     const last = groups[groups.length - 1];
     if (last && last.repo === repo) {
       last.rows.push({ session, sessionIndex: idx });
