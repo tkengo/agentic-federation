@@ -91,7 +91,7 @@ function collectActiveSessions(): Row[] {
     const meta = readMeta(sessionDir);
     if (!meta) continue;
     rows.push({
-      repo: meta.repo || meta.tmux_session,
+      repo: meta.repo || "standalone",
       branch: meta.branch || "",
       session: entry,
       workflow: meta.workflow ?? "solo",
@@ -118,7 +118,7 @@ function collectArchiveSessions(): Row[] {
       const meta = readMeta(sessDir);
       if (!meta) continue;
       rows.push({
-        repo: meta.repo || meta.tmux_session,
+        repo: meta.repo || "standalone",
         branch: meta.branch || "",
         session: meta.tmux_session,
         workflow: meta.workflow ?? "solo",
