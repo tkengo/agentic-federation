@@ -16,6 +16,7 @@ interface FooterContextValue {
   showError: (msg: string, duration?: number) => void;
   setOverride: (override: FooterOverride) => void;
   clearOverride: () => void;
+  clearOverrideIfType: (types: ReadonlyArray<NonNullable<FooterOverride>["type"]>) => void;
   setCtrlCPending: (pending: boolean) => void;
 }
 
@@ -70,6 +71,21 @@ export function FooterProvider({ children }: { children: React.ReactNode }) {
     setOverrideState(null);
   }, []);
 
+  // Only clear the override if its current type is in the given list.
+  // Used by screens that own a subset of override types and must not clobber
+  // overrides set by other screens (e.g. a long-running script spinner).
+  const clearOverrideIfType = useCallback(
+    (types: ReadonlyArray<NonNullable<FooterOverride>["type"]>) => {
+      setOverrideState((prev) => {
+        if (prev && types.includes(prev.type)) {
+          return null;
+        }
+        return prev;
+      });
+    },
+    []
+  );
+
   const setCtrlCPending = useCallback((pending: boolean) => {
     setCtrlCPendingState(pending);
   }, []);
@@ -82,6 +98,7 @@ export function FooterProvider({ children }: { children: React.ReactNode }) {
     showError,
     setOverride,
     clearOverride,
+    clearOverrideIfType,
     setCtrlCPending,
   };
 

@@ -67,7 +67,22 @@ export function Home({
   focusSessionName,
   onFocusSessionHandled,
 }: HomeProps) {
-  const { showMessage, showError, setOverride, clearOverride } = useFooter();
+  const { showMessage, showError, setOverride, clearOverrideIfType } = useFooter();
+
+  // Footer override types owned by the Home screen. Other types (e.g.
+  // "runningScript" set by App.tsx) must not be cleared here.
+  const HOME_OWNED_OVERRIDES = React.useMemo(
+    () =>
+      [
+        "cleaning",
+        "confirmClean",
+        "confirmKill",
+        "confirmDeleteRepo",
+        "confirmUnprotect",
+        "renaming",
+      ] as const,
+    []
+  );
 
   // --- Dynamic tab order (hide empty optional tabs) ---
   const TAB_ORDER: TabId[] = React.useMemo(() => {
@@ -192,13 +207,13 @@ export function Home({
     } else if (renamingRepo) {
       setOverride({ type: "renaming", name: renamingRepo });
     } else {
-      clearOverride();
+      clearOverrideIfType(HOME_OWNED_OVERRIDES);
     }
-  }, [cleaning, confirmingUnprotect, confirmingClean, confirmingKill, confirmingDeleteRepo, renamingRepo, cleanableCount, selectedSession, selectedProtected, selectedRepo, setOverride, clearOverride]);
+  }, [cleaning, confirmingUnprotect, confirmingClean, confirmingKill, confirmingDeleteRepo, renamingRepo, cleanableCount, selectedSession, selectedProtected, selectedRepo, setOverride, clearOverrideIfType, HOME_OWNED_OVERRIDES]);
 
   useEffect(() => {
-    return () => { clearOverride(); };
-  }, [clearOverride]);
+    return () => { clearOverrideIfType(HOME_OWNED_OVERRIDES); };
+  }, [clearOverrideIfType, HOME_OWNED_OVERRIDES]);
 
   // --- Actions ---
   const openLogInNvim = useCallback(() => {
@@ -273,7 +288,7 @@ export function Home({
     proc.stderr?.on("data", (data: Buffer) => { stderr += data.toString(); });
     proc.on("close", (code) => {
       setCleaning(false);
-      clearOverride();
+      clearOverrideIfType(HOME_OWNED_OVERRIDES);
       const doneLine = stdout.match(/^Done\. (.+)$/m);
       if (code === 0) {
         showMessage(doneLine ? doneLine[1]! : "Cleaned worktrees");
@@ -288,11 +303,11 @@ export function Home({
     });
     proc.on("error", () => {
       setCleaning(false);
-      clearOverride();
+      clearOverrideIfType(HOME_OWNED_OVERRIDES);
       showError("Failed to clean worktrees");
       refresh();
     });
-  }, [refresh, setOverride, clearOverride, showMessage, showError]);
+  }, [refresh, setOverride, clearOverrideIfType, HOME_OWNED_OVERRIDES, showMessage, showError]);
 
   const handleRenameSubmit = useCallback((newName: string) => {
     if (!renamingRepo || !newName.trim() || newName.trim() === renamingRepo) {
