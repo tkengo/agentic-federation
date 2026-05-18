@@ -33,9 +33,12 @@ export interface LogFileInfo {
   path: string;     // full path (~/.fed/logs/2026-04-08.log)
 }
 
-// Waiting-for-human state
-export interface WaitingHumanData {
-  waiting: boolean;
+// Agent interaction state — three discrete signals so the dashboard can
+// distinguish "Claude is thinking", "done & idle", and "explicit ask".
+export type AgentStateValue = "processing" | "idle" | "waiting_human";
+
+export interface AgentStateData {
+  state: AgentStateValue;
   reason: string | null;
 }
 
@@ -80,7 +83,7 @@ export interface SessionData {
   meta: MetaJson;
   status: string;
   workflow?: string;
-  waitingHuman: WaitingHumanData;
+  agentState: AgentStateData;
   description?: string;
   currentStep?: string | null;
   stateMtimeMs?: number;

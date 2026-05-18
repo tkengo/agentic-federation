@@ -30,6 +30,13 @@ import {
   waitingHumanClearCommand,
   waitingHumanShowCommand,
 } from "./commands/waiting-human.js";
+import {
+  agentStateProcessingCommand,
+  agentStateIdleCommand,
+  agentStateWaitingCommand,
+  agentStateClearCommand,
+  agentStateShowCommand,
+} from "./commands/agent-state.js";
 import { listCommand } from "./commands/list.js";
 import { stopCommand } from "./commands/stop.js";
 import { archiveCommand } from "./commands/archive.js";
@@ -308,14 +315,57 @@ prompt
     promptListCommand();
   });
 
-// --- waiting-human ---
+// --- agent-state ---
+const agentState = program
+  .command("agent-state")
+  .description("Manage the running agent's interaction state (processing/idle/waiting_human)");
+
+agentState
+  .command("processing")
+  .description("Mark the agent as actively processing (set on UserPromptSubmit / tool input)")
+  .action(() => {
+    agentStateProcessingCommand();
+  });
+
+agentState
+  .command("idle")
+  .description("Mark the agent as idle (no-op if currently waiting_human)")
+  .option("--reason <reason>", "Optional context (e.g. last assistant message excerpt)")
+  .action((options: { reason?: string }) => {
+    agentStateIdleCommand(options.reason ?? null);
+  });
+
+agentState
+  .command("waiting")
+  .description("Mark the agent as waiting for a human reply")
+  .requiredOption("--reason <reason>", "Reason for waiting")
+  .option("--notify", "Also send macOS notification")
+  .action((options: { reason: string; notify?: boolean }) => {
+    agentStateWaitingCommand(options.reason, options.notify ?? false);
+  });
+
+agentState
+  .command("clear")
+  .description("Reset agent state to idle (one-touch dismiss)")
+  .action(() => {
+    agentStateClearCommand();
+  });
+
+agentState
+  .command("show")
+  .description("Show current agent state")
+  .action(() => {
+    agentStateShowCommand();
+  });
+
+// --- waiting-human (deprecated alias of agent-state) ---
 const waitingHuman = program
   .command("waiting-human")
-  .description("Manage waiting-for-human state");
+  .description("[deprecated] Alias of `fed agent-state` for backward compatibility");
 
 waitingHuman
   .command("set")
-  .description("Set waiting-for-human state with a reason")
+  .description("[deprecated] Use `fed agent-state waiting` instead")
   .requiredOption("--reason <reason>", "Reason for waiting")
   .option("--notify", "Also send macOS notification")
   .action((options: { reason: string; notify?: boolean }) => {
@@ -324,14 +374,14 @@ waitingHuman
 
 waitingHuman
   .command("clear")
-  .description("Clear waiting-for-human state")
+  .description("[deprecated] Use `fed agent-state processing` instead")
   .action(() => {
     waitingHumanClearCommand();
   });
 
 waitingHuman
   .command("show")
-  .description("Show current waiting-for-human state")
+  .description("[deprecated] Use `fed agent-state show` instead")
   .action(() => {
     waitingHumanShowCommand();
   });

@@ -1,74 +1,25 @@
-import fs from "node:fs";
-import path from "node:path";
-import { getCurrentTmuxSession, resolveSession, requireSessionDir } from "../lib/session.js";
-import { notifyHumanCommand } from "./notify-human.js";
-import { log } from "../lib/logger.js";
+// Backward-compatible aliases for `fed waiting-human` that delegate to
+// `fed agent-state`. The legacy file `waiting_human.json` is read as a
+// fallback by readAgentState, but new writes go to `agent_state.json`.
 
-interface WaitingHumanJson {
-  waiting: boolean;
-  reason: string | null;
-  ts: string;
-}
+import {
+  agentStateProcessingCommand,
+  agentStateWaitingCommand,
+  agentStateShowCommand,
+} from "./agent-state.js";
 
 export function waitingHumanSetCommand(reason: string, notify: boolean): void {
-  // Silently exit 0 if not in a fed session (for hook safety)
-  const tmuxSession = getCurrentTmuxSession();
-  if (!tmuxSession) {
-    log("[waiting-human set] skipped: no tmux session detected (FED_SESSION and TMUX both unset)");
-    return;
-  }
-  const sessionDir = resolveSession(tmuxSession);
-  if (!sessionDir) {
-    log(`[waiting-human set] skipped: no active session for tmux="${tmuxSession}"`);
-    return;
-  }
-
-  const filePath = path.join(sessionDir, "waiting_human.json");
-  const data: WaitingHumanJson = {
-    waiting: true,
-    reason,
-    ts: new Date().toISOString(),
-  };
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2) + "\n");
-  console.log(`Set waiting_human: ${reason}`);
-
-  if (notify) {
-    notifyHumanCommand("WAITING", reason);
-  }
+  // `waiting-human set` always meant "the agent is now blocked on the human",
+  // which maps directly to the new `agent-state waiting`.
+  agentStateWaitingCommand(reason, notify);
 }
 
 export function waitingHumanClearCommand(): void {
-  // Silently exit 0 if not in a fed session (for hook safety)
-  const tmuxSession = getCurrentTmuxSession();
-  if (!tmuxSession) {
-    log("[waiting-human clear] skipped: no tmux session detected (FED_SESSION and TMUX both unset)");
-    return;
-  }
-  const sessionDir = resolveSession(tmuxSession);
-  if (!sessionDir) {
-    log(`[waiting-human clear] skipped: no active session for tmux="${tmuxSession}"`);
-    return;
-  }
-
-  const filePath = path.join(sessionDir, "waiting_human.json");
-  const data: WaitingHumanJson = {
-    waiting: false,
-    reason: null,
-    ts: new Date().toISOString(),
-  };
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2) + "\n");
-  console.log("Cleared waiting_human.");
+  // `waiting-human clear` is wired to UserPromptSubmit / PostToolUse hooks,
+  // i.e. the user (or a tool result) has just spoken — the agent is processing.
+  agentStateProcessingCommand();
 }
 
 export function waitingHumanShowCommand(): void {
-  const sessionDir = requireSessionDir();
-  const filePath = path.join(sessionDir, "waiting_human.json");
-
-  if (!fs.existsSync(filePath)) {
-    console.log(JSON.stringify({ waiting: false }, null, 2));
-    return;
-  }
-
-  const data = JSON.parse(fs.readFileSync(filePath, "utf-8")) as WaitingHumanJson;
-  console.log(JSON.stringify(data, null, 2));
+  agentStateShowCommand();
 }

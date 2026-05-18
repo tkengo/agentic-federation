@@ -21,7 +21,7 @@ type RenderedItem =
   | { kind: "row"; session: SessionData; sessionIndex: number };
 
 export function SessionList({ sessions, dimmed, selectedIndex, maxVisible }: SessionListProps) {
-  const anyWaiting = sessions.some((s) => s.waitingHuman.waiting);
+  const anyWaiting = sessions.some((s) => s.agentState.state === "waiting_human");
   const blinkOn = useBlink(500, anyWaiting);
 
   const colWidths = {
@@ -30,7 +30,9 @@ export function SessionList({ sessions, dimmed, selectedIndex, maxVisible }: Ses
     status: Math.max(6, ...sessions.map((s) => {
       const displayStatus = s.tmuxAlive ? s.status : "disconnected";
       const stale = s.stateMtimeMs != null && (Date.now() - s.stateMtimeMs) / 1000 >= STALE_THRESHOLD_SEC;
-      return statusDisplayWidth(displayStatus, s.tmuxAlive ? s.currentStep : null, stale, s.stateMtimeMs, s.waitingHuman.waiting);
+      // Reserve trailing width for the agent-state mark when the pane is alive.
+      const hasMark = s.tmuxAlive && (s.agentState.state === "waiting_human" || s.agentState.state === "processing" || s.agentState.state === "idle");
+      return statusDisplayWidth(displayStatus, s.tmuxAlive ? s.currentStep : null, stale, s.stateMtimeMs, hasMark);
     })),
   };
 

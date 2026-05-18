@@ -41,10 +41,10 @@ export function SessionRow({ session, selected, dimmed, blinkOn, colWidths }: Se
   // Determine inline text after CREATED:
   // - Selected + waiting: show waiting reason (actionable info)
   // - Otherwise: show description, fallback to waiting reason if no description
-  const isWaiting = session.waitingHuman.waiting && !!session.waitingHuman.reason;
+  const isWaiting = session.agentState.state === "waiting_human" && !!session.agentState.reason;
   const showWaitingReason = isWaiting && (selected || !session.description);
   const inlineText = showWaitingReason
-    ? "⏳ " + truncate(session.waitingHuman.reason!, DESC_INLINE_MAX - 3)
+    ? "⏳ " + truncate(session.agentState.reason!, DESC_INLINE_MAX - 3)
     : session.description
       ? truncate(session.description, DESC_INLINE_MAX)
       : null;
@@ -72,13 +72,24 @@ export function SessionRow({ session, selected, dimmed, blinkOn, colWidths }: Se
           highlight={highlight}
           dimColor={dimmed}
         />
-        {session.waitingHuman.waiting && (
+        {/* Agent state mark — distinguishes processing/idle/waiting at a glance */}
+        {session.tmuxAlive && session.agentState.state === "waiting_human" && (
           <Text
             color={highlight ? "cyan" : "yellow"}
             bold={highlight}
             dimColor={dimmed || (!highlight && !blinkOn)}
           >
             {` [!]`}
+          </Text>
+        )}
+        {session.tmuxAlive && session.agentState.state === "processing" && (
+          <Text color={highlight ? "cyan" : "cyan"} bold={highlight} dimColor={dimmed}>
+            {` ▶`}
+          </Text>
+        )}
+        {session.tmuxAlive && session.agentState.state === "idle" && (
+          <Text color={highlight ? "cyan" : undefined} bold={highlight} dimColor={dimmed || !highlight}>
+            {` ○`}
           </Text>
         )}
       </Box>

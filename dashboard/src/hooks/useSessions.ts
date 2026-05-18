@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { exec } from "node:child_process";
 import { ACTIVE_DIR, PROTECTED_WORKTREES_FILE } from "../utils/types.js";
-import type { MetaJson, SessionData, WaitingHumanData } from "../utils/types.js";
+import type { MetaJson, SessionData, AgentStateData, AgentStateValue } from "../utils/types.js";
 import { listTmuxSessions } from "../utils/tmux.js";
 
 function readMeta(sessionDir: string): MetaJson | null {
@@ -44,14 +44,27 @@ function resolveSession(name: string): string | null {
   return null;
 }
 
-function readWaitingHuman(sessionDir: string): WaitingHumanData {
+function readAgentState(sessionDir: string): AgentStateData {
+  // Prefer the new file, fall back to legacy waiting_human.json so in-flight
+  // sessions created before this change keep showing meaningful state.
   try {
     const data = JSON.parse(
-      fs.readFileSync(path.join(sessionDir, "waiting_human.json"), "utf-8")
-    ) as WaitingHumanData;
-    return { waiting: data.waiting, reason: data.reason };
+      fs.readFileSync(path.join(sessionDir, "agent_state.json"), "utf-8")
+    ) as { state: AgentStateValue; reason: string | null };
+    return { state: data.state, reason: data.reason };
   } catch {
-    return { waiting: false, reason: null };
+    // fall through to legacy
+  }
+  try {
+    const legacy = JSON.parse(
+      fs.readFileSync(path.join(sessionDir, "waiting_human.json"), "utf-8")
+    ) as { waiting: boolean; reason: string | null };
+    return {
+      state: legacy.waiting ? "waiting_human" : "idle",
+      reason: legacy.reason,
+    };
+  } catch {
+    return { state: "idle", reason: null };
   }
 }
 
@@ -98,7 +111,7 @@ function loadSessions(): SessionData[] {
       meta,
       status: statusValue || "active",
       workflow: meta.workflow,
-      waitingHuman: readWaitingHuman(sessionDir),
+      agentState: readAgentState(sessionDir),
       description: readDescription(sessionDir),
       currentStep: v2State?.current_step ?? null,
       stateMtimeMs,
