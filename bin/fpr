@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+# fed-pr-review: One-shot launcher for the pr-review workflow.
+#
+# Usage: fed-pr-review <PR_URL>
+#
+# Resolves the PR's repo and head branch from GitHub, starts a fed session
+# with a worktree tracking the PR branch, and injects the PR URL into the
+# analyzer pane so review begins automatically.
+set -euo pipefail
+
+PR_URL="${1:-}"
+if [[ -z "$PR_URL" ]]; then
+  echo "Usage: fed-pr-review <PR_URL>" >&2
+  exit 1
+fi
+
+# Preflight: gh CLI must be authenticated.
+if ! gh auth status >/dev/null 2>&1; then
+  echo "Error: gh is not authenticated. Run 'gh auth login' first." >&2
+  exit 1
+fi
+
+# Preflight: jq is required for PR info parsing.
+if ! command -v jq >/dev/null 2>&1; then
+  echo "Error: jq is not installed." >&2
+  exit 1
+fi
+
+# Parse https://github.com/<owner>/<repo>/pull/<num>[/...]
+REPO_FULL=$(echo "$PR_URL" | sed -nE 's|^https://github\.com/([^/]+/[^/]+)/pull/[0-9]+.*$|\1|p')
+PR_NUMBER=$(echo "$PR_URL" | sed -nE 's|^https://github\.com/[^/]+/[^/]+/pull/([0-9]+).*$|\1|p')
+
+if [[ -z "$REPO_FULL" || -z "$PR_NUMBER" ]]; then
+  echo "Error: Invalid PR URL: $PR_URL" >&2
+  echo "Expected: https://github.com/<owner>/<repo>/pull/<number>" >&2
+  exit 1
+fi
+
+# Fetch PR metadata.
+PR_INFO=$(gh pr view "$PR_URL" --json title,headRefName 2>/dev/null) || {
+  echo "Error: Failed to fetch PR info via gh." >&2
+  exit 1
+}
+PR_TITLE=$(echo "$PR_INFO" | jq -r .title)
+HEAD_REF=$(echo "$PR_INFO" | jq -r .headRefName)
+
+# Convention: fed repo name == GitHub repo name (last segment).
+FED_REPO=$(basename "$REPO_FULL")
+
+# Session name is derived from the head branch, sanitized the same way
+# fed start does (replace '/' and '.' with '-').
+SESSION_NAME=$(echo "$HEAD_REF" | sed 's|[/.]|-|g')
+
+echo "=== fed-pr-review ==="
+echo "PR:      #${PR_NUMBER} ${PR_TITLE}"
+echo "Repo:    ${FED_REPO}"
+echo "Branch:  ${HEAD_REF}"
+echo "Session: ${SESSION_NAME}"
+echo ""
+
+# Start the session with a worktree tracking the PR branch.
+fed session start pr-review "$FED_REPO" --from "origin/$HEAD_REF" --no-attach
+
+# Set a human-readable description (visible in dashboard).
+# Uses the global --session flag to target the session from outside tmux.
+fed --session "$SESSION_NAME" session describe "PR #${PR_NUMBER}: ${PR_TITLE}" || true
+
+# Wait for yoloclaude in the analyzer pane to become ready.
+# 10s is a comfortable buffer for typical startup variance.
+sleep 10
+
+# Inject the PR URL into the analyzer pane.
+# workflow-v2.yaml: window=analyze, pane=1 (analyzer).
+tmux send-keys -t "${SESSION_NAME}:analyze.1" "このPRをレビューして: ${PR_URL}" Enter
+
+# Attach to the session.
+exec tmux attach -t "$SESSION_NAME"
