@@ -66,6 +66,3 @@ sleep 10
 # Inject the PR URL into the analyzer pane.
 # workflow-v2.yaml: window=analyze, pane=1 (analyzer).
 tmux send-keys -t "${SESSION_NAME}:analyze.1" "このPRをレビューして: ${PR_URL}" Enter
-
-# Attach to the session.
-exec tmux attach -t "$SESSION_NAME"
