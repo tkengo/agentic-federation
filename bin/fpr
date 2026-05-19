@@ -14,12 +14,6 @@ if [[ -z "$PR_URL" ]]; then
   exit 1
 fi
 
-# Preflight: gh CLI must be authenticated.
-if ! gh auth status >/dev/null 2>&1; then
-  echo "Error: gh is not authenticated. Run 'gh auth login' first." >&2
-  exit 1
-fi
-
 # Preflight: jq is required for PR info parsing.
 if ! command -v jq >/dev/null 2>&1; then
   echo "Error: jq is not installed." >&2
