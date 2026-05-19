@@ -107,12 +107,32 @@ fi
 # Agents are composed at session start via syncAgents() and dispatched
 # via `fed prompt read` notifications from the workflow engine.
 
-# PATH hint (normal mode only)
+# Link auxiliary bin/ scripts into ~/bin (normal mode only).
+# The `fed` command itself is installed via `npm link` and lives in npm's
+# global bin. Other helpers in bin/ (e.g. fpr) are exposed via ~/bin.
 if [ "$DEV_MODE" = false ]; then
-  if ! echo "$PATH" | tr ':' '\n' | grep -qx "$REPO_DIR/bin"; then
+  USER_BIN="$HOME/bin"
+  mkdir -p "$USER_BIN"
+
+  echo "Linking auxiliary scripts to $USER_BIN..."
+  for script in "$REPO_DIR/bin"/*; do
+    name="$(basename "$script")"
+    # Skip install/uninstall themselves and broken symlinks.
+    case "$name" in
+      install|uninstall) continue ;;
+    esac
+    [ -e "$script" ] || continue
+    [ -x "$script" ] || continue
+    ln -sfn "$script" "$USER_BIN/$name"
+    echo "  $name -> $script"
+  done
+  echo ""
+
+  # PATH hint for ~/bin.
+  if ! echo "$PATH" | tr ':' '\n' | grep -qx "$USER_BIN"; then
     echo "Add this to your shell profile (~/.zshrc or ~/.bashrc):"
     echo ""
-    echo "  export PATH=\"$REPO_DIR/bin:\$PATH\""
+    echo "  export PATH=\"\$HOME/bin:\$PATH\""
     echo ""
   fi
 fi

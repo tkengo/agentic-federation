@@ -49,4 +49,19 @@ else
   cd "$REPO_DIR/cli"
   npm uninstall -g fed
   echo "Removed: fed (global)"
+
+  # Remove auxiliary script symlinks from ~/bin that point back into this repo.
+  USER_BIN="$HOME/bin"
+  if [ -d "$USER_BIN" ]; then
+    for link in "$USER_BIN"/*; do
+      [ -L "$link" ] || continue
+      target="$(readlink "$link")"
+      case "$target" in
+        "$REPO_DIR/bin/"*)
+          rm "$link"
+          echo "Removed: $(basename "$link") (was -> $target)"
+          ;;
+      esac
+    done
+  fi
 fi
