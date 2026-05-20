@@ -99,7 +99,7 @@ steps:
             resume: true
             resume_prompt: "コードが修正されました。前回の指摘事項が対応されているか確認し、再レビューしてください。"
           - id: review_history
-            type: codex
+            type: claude
             agent: code-reviewer-history
             description: "変更履歴・コミット観点レビュー"
             resume: true

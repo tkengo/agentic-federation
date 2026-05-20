@@ -64,7 +64,7 @@ steps:
             resume: true
             resume_prompt: "PR作成者が前回のレビュー指摘に基づいて修正をpushしました。最新のpr_analysisアーティファクトを読み直し、前回の指摘が修正されているか＋新たな問題がないかを重点的にレビューしてください。"
           - id: review_history
-            type: codex
+            type: claude
             agent: code-reviewer-history
             description: "変更履歴・コミット観点レビュー"
             resume: true
@@ -76,7 +76,7 @@ steps:
             resume: true
             resume_prompt: "PR作成者が前回のレビュー指摘に基づいて修正をpushしました。最新のpr_analysisアーティファクトを読み直し、修正による影響範囲の変化を再レビューしてください。"
           - id: review_conventions
-            type: claude
+            type: codex
             agent: code-reviewer-conventions
             description: "規約・一貫性観点レビュー"
             resume: true
