@@ -41,9 +41,9 @@ HEAD_REF=$(echo "$PR_INFO" | jq -r .headRefName)
 # Convention: fed repo name == GitHub repo name (last segment).
 FED_REPO=$(basename "$REPO_FULL")
 
-# Session name is derived from the head branch, sanitized the same way
-# fed start does (replace '/' and '.' with '-').
-SESSION_NAME=$(echo "$HEAD_REF" | sed 's|[/.]|-|g')
+# Session name is "<repo>-<branch>", sanitized the same way fed start does
+# (replace '/' and '.' with '-').
+SESSION_NAME=$(echo "${FED_REPO}-${HEAD_REF}" | sed 's|[/.]|-|g')
 
 echo "=== fed-pr-review ==="
 echo "PR:      #${PR_NUMBER} ${PR_TITLE}"
@@ -53,6 +53,7 @@ echo "Session: ${SESSION_NAME}"
 echo ""
 
 # Start the session with a worktree tracking the PR branch.
+# CLI defaults the session name to "<repo>-<branch>" when repo is provided.
 fed session start pr-review "$FED_REPO" --from "origin/$HEAD_REF" --no-attach
 
 # Set a human-readable description (visible in dashboard).

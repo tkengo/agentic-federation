@@ -61,9 +61,9 @@ export async function startCommand(
     if (!branch) {
       branch = extractBranchFromRemote(from);
     }
-    tmuxSession = branch;
+    tmuxSession = `${repoName}-${branch}`;
   } else if (branch) {
-    tmuxSession = branch;
+    tmuxSession = `${repoName}-${branch}`;
   } else {
     const now = new Date();
     const hhmm = String(now.getHours()).padStart(2, "0")
