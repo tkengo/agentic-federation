@@ -8,10 +8,11 @@ export type SessionContextAction =
   | { kind: "openDetail" }
   | { kind: "copyName" }
   | { kind: "copyWorktree" }
+  | { kind: "clearWaiting" }
   | { kind: "runScript"; scriptName: string };
 
 interface MenuItem {
-  id: "attach" | "delete" | "openDetail" | "copyName" | "copyWorktree" | "runScript";
+  id: "attach" | "delete" | "openDetail" | "copyName" | "copyWorktree" | "clearWaiting" | "runScript";
   label: string;
   shortcut: string;
   color?: string;
@@ -22,6 +23,7 @@ interface SessionContextMenuProps {
   sessionLabel: string;
   scripts: ScriptEntry[];
   hasWorktree: boolean;
+  isWaiting: boolean;
   onAction: (action: SessionContextAction) => void;
   onClose: () => void;
 }
@@ -32,6 +34,7 @@ const BASE_MAIN_ITEMS: { id: MenuItem["id"]; label: string; shortcut: string; co
   { id: "openDetail", label: "Open detail", shortcut: "i" },
   { id: "copyName", label: "Copy session name", shortcut: "y" },
   { id: "copyWorktree", label: "Copy worktree path", shortcut: "Y" },
+  { id: "clearWaiting", label: "Clear ! mark", shortcut: "!", color: "yellow" },
   { id: "runScript", label: "Run script…", shortcut: "r" },
 ];
 
@@ -39,6 +42,7 @@ export function SessionContextMenu({
   sessionLabel,
   scripts,
   hasWorktree,
+  isWaiting,
   onAction,
   onClose,
 }: SessionContextMenuProps) {
@@ -48,6 +52,7 @@ export function SessionContextMenu({
   const mainItems: MenuItem[] = BASE_MAIN_ITEMS.map((it) => {
     if (it.id === "runScript") return { ...it, disabled: scripts.length === 0 };
     if (it.id === "copyWorktree") return { ...it, disabled: !hasWorktree };
+    if (it.id === "clearWaiting") return { ...it, disabled: !isWaiting };
     return { ...it };
   });
 
@@ -64,6 +69,7 @@ export function SessionContextMenu({
     else if (id === "openDetail") onAction({ kind: "openDetail" });
     else if (id === "copyName") onAction({ kind: "copyName" });
     else if (id === "copyWorktree") onAction({ kind: "copyWorktree" });
+    else if (id === "clearWaiting") onAction({ kind: "clearWaiting" });
   };
 
   useInput((input, key) => {

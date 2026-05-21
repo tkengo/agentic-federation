@@ -351,6 +351,22 @@ function AppInner() {
         setScreen("list");
         break;
       }
+      case "clearWaiting": {
+        try {
+          execSync(
+            `fed --session '${session.meta.tmux_session}' agent-state clear`,
+            { stdio: "pipe" },
+          );
+          showMessage(`Cleared ! mark: ${session.name}`);
+          refresh();
+        } catch (e: unknown) {
+          const err = e as { stderr?: Buffer };
+          const msg = err.stderr?.toString().trim() || `Failed to clear ! mark: ${session.name}`;
+          showError(msg);
+        }
+        setScreen("list");
+        break;
+      }
       case "runScript": {
         const scriptName = action.scriptName;
         setScreen("list");
@@ -547,6 +563,7 @@ function AppInner() {
                 }
                 scripts={activeSessionScripts}
                 hasWorktree={!!activeSession.meta.worktree}
+                isWaiting={activeSession.agentState.state === "waiting_human"}
                 onClose={() => setScreen("list")}
                 onAction={handleSessionMenuAction}
               />
