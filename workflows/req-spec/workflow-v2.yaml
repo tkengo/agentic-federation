@@ -1,10 +1,12 @@
 name: req-spec
-description: "要件定義ワークフロー: 要件分析 → 並列レビュー → 統合 → PRD"
+description: "要件定義ワークフロー (engine v3): 要件分析 → 並列レビュー → 統合 → PRD"
 
+engine: v3
 focus: analyst
 
 windows:
-  - name: review
+  # Generic human pane (terminal + editor)
+  - name: human
     panes:
       - id: terminal
         name: Terminal
@@ -19,13 +21,56 @@ windows:
         - { source: 1, direction: h, percent: 50 }
       focus: 1
 
+  # Analysis phase: analyst agent + human collaboration
   - name: analyst
     panes:
       - id: analyst
         name: Analyst
         pane: 1
         command: "yoloclaude --agent __fed-req-spec-$FED_SESSION-analyst"
-      - id: human
+      - id: human-analyst
+        name: Human
+        pane: 2
+        command: "cd $FED_SESSION_DIR && nvim"
+    layout:
+      splits:
+        - { source: 1, direction: h, percent: 50 }
+      focus: 1
+
+  # Parallel PRD review (4 codex reviewers in a grid)
+  - name: review
+    panes:
+      - id: tech-reviewer
+        name: Tech Reviewer
+        pane: 1
+        command: "yolocodex"
+      - id: ux-reviewer
+        name: UX Reviewer
+        pane: 2
+        command: "yolocodex"
+      - id: trend-researcher
+        name: Trend Researcher
+        pane: 3
+        command: "yolocodex"
+      - id: security-reviewer
+        name: Security Reviewer
+        pane: 4
+        command: "yolocodex"
+    layout:
+      splits:
+        - { source: 1, direction: h, percent: 50 }
+        - { source: 1, direction: v, percent: 50 }
+        - { source: 3, direction: v, percent: 50 }
+      focus: 1
+
+  # PRD revision: spec-revisor + human review
+  - name: revise
+    panes:
+      - id: spec-revisor
+        name: Spec Revisor
+        pane: 1
+        command: "yoloclaude --agent __fed-req-spec-$FED_SESSION-spec-revisor"
+      - id: human-revise
         name: Human
         pane: 2
         command: "cd $FED_SESSION_DIR && nvim"

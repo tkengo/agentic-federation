@@ -1,10 +1,12 @@
 name: pr-review
-description: "PR code review pipeline"
+description: "PR code review pipeline (engine v3: tmux-resident agents)"
 
+engine: v3
 focus: analyze
 
 windows:
-  - name: review
+  # Generic human pane (terminal + editor)
+  - name: human
     panes:
       - id: terminal
         name: Terminal
@@ -19,16 +21,54 @@ windows:
         - { source: 1, direction: h, percent: 50 }
       focus: 1
 
+  # PR analysis phase: analyzer agent + human collaboration
   - name: analyze
     panes:
       - id: analyzer
         name: Analyzer
         pane: 1
         command: "yoloclaude --agent __fed-pr-review-$FED_SESSION-analyzer"
-      - id: human
+      - id: human-analyze
         name: Human
         pane: 2
         command: "cd $FED_SESSION_DIR && nvim"
+    layout:
+      splits:
+        - { source: 1, direction: h, percent: 50 }
+      focus: 1
+
+  # Code review (claude perspectives): history + impact + integrator
+  - name: review-deep
+    panes:
+      - id: code-reviewer-history
+        name: History Reviewer
+        pane: 1
+        command: "yoloclaude --agent __fed-pr-review-$FED_SESSION-code-reviewer-history"
+      - id: code-reviewer-impact
+        name: Impact Reviewer
+        pane: 2
+        command: "yoloclaude --agent __fed-pr-review-$FED_SESSION-code-reviewer-impact"
+      - id: code-review-integrator
+        name: Review Integrator
+        pane: 3
+        command: "yoloclaude --agent __fed-pr-review-$FED_SESSION-code-review-integrator"
+    layout:
+      splits:
+        - { source: 1, direction: h, percent: 50 }
+        - { source: 1, direction: v, percent: 50 }
+      focus: 1
+
+  # Code review (codex perspectives): diff + conventions
+  - name: review-fast
+    panes:
+      - id: code-reviewer-diff
+        name: Diff Reviewer
+        pane: 1
+        command: "yolocodex"
+      - id: code-reviewer-conventions
+        name: Conventions Reviewer
+        pane: 2
+        command: "yolocodex"
     layout:
       splits:
         - { source: 1, direction: h, percent: 50 }

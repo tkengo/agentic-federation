@@ -1,10 +1,12 @@
 name: solo-dev
-description: "ソロ開発用（v2エンジン）"
+description: "ソロ開発用 (engine v3: tmux-resident agents)"
 
-focus: solo-dev
+engine: v3
+focus: plan
 
 windows:
-  - name: review
+  # Generic human pane (terminal + editor)
+  - name: human
     panes:
       - id: terminal
         name: Terminal
@@ -19,13 +21,30 @@ windows:
         - { source: 1, direction: h, percent: 50 }
       focus: 1
 
-  - name: solo-dev
+  # Planning phase: planner agent + human collaboration
+  - name: plan
     panes:
-      - id: developer
-        name: Developer
+      - id: planner
+        name: Planner
         pane: 1
         command: "yoloclaude --agent __fed-solo-dev-$FED_SESSION-planner"
-      - id: human
+      - id: human-plan
+        name: Human
+        pane: 2
+        command: "cd $FED_SESSION_DIR && nvim"
+    layout:
+      splits:
+        - { source: 1, direction: h, percent: 50 }
+      focus: 1
+
+  # Implementation phase: implementer agent + human collaboration
+  - name: implement
+    panes:
+      - id: implementer
+        name: Implementer
+        pane: 1
+        command: "yoloclaude --agent __fed-solo-dev-$FED_SESSION-implementer"
+      - id: human-impl
         name: Human
         pane: 2
         command: "cd $FED_SESSION_DIR && nvim"
@@ -43,7 +62,7 @@ steps:
     agent: planner
     notify: false
     description: "人間と対話しながら計画を策定・レビュー・承認まで"
-    prompt: "developerペインで計画を策定してください。人間が承認したらplannerが自動でワークフローを進めます。"
+    prompt: "plannerペインで計画を策定してください。人間が承認したらplannerが自動でワークフローを進めます。"
 
   # ============================================================
   # Phase 2: Implementation + Code Review Loop
