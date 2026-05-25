@@ -5,6 +5,7 @@ import { resolveSession, readMeta } from "../lib/session.js";
 import { loadRepoConfig } from "../lib/repo.js";
 import * as tmux from "../lib/tmux.js";
 import { loadV2Workflow } from "../lib/engine-v2/workflow-loader.js";
+import { findWorkflowYaml } from "../lib/workflow-yaml.js";
 import { applyEnvironmentVars, createV2WindowLayout } from "./start.js";
 
 /**
@@ -41,10 +42,10 @@ export function recoverCommand(sessionName: string | undefined, noAttach?: boole
     process.exit(1);
   }
 
-  // v2 only — check workflow-v2.yaml exists
-  const workflowYamlPath = path.join(sessionPath, "workflow-v2.yaml");
-  if (!fs.existsSync(workflowYamlPath)) {
-    console.error("Error: workflow-v2.yaml not found. Only v2 sessions can be recovered.");
+  // Check workflow YAML exists (workflow-v3.yaml or workflow-v2.yaml)
+  const workflowYamlPath = findWorkflowYaml(sessionPath);
+  if (!workflowYamlPath) {
+    console.error("Error: workflow YAML not found. Only engine-managed sessions can be recovered.");
     process.exit(1);
   }
 
@@ -84,7 +85,7 @@ export function recoverCommand(sessionName: string | undefined, noAttach?: boole
     for (const win of windows) {
       console.log(`Creating window: ${win.name}...`);
       tmux.newWindow(tmuxSession, win.name, cwd);
-      createV2WindowLayout(tmuxSession, win, cwd, sessionPath);
+      createV2WindowLayout(tmuxSession, win, cwd, sessionPath, v2Workflow);
     }
   } else {
     // No-engine mode: create with first user window
@@ -95,13 +96,13 @@ export function recoverCommand(sessionName: string | undefined, noAttach?: boole
     }
     tmux.newSession(tmuxSession, cwd, firstWin.name);
     applyEnvironmentVars(tmuxSession, repoEnv);
-    createV2WindowLayout(tmuxSession, firstWin, cwd, sessionPath);
+    createV2WindowLayout(tmuxSession, firstWin, cwd, sessionPath, v2Workflow);
 
     for (let i = 1; i < windows.length; i++) {
       const win = windows[i];
       console.log(`Creating window: ${win.name}...`);
       tmux.newWindow(tmuxSession, win.name, cwd);
-      createV2WindowLayout(tmuxSession, win, cwd, sessionPath);
+      createV2WindowLayout(tmuxSession, win, cwd, sessionPath, v2Workflow);
     }
   }
 

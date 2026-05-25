@@ -6,6 +6,7 @@ import {
 } from "../lib/session.js";
 import { readV2State } from "../lib/engine-v2/state.js";
 import { loadV2Workflow } from "../lib/engine-v2/workflow-loader.js";
+import { findWorkflowYaml } from "../lib/workflow-yaml.js";
 import { buildStepTree } from "../lib/engine-v2/dashboard/build-step-tree.js";
 import type { StepNode, StepStatus } from "../lib/engine-v2/dashboard/types.js";
 import type { V2State } from "../lib/engine-v2/types.js";
@@ -98,10 +99,10 @@ export function workflowStatusCommand(sessionName?: string): void {
   }
   const state = readV2State(sessionDir);
 
-  // Read workflow-v2.yaml
-  const workflowPath = path.join(sessionDir, "workflow-v2.yaml");
-  if (!fs.existsSync(workflowPath)) {
-    console.error("Error: No workflow-v2.yaml found in session.");
+  // Read workflow YAML (workflow-v3.yaml preferred, falls back to workflow-v2.yaml)
+  const workflowPath = findWorkflowYaml(sessionDir);
+  if (!workflowPath) {
+    console.error("Error: No workflow YAML found in session.");
     process.exit(1);
   }
   const workflow = loadV2Workflow(workflowPath);

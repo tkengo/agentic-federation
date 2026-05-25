@@ -6,6 +6,7 @@ import type { EngineLogger } from "../logger.js";
 import type { RunnerHandle } from "./types.js";
 import { resolveAgentPane } from "../agent-pane.js";
 import { loadV2Workflow } from "../workflow-loader.js";
+import { findWorkflowYaml } from "../../workflow-yaml.js";
 import * as tmux from "../../tmux.js";
 
 export interface CodexRunnerOptions {
@@ -52,7 +53,12 @@ export function runCodexStep(options: CodexRunnerOptions): RunnerHandle {
       reject(new Error("FED_SESSION not set in runner env"));
       return;
     }
-    const workflow = loadV2Workflow(path.join(sessionDir, "workflow-v2.yaml"));
+    const wfPath = findWorkflowYaml(sessionDir);
+    if (!wfPath) {
+      reject(new Error("workflow YAML not found in session directory"));
+      return;
+    }
+    const workflow = loadV2Workflow(wfPath);
     const agentId = step.agent!;
     let paneTarget: string;
     try {

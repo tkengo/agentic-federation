@@ -5,6 +5,7 @@ import { readV2State, updateV2StateWithLock, setStepResult, appendHistory } from
 import { writeReplayRequest } from "../lib/engine-v2/replay.js";
 import { writeAbortRequest } from "../lib/engine-v2/abort.js";
 import { loadV2Workflow, collectStepPaths, resolveStepPath } from "../lib/engine-v2/workflow-loader.js";
+import { findWorkflowYaml } from "../lib/workflow-yaml.js";
 
 /**
  * `fed session respond-workflow <value> [--step <path>] [--replay <step>] [--abort]`
@@ -46,9 +47,9 @@ export async function workflowRespondCommand(
     }
 
     // Validate step exists in workflow
-    const workflowPath = path.join(sessionDir, "workflow-v2.yaml");
-    if (!fs.existsSync(workflowPath)) {
-      console.error("Error: workflow-v2.yaml not found.");
+    const workflowPath = findWorkflowYaml(sessionDir);
+    if (!workflowPath) {
+      console.error("Error: workflow YAML not found.");
       process.exit(1);
     }
 

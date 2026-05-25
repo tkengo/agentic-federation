@@ -3,6 +3,7 @@ import path from "node:path";
 import { readMeta } from "../session.js";
 import type { MetaJson } from "../types.js";
 import { loadV2Workflow } from "./workflow-loader.js";
+import { findWorkflowYaml } from "../workflow-yaml.js";
 import {
   initV2State,
   readV2State,
@@ -62,8 +63,12 @@ export async function runEngine(sessionDir: string, emitter?: EngineEventEmitter
     process.exit(1);
   }
 
-  // Load v2 workflow
-  const workflowPath = path.join(sessionDir, "workflow-v2.yaml");
+  // Load workflow (prefers workflow-v3.yaml, falls back to workflow-v2.yaml)
+  const workflowPath = findWorkflowYaml(sessionDir);
+  if (!workflowPath) {
+    console.error("Error: workflow YAML not found in session directory");
+    process.exit(1);
+  }
   const workflow = loadV2Workflow(workflowPath);
 
   const logger = new EngineLogger(sessionDir, emitter);

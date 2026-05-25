@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { resolveSession, requireSessionDir } from "../lib/session.js";
 import { loadV2Workflow as loadWorkflowForVersionCheck } from "../lib/engine-v2/workflow-loader.js";
+import { findWorkflowYaml } from "../lib/workflow-yaml.js";
 
 /** Resolve the engine version from the workflow YAML. */
 function getEngineVersion(workflowYamlPath: string): "v2" | "v3" {
@@ -36,9 +37,9 @@ export async function workflowEngineCommand(
     sessionPath = requireSessionDir();
   }
 
-  const workflowYamlPath = path.join(sessionPath, "workflow-v2.yaml");
-  if (!fs.existsSync(workflowYamlPath)) {
-    console.error("Error: workflow-v2.yaml not found.");
+  const workflowYamlPath = findWorkflowYaml(sessionPath);
+  if (!workflowYamlPath) {
+    console.error("Error: workflow YAML not found (expected workflow-v3.yaml or workflow-v2.yaml).");
     process.exit(1);
   }
 

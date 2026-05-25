@@ -10,8 +10,9 @@ import * as tmux from "../lib/tmux.js";
 import type { MetaJson, RepoConfig } from "../lib/types.js";
 import { initCommand } from "./init.js";
 import { loadV2Workflow } from "../lib/engine-v2/workflow-loader.js";
-import type { V2Window } from "../lib/engine-v2/types.js";
+import type { V2Window, V2Workflow, V2Step } from "../lib/engine-v2/types.js";
 import { initV2State } from "../lib/engine-v2/state.js";
+import { findWorkflowYaml } from "../lib/workflow-yaml.js";
 import { stringify as stringifyYaml } from "yaml";
 import { composeAgentInstruction } from "../lib/workflow.js";
 
@@ -88,14 +89,16 @@ export async function startCommand(
     process.exit(1);
   }
 
-  // Validate v2 workflow exists
+  // Validate workflow exists (prefers workflow-v3.yaml, falls back to workflow-v2.yaml)
   const fedRepoRoot = path.resolve(import.meta.dirname, "..", "..", "..");
-  const srcV2Workflow = path.join(fedRepoRoot, "workflows", workflowName, "workflow-v2.yaml");
-  if (!fs.existsSync(srcV2Workflow)) {
-    console.error(`Error: v2 workflow not found: ${srcV2Workflow}`);
-    console.error(`  Expected: workflows/${workflowName}/workflow-v2.yaml`);
+  const workflowSrcDir = path.join(fedRepoRoot, "workflows", workflowName);
+  const srcV2Workflow = findWorkflowYaml(workflowSrcDir);
+  if (!srcV2Workflow) {
+    console.error(`Error: workflow not found in: ${workflowSrcDir}`);
+    console.error(`  Expected: workflows/${workflowName}/workflow-v3.yaml or workflow-v2.yaml`);
     process.exit(1);
   }
+  const srcYamlBasename = path.basename(srcV2Workflow);
 
   // Setup repo and worktree (if repo-based)
   let config: RepoConfig | null = null;
@@ -188,11 +191,14 @@ export async function startCommand(
   fs.mkdirSync(path.join(sessionPath, "logs"), { recursive: true });
 
   // Copy workflow YAML as-is (${{ }} expressions are evaluated at runtime by the engine)
+  // Keep the original basename (workflow-v3.yaml or workflow-v2.yaml) so the engine
+  // version can be recovered from the file name in the session directory.
   const rawYaml = fs.readFileSync(srcV2Workflow, "utf-8");
-  fs.writeFileSync(path.join(sessionPath, "workflow-v2.yaml"), rawYaml);
+  const sessionYamlPath = path.join(sessionPath, srcYamlBasename);
+  fs.writeFileSync(sessionYamlPath, rawYaml);
 
   // Validate the expanded workflow
-  const v2Workflow = loadV2Workflow(path.join(sessionPath, "workflow-v2.yaml"));
+  const v2Workflow = loadV2Workflow(sessionYamlPath);
   const engineEnabled = v2Workflow.engine !== false;
   const windows = v2Workflow.windows ?? [];
 
@@ -220,7 +226,7 @@ export async function startCommand(
     for (const win of windows) {
       console.log(`Creating window: ${win.name}...`);
       tmux.newWindow(tmuxSession, win.name, cwd);
-      createV2WindowLayout(tmuxSession, win, cwd, sessionPath);
+      createV2WindowLayout(tmuxSession, win, cwd, sessionPath, v2Workflow);
     }
   } else {
     // No-engine mode: create with first user window directly
@@ -231,14 +237,14 @@ export async function startCommand(
     }
     tmux.newSession(tmuxSession, cwd, firstWin.name);
     applyEnvironmentVars(tmuxSession, config?.env, envVars);
-    createV2WindowLayout(tmuxSession, firstWin, cwd, sessionPath);
+    createV2WindowLayout(tmuxSession, firstWin, cwd, sessionPath, v2Workflow);
 
     // Create remaining windows
     for (let i = 1; i < windows.length; i++) {
       const win = windows[i];
       console.log(`Creating window: ${win.name}...`);
       tmux.newWindow(tmuxSession, win.name, cwd);
-      createV2WindowLayout(tmuxSession, win, cwd, sessionPath);
+      createV2WindowLayout(tmuxSession, win, cwd, sessionPath, v2Workflow);
     }
   }
 
@@ -280,13 +286,59 @@ export async function startCommand(
 }
 
 /**
+ * Find the first step path whose `agent` matches the given pane id.
+ * Used by engine-v3 to bind a long-running agent pane to its step path
+ * so that `fed session respond-workflow` resolves correctly even during
+ * parallel execution.
+ */
+function findStepPathByAgent(steps: V2Step[], agentId: string, parentPath = ""): string | null {
+  for (let i = 0; i < steps.length; i++) {
+    const step = steps[i];
+    const name = step.id ?? `step_${i}`;
+    const stepPath = parentPath ? `${parentPath}.${name}` : name;
+
+    if ((step.type === "claude" || step.type === "codex" || step.type === "human")
+        && step.agent === agentId) {
+      return stepPath;
+    }
+    if (step.type === "loop" && step.steps) {
+      const r = findStepPathByAgent(step.steps, agentId, stepPath);
+      if (r) return r;
+    }
+    if (step.type === "branch" && step.cases) {
+      for (const c of step.cases) {
+        if (c.steps) {
+          const r = findStepPathByAgent(c.steps, agentId, stepPath);
+          if (r) return r;
+        }
+      }
+    }
+    if (step.type === "parallel" && step.branches) {
+      for (const b of step.branches) {
+        if ((b.type === "claude" || b.type === "codex" || b.type === "human")
+            && b.agent === agentId) {
+          return `${stepPath}.${b.id}`;
+        }
+      }
+    }
+  }
+  return null;
+}
+
+/**
  * Create tmux pane layout for a v2 window definition.
+ *
+ * When `workflow` is provided and uses engine-v3, each pane also gets
+ * `FED_STEP=<path>` exported so that `fed session respond-workflow` can
+ * resolve the step without relying on the engine's mutable `current_step`
+ * field — which is unreliable during parallel execution.
  */
 export function createV2WindowLayout(
   session: string,
   win: V2Window,
   cwd: string,
   sessionPath: string,
+  workflow?: V2Workflow,
 ): void {
   const w = `${session}:${win.name}`;
 
@@ -296,11 +348,19 @@ export function createV2WindowLayout(
   }
   tmux.selectPane(`${w}.${win.layout.focus}`);
 
+  const isV3 = workflow?.engine === "v3";
+
   // Send commands to panes
   for (const pane of win.panes) {
+    let extraEnv = "";
+    if (isV3) {
+      const stepPath = findStepPathByAgent(workflow!.steps, pane.id);
+      if (stepPath) extraEnv = ` FED_STEP=${stepPath}`;
+    }
+
     tmux.sendKeys(
       `${w}.${pane.pane}`,
-      `export FED_PANE=${pane.id} FED_WINDOW=${win.name} FED_SESSION=${session} FED_SESSION_DIR=${sessionPath} FED_REPO_DIR=${cwd}`
+      `export FED_PANE=${pane.id} FED_WINDOW=${win.name} FED_SESSION=${session} FED_SESSION_DIR=${sessionPath} FED_REPO_DIR=${cwd}${extraEnv}`
     );
     if (pane.command) {
       tmux.sendKeys(`${w}.${pane.pane}`, pane.command);
