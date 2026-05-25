@@ -72,6 +72,11 @@ function writeState(sessionDir: string, state: AgentStateValue, reason: string |
   fs.writeFileSync(path.join(sessionDir, NEW_FILE), JSON.stringify(data, null, 2) + "\n");
 }
 
+// External writer: used by engine to keep agent_state in sync with engine status.
+export function writeAgentState(sessionDir: string, state: AgentStateValue, reason: string | null): void {
+  writeState(sessionDir, state, reason);
+}
+
 export function agentStateProcessingCommand(): void {
   const sessionDir = resolveCurrentSessionDir("agent-state processing");
   if (!sessionDir) return;

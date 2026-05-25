@@ -31,6 +31,7 @@ import { readAbortRequest, consumeAbortRequest, clearAbortRequest } from "./abor
 import { readReplayRequest, consumeReplayRequest, clearReplayRequest } from "./replay.js";
 import { collectStepPaths } from "./workflow-loader.js";
 import { isNetworkAvailable } from "./network.js";
+import { writeAgentState } from "../../commands/agent-state.js";
 import type { V2Step, V2State, V2BranchCase } from "./types.js";
 
 const NETWORK_POLL_INTERVAL_MS = 30_000; // 30 seconds
@@ -439,6 +440,13 @@ async function executeActionStep(
   appendHistory(state, "step_start", stepPath, `type=${step.type}`);
   writeV2State(sessionDir, state);
 
+  // Keep agent_state in sync with engine waiting_human so the dashboard
+  // [!] indicator never misses a human step even if Claude forgets to call
+  // `fed agent-state waiting` itself.
+  if (step.type === "human") {
+    writeAgentState(sessionDir, "waiting_human", step.prompt ?? null);
+  }
+
   logger.setCurrentStep(stepPath);
   logger.stepStart(stepPath, step.type, step.description);
   const startTime = Date.now();
@@ -778,6 +786,7 @@ async function executeLoop(
     setStatus(state, "waiting_human");
     appendHistory(state, "step_start", escalationStepPath, "type=human (max_reached escalation)");
     writeV2State(sessionDir, state);
+    writeAgentState(sessionDir, "waiting_human", prompt);
 
     const handle = runHumanStep({
       step: { id: "__max_escalation", type: "human", prompt, notify: true } as V2Step,
