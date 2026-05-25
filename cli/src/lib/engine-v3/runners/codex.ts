@@ -114,8 +114,10 @@ export function runCodexStep(options: CodexRunnerOptions): RunnerHandle {
       return;
     }
 
+    // Use sendPrompt (text -> sleep -> Enter) so codex doesn't swallow the
+    // trailing Enter as part of the pasted text.
     try {
-      tmux.sendKeys(paneTarget, message);
+      tmux.sendPrompt(paneTarget, message);
     } catch (err) {
       watcher?.close().catch(() => {});
       reject(new Error(

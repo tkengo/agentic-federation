@@ -125,9 +125,11 @@ export function runClaudeStep(options: ClaudeRunnerOptions): RunnerHandle {
       return;
     }
 
-    // Dispatch via tmux send-keys. tmux.sendKeys appends Enter automatically.
+    // Dispatch via tmux send-keys. Use sendPrompt (text -> sleep -> Enter)
+    // so the resident CLI doesn't treat the trailing Enter as part of the
+    // pasted text.
     try {
-      tmux.sendKeys(paneTarget, message);
+      tmux.sendPrompt(paneTarget, message);
     } catch (err) {
       watcher?.close().catch(() => {});
       reject(new Error(

@@ -57,6 +57,25 @@ export function sendKeys(target: string, keys: string): void {
   tmux(`send-keys -t ${quote(`=${target}`)} ${quote(keys)} Enter`);
 }
 
+// Send a prompt to an interactive CLI in a pane, then submit with Enter.
+// Splitting the text and the Enter into two send-keys calls (with a brief
+// pause between) prevents the receiving CLI from treating the trailing Enter
+// as part of the pasted text. Used to dispatch prompts to long-running
+// claude / codex sessions in engine-v3.
+export function sendPrompt(target: string, text: string, sleepMs: number = 1000): void {
+  // 1) Deliver the text without committing it.
+  tmux(`send-keys -t ${quote(`=${target}`)} ${quote(text)}`);
+
+  // 2) Brief pause so the CLI finishes processing the paste before submit.
+  if (sleepMs > 0) {
+    execSync(`sleep ${(sleepMs / 1000).toFixed(2)}`);
+  }
+
+  // 3) Submit with a standalone Enter so it is interpreted as a key event,
+  //    not as part of the previous paste buffer.
+  tmux(`send-keys -t ${quote(`=${target}`)} Enter`);
+}
+
 // Select a pane
 export function selectPane(target: string): void {
   tmux(`select-pane -t ${quote(`=${target}`)}`);
