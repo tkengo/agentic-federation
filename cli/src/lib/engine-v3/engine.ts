@@ -1,0 +1,977 @@
+import fs from "node:fs";
+import path from "node:path";
+import { readMeta } from "../session.js";
+import type { MetaJson } from "../types.js";
+import { loadV2Workflow } from "./workflow-loader.js";
+import {
+  initV2State,
+  readV2State,
+  writeV2State,
+  setStepResult,
+  clearDescendantResults,
+  appendHistory,
+  setStatus,
+  setCurrentStep,
+  getSessionId,
+  setSessionId,
+  setLoopIteration,
+  getLoopIteration,
+  clearLoopIteration,
+} from "./state.js";
+import { EngineLogger } from "./logger.js";
+import { EngineEventEmitter } from "./events.js";
+import { runClaudeStep } from "./runners/claude.js";
+import { runHumanStep } from "./runners/human.js";
+import { runCodexStep } from "./runners/codex.js";
+import { runShellStep } from "./runners/shell.js";
+import type { RunnerHandle } from "./runners/types.js";
+import { evaluateCondition, type ExprContext } from "./expr.js";
+import { readAbortRequest, consumeAbortRequest, clearAbortRequest } from "./abort.js";
+import { readReplayRequest, consumeReplayRequest, clearReplayRequest } from "./replay.js";
+import { collectStepPaths } from "./workflow-loader.js";
+import { isNetworkAvailable } from "./network.js";
+import type { V2Step, V2State, V2BranchCase } from "./types.js";
+
+const NETWORK_POLL_INTERVAL_MS = 30_000; // 30 seconds
+
+// Sentinel to signal loop break from a branch case
+const BREAK_LOOP = Symbol("BREAK_LOOP");
+
+class EngineAbortError extends Error {
+  constructor(public readonly mode: "immediate" | "graceful") {
+    super(`Engine aborted (${mode})`);
+    this.name = "EngineAbortError";
+  }
+}
+
+class EngineReplayError extends Error {
+  constructor(public readonly from: string) {
+    super(`Engine replay from ${from}`);
+    this.name = "EngineReplayError";
+  }
+}
+
+/**
+ * Main engine entry point.
+ * Called from the engine tmux pane with session dir as argument.
+ */
+export async function runEngine(sessionDir: string, emitter?: EngineEventEmitter): Promise<void> {
+  const meta = readMeta(sessionDir);
+  if (!meta) {
+    console.error("Error: No meta.json found in session directory");
+    process.exit(1);
+  }
+
+  // Load v2 workflow
+  const workflowPath = path.join(sessionDir, "workflow-v2.yaml");
+  const workflow = loadV2Workflow(workflowPath);
+
+  const logger = new EngineLogger(sessionDir, emitter);
+  logger.engineStart(workflow.name, workflow.steps.length);
+
+  // Initialize or resume state
+  let state: V2State;
+  const stateFilePath = path.join(sessionDir, "state-v2.json");
+  if (fs.existsSync(stateFilePath)) {
+    state = readV2State(sessionDir);
+    logger.info("Resuming from existing state");
+    // Reset status for resume (may have been failed/running from previous crash)
+    setStatus(state, "running");
+    appendHistory(state, "engine_resume", "", "Resumed from previous state");
+    writeV2State(sessionDir, state);
+  } else {
+    state = initV2State(sessionDir);
+  }
+
+  // Clear any stale requests from a previous run
+  clearAbortRequest(sessionDir);
+  clearReplayRequest(sessionDir);
+
+  const allStepPaths = collectStepPaths(workflow);
+  const engineStartTime = Date.now();
+
+  // Main execution loop — replays restart from the top (completed steps are skipped)
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    try {
+      await executeBlock(workflow.steps, "", sessionDir, state, meta, logger);
+
+      // All steps completed
+      setStatus(state, "completed");
+      setCurrentStep(state, null);
+      appendHistory(state, "engine_complete", "", "All steps completed");
+      writeV2State(sessionDir, state);
+
+      logger.engineComplete(Date.now() - engineStartTime);
+      break;
+    } catch (err) {
+      if (err instanceof EngineReplayError) {
+        consumeReplayRequest(sessionDir);
+        const targetPath = err.from;
+        const targetIndex = allStepPaths.indexOf(targetPath);
+        const pathsToClear = targetIndex >= 0 ? allStepPaths.slice(targetIndex) : [targetPath];
+
+        // Clear results, sessions, loops for affected steps
+        let cleared = 0;
+        for (const p of pathsToClear) {
+          if (state.results[p]) { delete state.results[p]; cleared++; }
+          if (state.sessions[p]) { delete state.sessions[p]; }
+          if (state.loops[p]) { delete state.loops[p]; }
+        }
+
+        // Clear container completion markers from history
+        state.history = state.history.filter(
+          h => !(
+            (h.event === "parallel_complete" || h.event === "loop_complete") &&
+            pathsToClear.includes(h.step)
+          )
+        );
+
+        // Clear respond files for affected steps
+        const respondDir = path.join(sessionDir, "respond");
+        if (fs.existsSync(respondDir)) {
+          for (const p of pathsToClear) {
+            const safeStepPath = p.replace(/[./]/g, "_");
+            const respondFile = path.join(respondDir, `${safeStepPath}.respond`);
+            if (fs.existsSync(respondFile)) { fs.unlinkSync(respondFile); }
+          }
+        }
+
+        setStatus(state, "running");
+        setCurrentStep(state, null);
+        state.replay_from = targetPath;
+        appendHistory(state, "replay_from", targetPath, `cleared=${cleared} steps`);
+        writeV2State(sessionDir, state);
+
+        logger.info(`Replaying from step: ${targetPath} (cleared ${cleared} result(s))`);
+        emitter?.emit("replay", { type: "replay", from: targetPath });
+        continue;
+      }
+      if (err instanceof EngineAbortError) {
+        consumeAbortRequest(sessionDir);
+        const abortedStep = state.current_step;
+        // Clear the aborted step's result so it re-runs on resume
+        if (abortedStep && state.results[abortedStep]) {
+          delete state.results[abortedStep];
+        }
+        setStatus(state, "aborted");
+        setCurrentStep(state, null);
+        appendHistory(state, "engine_aborted", abortedStep ?? "", `mode=${err.mode}`);
+        writeV2State(sessionDir, state);
+
+        logger.engineAborted(err.mode);
+        break;
+      }
+      if (err === BREAK_LOOP) {
+        // Should not reach here at top level
+        logger.error("Unexpected break at top level");
+      }
+      const message = err instanceof Error ? err.message : String(err);
+      setStatus(state, "failed");
+      appendHistory(state, "engine_error", state.current_step ?? "", message);
+      writeV2State(sessionDir, state);
+
+      logger.engineFailed(message);
+      process.exit(1);
+    }
+  } // end while
+
+  logger.close();
+}
+
+/**
+ * Wait for a runner to complete, polling for abort and replay requests.
+ * For immediate abort: kills the child process and throws EngineAbortError.
+ * For replay: kills the child process and throws EngineReplayError.
+ * For graceful abort: lets the step finish, then the caller checks after completion.
+ */
+async function waitWithAbortCheck(handle: RunnerHandle, sessionDir: string): Promise<number> {
+  return new Promise<number>((resolve, reject) => {
+    let settled = false;
+
+    const requestChecker = setInterval(() => {
+      // Check abort
+      const abortReq = readAbortRequest(sessionDir);
+      if (abortReq && abortReq.mode === "immediate") {
+        clearInterval(requestChecker);
+        handle.kill();
+        settled = true;
+        reject(new EngineAbortError("immediate"));
+        return;
+      }
+      // Check replay
+      const replayReq = readReplayRequest(sessionDir);
+      if (replayReq) {
+        clearInterval(requestChecker);
+        handle.kill();
+        settled = true;
+        reject(new EngineReplayError(replayReq.from));
+        return;
+      }
+    }, 500);
+
+    handle.promise.then(
+      (exitCode) => {
+        clearInterval(requestChecker);
+        if (!settled) resolve(exitCode);
+      },
+      (err) => {
+        clearInterval(requestChecker);
+        if (!settled) reject(err);
+      },
+    );
+  });
+}
+
+/**
+ * Check for graceful abort or replay request after a step completes.
+ * Throws EngineAbortError or EngineReplayError if requested.
+ */
+function checkGracefulAbort(sessionDir: string): void {
+  const replayReq = readReplayRequest(sessionDir);
+  if (replayReq) {
+    throw new EngineReplayError(replayReq.from);
+  }
+  const req = readAbortRequest(sessionDir);
+  if (req) {
+    throw new EngineAbortError(req.mode);
+  }
+}
+
+/**
+ * Execute an async function with network-aware retry.
+ * If fn throws and network is down, waits for recovery and retries.
+ * If fn throws and network is up, re-throws the original error.
+ * EngineAbortError and EngineReplayError are always re-thrown immediately.
+ */
+async function withNetworkRetry<T>(
+  fn: () => Promise<T>,
+  stepPath: string,
+  sessionDir: string,
+  state: V2State,
+  logger: EngineLogger,
+): Promise<T> {
+  while (true) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (err instanceof EngineAbortError) throw err;
+      if (err instanceof EngineReplayError) throw err;
+
+      if (await isNetworkAvailable()) throw err;
+
+      // Network is down — wait for recovery
+      logger.waitingNetwork("Network disconnected. Waiting for recovery...");
+      setStatus(state, "waiting_network");
+      appendHistory(state, "waiting_network", stepPath, "Network disconnected");
+      writeV2State(sessionDir, state);
+
+      await waitForNetworkWithAbort(sessionDir, logger);
+
+      // Network recovered
+      logger.info("  Network recovered. Retrying step...");
+      setStatus(state, "running");
+      appendHistory(state, "network_recovered", stepPath, "Retrying");
+      writeV2State(sessionDir, state);
+    }
+  }
+}
+
+/**
+ * Wait for network recovery, polling every 30 seconds.
+ * Checks for abort requests between polls.
+ * Throws EngineAbortError if abort is requested.
+ */
+async function waitForNetworkWithAbort(
+  sessionDir: string,
+  logger: EngineLogger,
+): Promise<void> {
+  while (true) {
+    const req = readAbortRequest(sessionDir);
+    if (req) {
+      throw new EngineAbortError(req.mode);
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, NETWORK_POLL_INTERVAL_MS));
+
+    if (await isNetworkAvailable()) {
+      return;
+    }
+
+    logger.info("  Still waiting for network...");
+  }
+}
+
+/**
+ * Execute a block of steps sequentially.
+ * Returns true if a break was signaled (for loop exit).
+ */
+async function executeBlock(
+  steps: V2Step[],
+  parentPath: string,
+  sessionDir: string,
+  state: V2State,
+  meta: MetaJson,
+  logger: EngineLogger,
+): Promise<boolean> {
+  for (let i = 0; i < steps.length; i++) {
+    const step = steps[i];
+    const stepPath = buildStepPath(parentPath, step, i);
+
+    const shouldBreak = await executeStep(step, stepPath, sessionDir, state, meta, logger);
+    if (shouldBreak) return true;
+
+    // Check for graceful abort between steps
+    checkGracefulAbort(sessionDir);
+  }
+  return false;
+}
+
+function buildStepPath(parentPath: string, step: V2Step, index: number): string {
+  const name = step.id ?? `step_${index}`;
+  return parentPath ? `${parentPath}.${name}` : name;
+}
+
+/**
+ * Build expression context from current state.
+ */
+function buildExprContext(state: V2State, runCtx?: { iteration: number; max: number | null }): ExprContext {
+  const steps: Record<string, { result?: string }> = {};
+  for (const [key, val] of Object.entries(state.results)) {
+    // Use the last segment of the path as the step id for expression resolution
+    // e.g., "plan_review_cycle.review" -> accessible as both full path and "review"
+    steps[key] = { result: val.value };
+    const lastDot = key.lastIndexOf(".");
+    if (lastDot >= 0) {
+      const shortKey = key.slice(lastDot + 1);
+      steps[shortKey] = { result: val.value };
+    }
+  }
+  return {
+    steps,
+    run: runCtx ? { iteration: runCtx.iteration, max_iterations: runCtx.max } : undefined,
+  };
+}
+
+/**
+ * Check if a step type is an action step (produces a result).
+ */
+function isActionStep(type: string): boolean {
+  return type === "claude" || type === "codex" || type === "shell" || type === "human";
+}
+
+/**
+ * Execute a single step. Returns true if a loop break was signaled.
+ */
+async function executeStep(
+  step: V2Step,
+  stepPath: string,
+  sessionDir: string,
+  state: V2State,
+  meta: MetaJson,
+  logger: EngineLogger,
+): Promise<boolean> {
+  // Replay mode: skip steps before the replay target
+  if (state.replay_from) {
+    if (stepPath === state.replay_from) {
+      // Reached the target — clear replay mode and execute normally
+      logger.info(`Replay target reached: ${stepPath}`);
+      delete state.replay_from;
+      writeV2State(sessionDir, state);
+    } else if (state.replay_from.startsWith(stepPath + ".")) {
+      // This is a container that holds the replay target — enter it
+      // (fall through to the switch below which handles the container type)
+    } else {
+      // Step is before the target — skip
+      logger.info(`Skipping (replay): ${stepPath}`);
+      return false;
+    }
+  }
+
+  // Skip already-completed action steps (for resume after crash)
+  if (isActionStep(step.type) && state.results[stepPath]) {
+    logger.info(`Skipping completed step: ${stepPath} (result=${state.results[stepPath].value})`);
+    return false;
+  }
+
+  switch (step.type) {
+    case "loop":
+      return await executeLoop(step, stepPath, sessionDir, state, meta, logger);
+
+    case "branch":
+      return await executeBranch(step, stepPath, sessionDir, state, meta, logger);
+
+    case "parallel":
+      return await executeParallel(step, stepPath, sessionDir, state, meta, logger);
+
+    case "claude":
+    case "codex":
+    case "shell":
+    case "human":
+      await executeActionStep(step, stepPath, sessionDir, state, meta, logger);
+      return false;
+
+    default:
+      throw new Error(`Step type "${step.type}" is not yet implemented`);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Action steps (claude, human)
+// ---------------------------------------------------------------------------
+
+async function executeActionStep(
+  step: V2Step,
+  stepPath: string,
+  sessionDir: string,
+  state: V2State,
+  meta: MetaJson,
+  logger: EngineLogger,
+): Promise<void> {
+  // Update state
+  setCurrentStep(state, stepPath);
+  setStatus(state, step.type === "human" ? "waiting_human" : "running");
+  appendHistory(state, "step_start", stepPath, `type=${step.type}`);
+  writeV2State(sessionDir, state);
+
+  logger.setCurrentStep(stepPath);
+  logger.stepStart(stepPath, step.type, step.description);
+  const startTime = Date.now();
+
+  let resultValue: string | undefined;
+
+  switch (step.type) {
+    case "claude": {
+      const worktreeDir = meta.worktree || sessionDir;
+      const agentName = step.agent!;
+      const agentPath = resolveAgentPath(sessionDir, meta, agentName);
+
+      const env: Record<string, string> = {
+        FED_SESSION: meta.tmux_session ?? "",
+        FED_SESSION_DIR: sessionDir,
+        FED_REPO_DIR: worktreeDir,
+      };
+
+      await withNetworkRetry(async () => {
+        // Determine resume session ID
+        const resumeSessionId = step.resume ? getSessionId(state, stepPath) : undefined;
+
+        const handle = runClaudeStep({
+          step,
+          stepPath,
+          sessionDir,
+          worktreeDir,
+          agentInstructionPath: agentPath,
+          env,
+          logger,
+          resumeSessionId,
+        });
+
+        const exitCode = await waitWithAbortCheck(handle, sessionDir);
+
+        // Store session ID for future resume
+        if (handle.sessionId) {
+          setSessionId(state, stepPath, handle.sessionId);
+          writeV2State(sessionDir, state);
+        }
+
+        if (exitCode !== 0) {
+          // If resume failed (e.g. session expired), retry without resume
+          if (resumeSessionId) {
+            logger.warn(`  Resume failed (exit ${exitCode}), retrying without resume...`);
+            delete state.sessions[stepPath];
+
+            const retryHandle = runClaudeStep({
+              step,
+              stepPath,
+              sessionDir,
+              worktreeDir,
+              agentInstructionPath: agentPath,
+              env,
+              logger,
+            });
+
+            const retryExitCode = await waitWithAbortCheck(retryHandle, sessionDir);
+
+            if (retryHandle.sessionId) {
+              setSessionId(state, stepPath, retryHandle.sessionId);
+              writeV2State(sessionDir, state);
+            }
+
+            if (retryExitCode !== 0) {
+              throw new Error(`claude -p exited with code ${retryExitCode}`);
+            }
+          } else {
+            throw new Error(`claude -p exited with code ${exitCode}`);
+          }
+        }
+      }, stepPath, sessionDir, state, logger);
+
+      resultValue = readRespondFile(sessionDir, stepPath);
+      break;
+    }
+
+    case "codex": {
+      const worktreeDir = meta.worktree || sessionDir;
+      const agentName = step.agent!;
+      const agentPath = resolveAgentPath(sessionDir, meta, agentName);
+
+      const env: Record<string, string> = {
+        FED_SESSION: meta.tmux_session ?? "",
+        FED_SESSION_DIR: sessionDir,
+        FED_REPO_DIR: worktreeDir,
+      };
+
+      await withNetworkRetry(async () => {
+        // Determine resume session ID
+        const resumeSessionId = step.resume ? getSessionId(state, stepPath) : undefined;
+
+        const handle = runCodexStep({
+          step,
+          stepPath,
+          sessionDir,
+          worktreeDir,
+          agentInstructionPath: agentPath,
+          env,
+          logger,
+          resumeSessionId,
+        });
+
+        const exitCode = await waitWithAbortCheck(handle, sessionDir);
+
+        // Store session ID for future resume
+        if (handle.sessionId) {
+          setSessionId(state, stepPath, handle.sessionId);
+          writeV2State(sessionDir, state);
+        }
+
+        if (exitCode !== 0) {
+          // If resume failed (e.g. session expired), retry without resume
+          if (resumeSessionId) {
+            logger.warn(`  Resume failed (exit ${exitCode}), retrying without resume...`);
+            delete state.sessions[stepPath];
+
+            const retryHandle = runCodexStep({
+              step,
+              stepPath,
+              sessionDir,
+              worktreeDir,
+              agentInstructionPath: agentPath,
+              env,
+              logger,
+            });
+
+            const retryExitCode = await waitWithAbortCheck(retryHandle, sessionDir);
+
+            if (retryHandle.sessionId) {
+              setSessionId(state, stepPath, retryHandle.sessionId);
+              writeV2State(sessionDir, state);
+            }
+
+            if (retryExitCode !== 0) {
+              throw new Error(`codex exec exited with code ${retryExitCode}`);
+            }
+          } else {
+            throw new Error(`codex exec exited with code ${exitCode}`);
+          }
+        }
+      }, stepPath, sessionDir, state, logger);
+
+      resultValue = readRespondFile(sessionDir, stepPath);
+      break;
+    }
+
+    case "shell": {
+      const worktreeDir = meta.worktree || sessionDir;
+      const env: Record<string, string> = {
+        FED_SESSION: meta.tmux_session ?? "",
+        FED_SESSION_DIR: sessionDir,
+        FED_REPO_DIR: worktreeDir,
+      };
+
+      const handle = runShellStep({
+        step,
+        stepPath,
+        sessionDir,
+        worktreeDir,
+        env,
+        logger,
+      });
+
+      const exitCode = await waitWithAbortCheck(handle, sessionDir);
+
+      // Shell step result is based on exit code
+      resultValue = exitCode === 0 ? "pass" : "fail";
+      if (exitCode !== 0) {
+        logger.warn(`  Shell exited with code ${exitCode}`);
+      }
+      break;
+    }
+
+    case "human": {
+      const handle = runHumanStep({
+        step,
+        stepPath,
+        sessionDir,
+        logger,
+      });
+
+      // Wrap string promise into RunnerHandle for abort checking
+      let humanResult: string | undefined;
+      await waitWithAbortCheck(
+        {
+          promise: handle.promise.then((v) => { humanResult = v; return 0; }),
+          kill: handle.kill,
+        },
+        sessionDir,
+      );
+      resultValue = humanResult;
+      break;
+    }
+  }
+
+  // Record result
+  const durationMs = Date.now() - startTime;
+
+  // claude/codex steps must call `fed session respond-workflow` before exiting.
+  // If they exit 0 without a respond file, treat it as an error.
+  if (!resultValue && (step.type === "claude" || step.type === "codex")) {
+    logger.stepFailed(stepPath, "Agent exited without calling respond-workflow", durationMs);
+    logger.setCurrentStep(null);
+    throw new Error(
+      `Step "${stepPath}" (${step.type}) completed without respond-workflow. ` +
+      `The agent must call \`fed session respond-workflow <value>\` before exiting.`
+    );
+  }
+
+  if (resultValue) {
+    if (step.result?.values && !step.result.values.includes(resultValue)) {
+      logger.warn(
+        `Invalid result "${resultValue}" for step ${stepPath}. Valid: ${step.result.values.join(", ")}`
+      );
+    }
+    setStepResult(state, stepPath, resultValue);
+  }
+
+  setCurrentStep(state, null);
+  setStatus(state, "running");
+  appendHistory(state, "step_complete", stepPath, `result=${resultValue ?? "(none)"} duration=${durationMs}ms`);
+  writeV2State(sessionDir, state);
+
+  logger.stepComplete(stepPath, resultValue, durationMs);
+  logger.setCurrentStep(null);
+}
+
+// ---------------------------------------------------------------------------
+// Loop
+// ---------------------------------------------------------------------------
+
+async function executeLoop(
+  step: V2Step,
+  stepPath: string,
+  sessionDir: string,
+  state: V2State,
+  meta: MetaJson,
+  logger: EngineLogger,
+): Promise<boolean> {
+  if (!step.steps || step.steps.length === 0) {
+    throw new Error(`Loop step "${stepPath}" has no sub-steps`);
+  }
+
+  // Skip if loop was already completed in a previous run
+  // But not if we're replaying into a sub-step inside this loop
+  const isReplayParent = state.replay_from?.startsWith(stepPath + ".");
+  if (!isReplayParent) {
+    const loopCompleted = state.history.some(
+      h => h.event === "loop_complete" && h.step === stepPath
+    );
+    if (loopCompleted) {
+      logger.info(`Skipping completed loop: ${stepPath}`);
+      return false;
+    }
+  }
+
+  // If max is not set but until is present, loop indefinitely (until condition satisfied)
+  // If neither is set, safety limit of 100
+  const maxIterations = step.max ?? (step.until ? Infinity : 100);
+  const maxLabel = maxIterations === Infinity ? "∞" : String(maxIterations);
+
+  // Determine starting iteration for resume
+  const savedIteration = getLoopIteration(state, stepPath);
+  const startIteration = savedIteration ?? 1;
+
+  if (savedIteration) {
+    logger.info(`  Loop ${stepPath}: resuming from iteration ${savedIteration}`);
+    appendHistory(state, "loop_resume", stepPath, `iteration=${savedIteration}`);
+  } else {
+    logger.stepStart(stepPath, "loop", step.description);
+    appendHistory(state, "loop_start", stepPath, `max=${maxLabel}`);
+  }
+  const startTime = Date.now();
+
+  // Track loop exit reason
+  let exitReason: "until_satisfied" | "break" | "max_reached" = "max_reached";
+
+  for (let iteration = startIteration; iteration <= maxIterations; iteration++) {
+    logger.loopIteration(stepPath, iteration, maxLabel);
+
+    // Save current iteration to state for resume
+    setLoopIteration(state, stepPath, iteration);
+    writeV2State(sessionDir, state);
+
+    // Clear descendant results from previous iteration to allow re-execution.
+    // Skip clearing on the first iteration and on the resumed iteration
+    // (keep partial results for step-level skip on resume).
+    if (iteration > 1 && iteration !== savedIteration) {
+      const cleared = clearDescendantResults(state, stepPath);
+      if (cleared.length > 0) {
+        logger.info(`  Loop ${stepPath}: cleared ${cleared.length} descendant result(s) for re-execution`);
+        writeV2State(sessionDir, state);
+      }
+    }
+
+    // Check 'until' condition BEFORE executing steps (except first iteration)
+    if (iteration > 1 && step.until) {
+      const ctx = buildExprContext(state, { iteration, max: maxIterations });
+      if (evaluateCondition(step.until, ctx)) {
+        logger.info(`  Loop ${stepPath}: until condition satisfied`);
+        exitReason = "until_satisfied";
+        break;
+      }
+    }
+
+    // Execute sub-steps
+    const didBreak = await executeBlock(step.steps, stepPath, sessionDir, state, meta, logger);
+    if (didBreak) {
+      logger.info(`  Loop ${stepPath}: break signaled`);
+      exitReason = "break";
+      break;
+    }
+
+    // Check 'until' condition AFTER executing steps
+    if (step.until) {
+      const ctx = buildExprContext(state, { iteration, max: maxIterations });
+      if (evaluateCondition(step.until, ctx)) {
+        logger.info(`  Loop ${stepPath}: until condition satisfied`);
+        exitReason = "until_satisfied";
+        break;
+      }
+    }
+  }
+
+  // Escalate to human when max reached with unsatisfied until condition.
+  // If there's no until condition, max_reached is the expected/normal termination.
+  if (exitReason === "max_reached" && step.until) {
+    logger.info(`  Loop ${stepPath}: max iterations reached without satisfying until condition — escalating to human`);
+    appendHistory(state, "loop_max_reached", stepPath, `max=${maxLabel} until=${step.until}`);
+    writeV2State(sessionDir, state);
+
+    const escalationStepPath = `${stepPath}.__max_escalation`;
+    const prompt = `ループ "${stepPath}" が最大回数 (${maxLabel}) に到達しましたが、終了条件 (${step.until}) が満たされていません。状況を確認して対応してください。`;
+
+    setCurrentStep(state, escalationStepPath);
+    setStatus(state, "waiting_human");
+    appendHistory(state, "step_start", escalationStepPath, "type=human (max_reached escalation)");
+    writeV2State(sessionDir, state);
+
+    const handle = runHumanStep({
+      step: { id: "__max_escalation", type: "human", prompt, notify: true } as V2Step,
+      stepPath: escalationStepPath,
+      sessionDir,
+      logger,
+    });
+
+    let humanResult: string | undefined;
+    await waitWithAbortCheck(
+      {
+        promise: handle.promise.then((v) => { humanResult = v; return 0; }),
+        kill: handle.kill,
+      },
+      sessionDir,
+    );
+
+    setStepResult(state, escalationStepPath, humanResult ?? "acknowledged");
+    setStatus(state, "running");
+    appendHistory(state, "step_complete", escalationStepPath, `result=${humanResult ?? "acknowledged"}`);
+    writeV2State(sessionDir, state);
+  }
+
+  // Clear loop iteration tracking after completion
+  clearLoopIteration(state, stepPath);
+
+  const durationMs = Date.now() - startTime;
+  appendHistory(state, "loop_complete", stepPath, `reason=${exitReason} duration=${durationMs}ms`);
+  writeV2State(sessionDir, state);
+
+  logger.stepComplete(stepPath, undefined, durationMs);
+  return false;
+}
+
+// ---------------------------------------------------------------------------
+// Branch
+// ---------------------------------------------------------------------------
+
+async function executeBranch(
+  step: V2Step,
+  stepPath: string,
+  sessionDir: string,
+  state: V2State,
+  meta: MetaJson,
+  logger: EngineLogger,
+): Promise<boolean> {
+  if (!step.cases || step.cases.length === 0) {
+    throw new Error(`Branch step "${stepPath}" has no cases`);
+  }
+
+  logger.stepStart(stepPath, "branch", step.description);
+  const ctx = buildExprContext(state);
+
+  for (let i = 0; i < step.cases.length; i++) {
+    const branchCase = step.cases[i];
+
+    // Evaluate condition (else case always matches)
+    const isElse = branchCase.else === true || (!branchCase.if && branchCase.if !== "");
+    const conditionMet = isElse || (branchCase.if ? evaluateCondition(branchCase.if, ctx) : false);
+
+    if (conditionMet) {
+      const caseLabel = isElse ? "else" : `case[${i}]`;
+      logger.info(`  Branch ${stepPath}: matched ${caseLabel}`);
+
+      // Check for break signal on the case itself
+      if (branchCase.break) {
+        logger.info(`  Branch ${stepPath}: break signaled`);
+        return true;
+      }
+
+      // Execute the case's steps
+      if (branchCase.steps && branchCase.steps.length > 0) {
+        const didBreak = await executeBlock(branchCase.steps, stepPath, sessionDir, state, meta, logger);
+        if (didBreak) return true;
+      }
+
+      return false; // First matching case wins
+    }
+  }
+
+  logger.info(`  Branch ${stepPath}: no case matched`);
+  return false;
+}
+
+// ---------------------------------------------------------------------------
+// Parallel
+// ---------------------------------------------------------------------------
+
+async function executeParallel(
+  step: V2Step,
+  stepPath: string,
+  sessionDir: string,
+  state: V2State,
+  meta: MetaJson,
+  logger: EngineLogger,
+): Promise<boolean> {
+  if (!step.branches || step.branches.length === 0) {
+    throw new Error(`Parallel step "${stepPath}" has no branches`);
+  }
+
+  // Skip if parallel was already completed in a previous run
+  // But not if we're replaying into a branch inside this parallel
+  const isReplayParentParallel = state.replay_from?.startsWith(stepPath + ".");
+  if (!isReplayParentParallel) {
+    const parallelCompleted = state.history.some(
+      h => h.event === "parallel_complete" && h.step === stepPath
+    );
+    if (parallelCompleted) {
+      logger.info(`Skipping completed parallel: ${stepPath}`);
+      return false;
+    }
+  }
+
+  logger.stepStart(stepPath, "parallel", step.description);
+  logger.info(`  ${step.branches.length} branches`);
+  appendHistory(state, "parallel_start", stepPath, `branches=${step.branches.length}`);
+  writeV2State(sessionDir, state);
+
+  const startTime = Date.now();
+
+  // Create abort controller for canceling sibling branches on failure
+  const abortController = new AbortController();
+
+  // Launch all branches concurrently
+  const promises = step.branches.map(async (branch) => {
+    const branchPath = `${stepPath}.${branch.id}`;
+
+    // Convert parallel branch to a V2Step for executeActionStep
+    const branchStep: V2Step = {
+      id: branch.id,
+      type: branch.type,
+      agent: branch.agent,
+      description: branch.description,
+      prompt: branch.prompt,
+      result: branch.result,
+      resume: branch.resume,
+      resume_prompt: branch.resume_prompt,
+    };
+
+    try {
+      // Check abort before starting
+      if (abortController.signal.aborted) return;
+
+      const branchLogger = logger.createChildLogger(branchPath);
+      await executeActionStep(branchStep, branchPath, sessionDir, state, meta, branchLogger);
+    } catch (err) {
+      // Abort all sibling branches
+      abortController.abort();
+      throw err;
+    }
+  });
+
+  try {
+    await Promise.all(promises);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    logger.error(`  Parallel ${stepPath}: branch failed: ${message}`);
+    throw err;
+  }
+
+  const durationMs = Date.now() - startTime;
+  appendHistory(state, "parallel_complete", stepPath, `duration=${durationMs}ms`);
+  writeV2State(sessionDir, state);
+
+  logger.stepComplete(stepPath, undefined, durationMs);
+  return false;
+}
+
+// ---------------------------------------------------------------------------
+// Utilities
+// ---------------------------------------------------------------------------
+
+function resolveAgentPath(sessionDir: string, meta: MetaJson, agentName: string): string {
+  const agentsDir = path.join(sessionDir, "agents");
+
+  const directPath = path.join(agentsDir, `${agentName}.md`);
+  if (fs.existsSync(directPath)) return directPath;
+
+  const composedName = `__fed-${meta.workflow}-${meta.tmux_session}-${agentName}`;
+  const composedPath = path.join(agentsDir, `${composedName}.md`);
+  if (fs.existsSync(composedPath)) return composedPath;
+
+  if (fs.existsSync(agentsDir)) {
+    const files = fs.readdirSync(agentsDir);
+    const match = files.find((f) => f.endsWith(`-${agentName}.md`));
+    if (match) return path.join(agentsDir, match);
+  }
+
+  return directPath;
+}
+
+function readRespondFile(sessionDir: string, stepPath: string): string | undefined {
+  const safeStepPath = stepPath.replace(/[./]/g, "_");
+  const respondFile = path.join(sessionDir, "respond", `${safeStepPath}.respond`);
+
+  if (fs.existsSync(respondFile)) {
+    const value = fs.readFileSync(respondFile, "utf-8").trim();
+    return value || undefined;
+  }
+  return undefined;
+}
+

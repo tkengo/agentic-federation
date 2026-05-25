@@ -1,14 +1,19 @@
 import fs from "node:fs";
 import path from "node:path";
 import { resolveSession, requireSessionDir } from "../lib/session.js";
-import { initV2State, readV2State, writeV2State, appendHistory } from "../lib/engine-v2/state.js";
-import { runEngine } from "../lib/engine-v2/engine.js";
-import { loadV2Workflow, collectStepPaths, resolveStepPath } from "../lib/engine-v2/workflow-loader.js";
+import { loadV2Workflow as loadWorkflowForVersionCheck } from "../lib/engine-v2/workflow-loader.js";
+
+/** Resolve the engine version from the workflow YAML. */
+function getEngineVersion(workflowYamlPath: string): "v2" | "v3" {
+  const workflow = loadWorkflowForVersionCheck(workflowYamlPath);
+  return workflow.engine === "v3" ? "v3" : "v2";
+}
 
 /**
  * `fed session start-engine [session-name]`
  *
- * Start the v2 engine directly in the current terminal.
+ * Start the workflow engine directly in the current terminal.
+ * Engine version (v2 / v3) is selected per workflow via the `engine` field.
  * By default, resumes from last completed step (skips completed steps).
  * With --reset, reinitializes state and starts from the beginning.
  * With --from <step>, clears results from that step onwards and resumes.
@@ -31,10 +36,9 @@ export async function workflowEngineCommand(
     sessionPath = requireSessionDir();
   }
 
-  // v2 only
   const workflowYamlPath = path.join(sessionPath, "workflow-v2.yaml");
   if (!fs.existsSync(workflowYamlPath)) {
-    console.error("Error: workflow-v2.yaml not found. Only v2 sessions are supported.");
+    console.error("Error: workflow-v2.yaml not found.");
     process.exit(1);
   }
 
@@ -43,6 +47,40 @@ export async function workflowEngineCommand(
     console.error("Error: --reset and --from cannot be used together.");
     process.exit(1);
   }
+
+  // Select engine version based on workflow YAML's `engine` field
+  const version = getEngineVersion(workflowYamlPath);
+
+  // Dynamically import engine-v2 or engine-v3 modules
+  const stateModule = version === "v3"
+    ? await import("../lib/engine-v3/state.js")
+    : await import("../lib/engine-v2/state.js");
+  const engineModule = version === "v3"
+    ? await import("../lib/engine-v3/engine.js")
+    : await import("../lib/engine-v2/engine.js");
+  const loaderModule = version === "v3"
+    ? await import("../lib/engine-v3/workflow-loader.js")
+    : await import("../lib/engine-v2/workflow-loader.js");
+  const eventsModule = version === "v3"
+    ? await import("../lib/engine-v3/events.js")
+    : await import("../lib/engine-v2/events.js");
+  const dashboardAppModule = version === "v3"
+    ? await import("../lib/engine-v3/dashboard/EngineApp.js")
+    : await import("../lib/engine-v2/dashboard/EngineApp.js");
+  const buildStepTreeModule = version === "v3"
+    ? await import("../lib/engine-v3/dashboard/build-step-tree.js")
+    : await import("../lib/engine-v2/dashboard/build-step-tree.js");
+  const bufferedStdoutModule = version === "v3"
+    ? await import("../lib/engine-v3/dashboard/buffered-stdout.js")
+    : await import("../lib/engine-v2/dashboard/buffered-stdout.js");
+
+  const { initV2State, readV2State, writeV2State, appendHistory } = stateModule;
+  const { runEngine } = engineModule;
+  const { loadV2Workflow, collectStepPaths, resolveStepPath } = loaderModule;
+  const { EngineEventEmitter } = eventsModule;
+  const { EngineApp } = dashboardAppModule;
+  const { buildStepTree } = buildStepTreeModule;
+  const { patchStdoutBuffering } = bufferedStdoutModule;
 
   // Reset state if requested
   if (reset) {
@@ -121,19 +159,14 @@ export async function workflowEngineCommand(
   }
 
   const modeLabel = reset
-    ? "Starting engine from beginning..."
+    ? `Starting engine (${version}) from beginning...`
     : from
-      ? `Starting engine (replaying from ${from})...`
-      : "Starting engine (resuming from last completed step)..."
+      ? `Starting engine (${version}, replaying from ${from})...`
+      : `Starting engine (${version}, resuming from last completed step)...`
   console.log(modeLabel);
 
-  // Launch engine with Ink dashboard
-  const { EngineEventEmitter } = await import("../lib/engine-v2/events.js");
   const { render } = await import("ink");
   const React = await import("react");
-  const { EngineApp } = await import("../lib/engine-v2/dashboard/EngineApp.js");
-  const { buildStepTree } = await import("../lib/engine-v2/dashboard/build-step-tree.js");
-  const { patchStdoutBuffering } = await import("../lib/engine-v2/dashboard/buffered-stdout.js");
 
   const emitter = new EngineEventEmitter();
 
