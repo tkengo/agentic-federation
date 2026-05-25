@@ -1,13 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
 import { watch, type FSWatcher } from "chokidar";
-import type { V2Step } from "../types.js";
+import type { WorkflowStep } from "../types.js";
 import type { EngineLogger } from "../logger.js";
 import type { RunnerHandle } from "./types.js";
 import { sendOsNotification } from "../../../commands/notify-human.js";
 
 export interface HumanRunnerOptions {
-  step: V2Step;
+  step: WorkflowStep;
   stepPath: string;
   sessionDir: string;
   logger: EngineLogger;

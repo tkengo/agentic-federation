@@ -31,7 +31,7 @@ import { readAbortRequest, consumeAbortRequest, clearAbortRequest } from "./abor
 import { readReplayRequest, consumeReplayRequest, clearReplayRequest } from "./replay.js";
 import { collectStepPaths } from "./workflow-loader.js";
 import { isNetworkAvailable } from "./network.js";
-import type { V2Step, V2State, V2BranchCase } from "./types.js";
+import type { WorkflowStep, EngineState, BranchCase } from "./types.js";
 
 const NETWORK_POLL_INTERVAL_MS = 30_000; // 30 seconds
 
@@ -75,7 +75,7 @@ export async function runEngine(sessionDir: string, emitter?: EngineEventEmitter
   logger.engineStart(workflow.name, workflow.steps.length);
 
   // Initialize or resume state
-  let state: V2State;
+  let state: EngineState;
   const stateFilePath = path.join(sessionDir, "state-v2.json");
   if (fs.existsSync(stateFilePath)) {
     state = readV2State(sessionDir);
@@ -253,7 +253,7 @@ async function withNetworkRetry<T>(
   fn: () => Promise<T>,
   stepPath: string,
   sessionDir: string,
-  state: V2State,
+  state: EngineState,
   logger: EngineLogger,
 ): Promise<T> {
   while (true) {
@@ -312,10 +312,10 @@ async function waitForNetworkWithAbort(
  * Returns true if a break was signaled (for loop exit).
  */
 async function executeBlock(
-  steps: V2Step[],
+  steps: WorkflowStep[],
   parentPath: string,
   sessionDir: string,
-  state: V2State,
+  state: EngineState,
   meta: MetaJson,
   logger: EngineLogger,
 ): Promise<boolean> {
@@ -332,7 +332,7 @@ async function executeBlock(
   return false;
 }
 
-function buildStepPath(parentPath: string, step: V2Step, index: number): string {
+function buildStepPath(parentPath: string, step: WorkflowStep, index: number): string {
   const name = step.id ?? `step_${index}`;
   return parentPath ? `${parentPath}.${name}` : name;
 }
@@ -340,7 +340,7 @@ function buildStepPath(parentPath: string, step: V2Step, index: number): string 
 /**
  * Build expression context from current state.
  */
-function buildExprContext(state: V2State, runCtx?: { iteration: number; max: number | null }): ExprContext {
+function buildExprContext(state: EngineState, runCtx?: { iteration: number; max: number | null }): ExprContext {
   const steps: Record<string, { result?: string }> = {};
   for (const [key, val] of Object.entries(state.results)) {
     // Use the last segment of the path as the step id for expression resolution
@@ -369,10 +369,10 @@ function isActionStep(type: string): boolean {
  * Execute a single step. Returns true if a loop break was signaled.
  */
 async function executeStep(
-  step: V2Step,
+  step: WorkflowStep,
   stepPath: string,
   sessionDir: string,
-  state: V2State,
+  state: EngineState,
   meta: MetaJson,
   logger: EngineLogger,
 ): Promise<boolean> {
@@ -426,10 +426,10 @@ async function executeStep(
 // ---------------------------------------------------------------------------
 
 async function executeActionStep(
-  step: V2Step,
+  step: WorkflowStep,
   stepPath: string,
   sessionDir: string,
-  state: V2State,
+  state: EngineState,
   meta: MetaJson,
   logger: EngineLogger,
 ): Promise<void> {
@@ -458,7 +458,10 @@ async function executeActionStep(
       };
 
       await withNetworkRetry(async () => {
-        // Determine resume session ID
+        // In engine-v3, sessions[stepPath] is a sentinel marking that this step
+        // has been dispatched to the pane at least once. step.resume + sentinel
+        // means the runner should send the resume_prompt instead of the full
+        // instruction.
         const resumeSessionId = step.resume ? getSessionId(state, stepPath) : undefined;
 
         const handle = runClaudeStep({
@@ -472,43 +475,15 @@ async function executeActionStep(
           resumeSessionId,
         });
 
-        const exitCode = await waitWithAbortCheck(handle, sessionDir);
+        // v3 runner contract: promise resolves with 0 when the respond file
+        // appears, or rejects on dispatch / watcher failure. There is no
+        // non-zero exit path, so reject is the only failure mode and it
+        // propagates straight to withNetworkRetry for retry handling.
+        await waitWithAbortCheck(handle, sessionDir);
 
-        // Store session ID for future resume
         if (handle.sessionId) {
           setSessionId(state, stepPath, handle.sessionId);
           writeV2State(sessionDir, state);
-        }
-
-        if (exitCode !== 0) {
-          // If resume failed (e.g. session expired), retry without resume
-          if (resumeSessionId) {
-            logger.warn(`  Resume failed (exit ${exitCode}), retrying without resume...`);
-            delete state.sessions[stepPath];
-
-            const retryHandle = runClaudeStep({
-              step,
-              stepPath,
-              sessionDir,
-              worktreeDir,
-              agentInstructionPath: agentPath,
-              env,
-              logger,
-            });
-
-            const retryExitCode = await waitWithAbortCheck(retryHandle, sessionDir);
-
-            if (retryHandle.sessionId) {
-              setSessionId(state, stepPath, retryHandle.sessionId);
-              writeV2State(sessionDir, state);
-            }
-
-            if (retryExitCode !== 0) {
-              throw new Error(`claude -p exited with code ${retryExitCode}`);
-            }
-          } else {
-            throw new Error(`claude -p exited with code ${exitCode}`);
-          }
         }
       }, stepPath, sessionDir, state, logger);
 
@@ -528,7 +503,6 @@ async function executeActionStep(
       };
 
       await withNetworkRetry(async () => {
-        // Determine resume session ID
         const resumeSessionId = step.resume ? getSessionId(state, stepPath) : undefined;
 
         const handle = runCodexStep({
@@ -542,43 +516,11 @@ async function executeActionStep(
           resumeSessionId,
         });
 
-        const exitCode = await waitWithAbortCheck(handle, sessionDir);
+        await waitWithAbortCheck(handle, sessionDir);
 
-        // Store session ID for future resume
         if (handle.sessionId) {
           setSessionId(state, stepPath, handle.sessionId);
           writeV2State(sessionDir, state);
-        }
-
-        if (exitCode !== 0) {
-          // If resume failed (e.g. session expired), retry without resume
-          if (resumeSessionId) {
-            logger.warn(`  Resume failed (exit ${exitCode}), retrying without resume...`);
-            delete state.sessions[stepPath];
-
-            const retryHandle = runCodexStep({
-              step,
-              stepPath,
-              sessionDir,
-              worktreeDir,
-              agentInstructionPath: agentPath,
-              env,
-              logger,
-            });
-
-            const retryExitCode = await waitWithAbortCheck(retryHandle, sessionDir);
-
-            if (retryHandle.sessionId) {
-              setSessionId(state, stepPath, retryHandle.sessionId);
-              writeV2State(sessionDir, state);
-            }
-
-            if (retryExitCode !== 0) {
-              throw new Error(`codex exec exited with code ${retryExitCode}`);
-            }
-          } else {
-            throw new Error(`codex exec exited with code ${exitCode}`);
-          }
         }
       }, stepPath, sessionDir, state, logger);
 
@@ -672,10 +614,10 @@ async function executeActionStep(
 // ---------------------------------------------------------------------------
 
 async function executeLoop(
-  step: V2Step,
+  step: WorkflowStep,
   stepPath: string,
   sessionDir: string,
-  state: V2State,
+  state: EngineState,
   meta: MetaJson,
   logger: EngineLogger,
 ): Promise<boolean> {
@@ -780,7 +722,7 @@ async function executeLoop(
     writeV2State(sessionDir, state);
 
     const handle = runHumanStep({
-      step: { id: "__max_escalation", type: "human", prompt, notify: true } as V2Step,
+      step: { id: "__max_escalation", type: "human", prompt, notify: true } as WorkflowStep,
       stepPath: escalationStepPath,
       sessionDir,
       logger,
@@ -817,10 +759,10 @@ async function executeLoop(
 // ---------------------------------------------------------------------------
 
 async function executeBranch(
-  step: V2Step,
+  step: WorkflowStep,
   stepPath: string,
   sessionDir: string,
-  state: V2State,
+  state: EngineState,
   meta: MetaJson,
   logger: EngineLogger,
 ): Promise<boolean> {
@@ -867,10 +809,10 @@ async function executeBranch(
 // ---------------------------------------------------------------------------
 
 async function executeParallel(
-  step: V2Step,
+  step: WorkflowStep,
   stepPath: string,
   sessionDir: string,
-  state: V2State,
+  state: EngineState,
   meta: MetaJson,
   logger: EngineLogger,
 ): Promise<boolean> {
@@ -905,8 +847,8 @@ async function executeParallel(
   const promises = step.branches.map(async (branch) => {
     const branchPath = `${stepPath}.${branch.id}`;
 
-    // Convert parallel branch to a V2Step for executeActionStep
-    const branchStep: V2Step = {
+    // Convert parallel branch to a WorkflowStep for executeActionStep
+    const branchStep: WorkflowStep = {
       id: branch.id,
       type: branch.type,
       agent: branch.agent,

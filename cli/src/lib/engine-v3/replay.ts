@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { V2ReplayRequest } from "./types.js";
+import type { ReplayRequest } from "./types.js";
 
 const REPLAY_REQUEST_FILE = "replay-request.json";
 
@@ -12,7 +12,7 @@ function replayRequestPath(sessionDir: string): string {
  * Write a replay request file for the engine to pick up.
  */
 export function writeReplayRequest(sessionDir: string, from: string): void {
-  const request: V2ReplayRequest = {
+  const request: ReplayRequest = {
     from,
     requested_at: new Date().toISOString(),
   };
@@ -22,11 +22,11 @@ export function writeReplayRequest(sessionDir: string, from: string): void {
 /**
  * Read the replay request file if it exists.
  */
-export function readReplayRequest(sessionDir: string): V2ReplayRequest | null {
+export function readReplayRequest(sessionDir: string): ReplayRequest | null {
   const fp = replayRequestPath(sessionDir);
   if (!fs.existsSync(fp)) return null;
   try {
-    return JSON.parse(fs.readFileSync(fp, "utf-8")) as V2ReplayRequest;
+    return JSON.parse(fs.readFileSync(fp, "utf-8")) as ReplayRequest;
   } catch {
     return null;
   }
@@ -35,7 +35,7 @@ export function readReplayRequest(sessionDir: string): V2ReplayRequest | null {
 /**
  * Read and delete the replay request file (one-time consumption).
  */
-export function consumeReplayRequest(sessionDir: string): V2ReplayRequest | null {
+export function consumeReplayRequest(sessionDir: string): ReplayRequest | null {
   const req = readReplayRequest(sessionDir);
   if (req) {
     clearReplayRequest(sessionDir);

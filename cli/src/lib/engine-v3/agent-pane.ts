@@ -1,4 +1,4 @@
-import type { V2Workflow } from "./types.js";
+import type { Workflow } from "./types.js";
 
 /**
  * Resolve an agent ID to its tmux pane target string ("session:window.pane").
@@ -11,7 +11,7 @@ import type { V2Workflow } from "./types.js";
  * `steps[].agent` must match.
  */
 export function resolveAgentPane(
-  workflow: V2Workflow,
+  workflow: Workflow,
   tmuxSession: string,
   agentId: string,
 ): string {

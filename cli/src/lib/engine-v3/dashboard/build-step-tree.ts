@@ -1,17 +1,17 @@
-import type { V2Step, V2Workflow } from "../types.js";
+import type { WorkflowStep, Workflow } from "../types.js";
 import type { StepNode } from "./types.js";
 
 /**
- * Build a flat list of StepNode rows from a V2Workflow definition.
+ * Build a flat list of StepNode rows from a Workflow definition.
  * Handles nested structures (loop sub-steps, branch cases, parallel branches).
  */
-export function buildStepTree(workflow: V2Workflow): StepNode[] {
+export function buildStepTree(workflow: Workflow): StepNode[] {
   const nodes: StepNode[] = [];
   flattenSteps(workflow.steps, "", 0, nodes);
   return nodes;
 }
 
-function flattenSteps(steps: V2Step[], parentPath: string, depth: number, nodes: StepNode[], condition?: string): void {
+function flattenSteps(steps: WorkflowStep[], parentPath: string, depth: number, nodes: StepNode[], condition?: string): void {
   for (let i = 0; i < steps.length; i++) {
     const step = steps[i];
     const name = step.id ?? `step_${i}`;

@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { V2AbortRequest } from "./types.js";
+import type { AbortRequest } from "./types.js";
 
 const ABORT_REQUEST_FILE = "abort-request.json";
 
@@ -12,7 +12,7 @@ function abortRequestPath(sessionDir: string): string {
  * Write an abort request file for the engine to pick up.
  */
 export function writeAbortRequest(sessionDir: string, mode: "immediate" | "graceful"): void {
-  const request: V2AbortRequest = {
+  const request: AbortRequest = {
     mode,
     requested_at: new Date().toISOString(),
   };
@@ -22,11 +22,11 @@ export function writeAbortRequest(sessionDir: string, mode: "immediate" | "grace
 /**
  * Read the abort request file if it exists.
  */
-export function readAbortRequest(sessionDir: string): V2AbortRequest | null {
+export function readAbortRequest(sessionDir: string): AbortRequest | null {
   const fp = abortRequestPath(sessionDir);
   if (!fs.existsSync(fp)) return null;
   try {
-    return JSON.parse(fs.readFileSync(fp, "utf-8")) as V2AbortRequest;
+    return JSON.parse(fs.readFileSync(fp, "utf-8")) as AbortRequest;
   } catch {
     return null;
   }
@@ -35,7 +35,7 @@ export function readAbortRequest(sessionDir: string): V2AbortRequest | null {
 /**
  * Read and delete the abort request file (one-time consumption).
  */
-export function consumeAbortRequest(sessionDir: string): V2AbortRequest | null {
+export function consumeAbortRequest(sessionDir: string): AbortRequest | null {
   const req = readAbortRequest(sessionDir);
   if (req) {
     clearAbortRequest(sessionDir);

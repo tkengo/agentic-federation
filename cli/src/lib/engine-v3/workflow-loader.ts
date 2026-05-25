@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import { parse as parseYaml } from "yaml";
-import type { V2Workflow, V2Window, V2Step } from "./types.js";
+import type { Workflow, WorkflowWindow, WorkflowStep } from "./types.js";
 
 const VALID_STEP_TYPES = new Set([
   "claude", "codex", "shell", "human", "loop", "branch", "parallel",
@@ -12,7 +12,7 @@ const RESERVED_WINDOW_NAMES = new Set(["engine"]);
 /**
  * Load and validate a v2 workflow YAML file.
  */
-export function loadV2Workflow(filePath: string): V2Workflow {
+export function loadV2Workflow(filePath: string): Workflow {
   if (!fs.existsSync(filePath)) {
     throw new Error(`Workflow file not found: ${filePath}`);
   }
@@ -24,7 +24,7 @@ export function loadV2Workflow(filePath: string): V2Workflow {
     throw new Error(`Invalid workflow YAML: ${filePath}`);
   }
 
-  const workflow = doc as unknown as V2Workflow;
+  const workflow = doc as unknown as Workflow;
 
   // Validate required fields
   if (!workflow.name || typeof workflow.name !== "string") {
@@ -40,7 +40,7 @@ export function loadV2Workflow(filePath: string): V2Workflow {
   } else {
     // engine: false — steps are optional, default to empty array
     if (!workflow.steps) {
-      (workflow as { steps: V2Step[] }).steps = [];
+      (workflow as { steps: WorkflowStep[] }).steps = [];
     }
   }
 
@@ -69,7 +69,7 @@ export function loadV2Workflow(filePath: string): V2Workflow {
 /**
  * Validate the windows array.
  */
-function validateWindows(windows: V2Window[]): void {
+function validateWindows(windows: WorkflowWindow[]): void {
   const seenWindowNames = new Set<string>();
 
   for (let i = 0; i < windows.length; i++) {
@@ -133,13 +133,13 @@ function validateWindows(windows: V2Window[]): void {
  * Collect all step paths from a workflow in document order.
  * Includes container steps (loop, branch, parallel) and their children.
  */
-export function collectStepPaths(workflow: V2Workflow): string[] {
+export function collectStepPaths(workflow: Workflow): string[] {
   const paths: string[] = [];
   collectFromSteps(workflow.steps, "", paths);
   return paths;
 }
 
-function collectFromSteps(steps: V2Step[], parentPath: string, paths: string[]): void {
+function collectFromSteps(steps: WorkflowStep[], parentPath: string, paths: string[]): void {
   for (let i = 0; i < steps.length; i++) {
     const step = steps[i];
     const name = step.id ?? `step_${i}`;
@@ -193,7 +193,7 @@ export function resolveStepPath(allPaths: string[], target: string): string | nu
 // Step validation
 // ---------------------------------------------------------------------------
 
-function validateStep(step: V2Step, path: string, seenIds: Set<string>): void {
+function validateStep(step: WorkflowStep, path: string, seenIds: Set<string>): void {
   if (!step.type || !VALID_STEP_TYPES.has(step.type)) {
     throw new Error(
       `${path}: invalid step type "${step.type}". Valid types: ${[...VALID_STEP_TYPES].join(", ")}`

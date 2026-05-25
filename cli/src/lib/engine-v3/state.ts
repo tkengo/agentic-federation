@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { acquireLock } from "../filelock.js";
-import type { V2State, V2Status, V2HistoryEntry } from "./types.js";
+import type { EngineState, EngineStatus, HistoryEntry } from "./types.js";
 
 const STATE_FILENAME = "state-v2.json";
 
@@ -12,8 +12,8 @@ function statePath(sessionDir: string): string {
 /**
  * Create initial state-v2.json for a new session.
  */
-export function initV2State(sessionDir: string): V2State {
-  const state: V2State = {
+export function initV2State(sessionDir: string): EngineState {
+  const state: EngineState = {
     current_step: null,
     status: "running",
     results: {},
@@ -28,12 +28,12 @@ export function initV2State(sessionDir: string): V2State {
 /**
  * Read current v2 state.
  */
-export function readV2State(sessionDir: string): V2State {
+export function readV2State(sessionDir: string): EngineState {
   const fp = statePath(sessionDir);
   if (!fs.existsSync(fp)) {
     throw new Error(`State file not found: ${fp}`);
   }
-  const state = JSON.parse(fs.readFileSync(fp, "utf-8")) as V2State;
+  const state = JSON.parse(fs.readFileSync(fp, "utf-8")) as EngineState;
   // Backward compatibility: ensure sessions and loops fields exist
   if (!state.sessions) {
     state.sessions = {};
@@ -47,7 +47,7 @@ export function readV2State(sessionDir: string): V2State {
 /**
  * Write v2 state (no locking - caller must hold lock if needed).
  */
-export function writeV2State(sessionDir: string, state: V2State): void {
+export function writeV2State(sessionDir: string, state: EngineState): void {
   fs.writeFileSync(statePath(sessionDir), JSON.stringify(state, null, 2) + "\n");
 }
 
@@ -56,8 +56,8 @@ export function writeV2State(sessionDir: string, state: V2State): void {
  */
 export async function updateV2StateWithLock(
   sessionDir: string,
-  updater: (state: V2State) => void,
-): Promise<V2State> {
+  updater: (state: EngineState) => void,
+): Promise<EngineState> {
   const fp = statePath(sessionDir);
   const release = await acquireLock(fp);
   try {
@@ -74,7 +74,7 @@ export async function updateV2StateWithLock(
  * Record a step result in the state.
  */
 export function setStepResult(
-  state: V2State,
+  state: EngineState,
   stepPath: string,
   value: string,
 ): void {
@@ -95,7 +95,7 @@ export function setStepResult(
  * must not prevent re-execution when a parent loop starts a new iteration.
  */
 export function clearDescendantResults(
-  state: V2State,
+  state: EngineState,
   pathPrefix: string,
 ): string[] {
   const cleared: string[] = [];
@@ -123,7 +123,7 @@ export function clearDescendantResults(
  * Save current loop iteration for resume.
  */
 export function setLoopIteration(
-  state: V2State,
+  state: EngineState,
   stepPath: string,
   iteration: number,
 ): void {
@@ -134,7 +134,7 @@ export function setLoopIteration(
  * Get saved loop iteration (for resume). Returns undefined if not saved.
  */
 export function getLoopIteration(
-  state: V2State,
+  state: EngineState,
   stepPath: string,
 ): number | undefined {
   return state.loops[stepPath]?.iteration;
@@ -144,7 +144,7 @@ export function getLoopIteration(
  * Clear loop iteration tracking (after loop completes).
  */
 export function clearLoopIteration(
-  state: V2State,
+  state: EngineState,
   stepPath: string,
 ): void {
   delete state.loops[stepPath];
@@ -154,7 +154,7 @@ export function clearLoopIteration(
  * Store agent session ID for a step (for resume on loop re-execution).
  */
 export function setSessionId(
-  state: V2State,
+  state: EngineState,
   stepPath: string,
   sessionId: string,
 ): void {
@@ -165,7 +165,7 @@ export function setSessionId(
  * Get stored session ID for a step.
  */
 export function getSessionId(
-  state: V2State,
+  state: EngineState,
   stepPath: string,
 ): string | undefined {
   return state.sessions[stepPath];
@@ -175,12 +175,12 @@ export function getSessionId(
  * Append a history entry.
  */
 export function appendHistory(
-  state: V2State,
+  state: EngineState,
   event: string,
   step: string,
   detail?: string,
 ): void {
-  const entry: V2HistoryEntry = {
+  const entry: HistoryEntry = {
     ts: new Date().toISOString(),
     event,
     step,
@@ -192,13 +192,13 @@ export function appendHistory(
 /**
  * Update engine status.
  */
-export function setStatus(state: V2State, status: V2Status): void {
+export function setStatus(state: EngineState, status: EngineStatus): void {
   state.status = status;
 }
 
 /**
  * Set current step path.
  */
-export function setCurrentStep(state: V2State, stepPath: string | null): void {
+export function setCurrentStep(state: EngineState, stepPath: string | null): void {
   state.current_step = stepPath;
 }

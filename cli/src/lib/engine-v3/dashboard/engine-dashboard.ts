@@ -4,7 +4,7 @@
  */
 
 import type { EngineEventEmitter } from "../events.js";
-import type { V2Workflow } from "../types.js";
+import type { Workflow } from "../types.js";
 import type { StepNode, StepStatus } from "./types.js";
 import { buildStepTree } from "./build-step-tree.js";
 import { TerminalRenderer, color } from "./renderer.js";
@@ -32,7 +32,7 @@ interface DashboardState {
 
 export function startDashboard(
   emitter: EngineEventEmitter,
-  workflow: V2Workflow,
+  workflow: Workflow,
 ): { cleanup: () => void } {
   const renderer = new TerminalRenderer();
   renderer.enter();
