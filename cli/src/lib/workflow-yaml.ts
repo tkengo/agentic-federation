@@ -16,3 +16,24 @@ export function findWorkflowYaml(dir: string): string | null {
   if (fs.existsSync(v2)) return v2;
   return null;
 }
+
+/**
+ * Resolve the engine version from a workflow's `engine` field.
+ *
+ * Semantics:
+ *   "v2"                  -> v2 engine (legacy headless `claude -p` spawning)
+ *   "v3" | true | undefined -> v3 engine (tmux-resident agents, default)
+ *   false                 -> caller should check via isEngineEnabled first;
+ *                            still returns "v3" here so the type stays clean
+ *
+ * v3 is the default. Pre-existing workflows that still need the v2 engine
+ * must declare `engine: v2` explicitly.
+ */
+export function resolveEngineVersion(engine: boolean | "v2" | "v3" | undefined): "v2" | "v3" {
+  return engine === "v2" ? "v2" : "v3";
+}
+
+/** Whether the workflow opts in to an engine process at all. */
+export function isEngineEnabled(engine: boolean | "v2" | "v3" | undefined): boolean {
+  return engine !== false;
+}

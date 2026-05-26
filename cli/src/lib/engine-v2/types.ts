@@ -91,8 +91,8 @@ export interface V2Workflow {
   name: string;
   description?: string;
   // engine field semantics:
-  //   undefined / true / "v2" -> v2 engine (default, headless `claude -p` spawning)
-  //   "v3"                    -> v3 engine (tmux-resident agents with send-keys)
+  //   "v2"                    -> v2 engine (legacy headless `claude -p` spawning)
+  //   undefined / true / "v3" -> v3 engine (tmux-resident agents, default)
   //   false                   -> no engine window/process (standalone tmux session)
   engine?: boolean | "v2" | "v3";
   focus?: string;

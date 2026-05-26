@@ -1,6 +1,7 @@
 name: test-brushup
 description: "テストコードブラッシュアップ: データ収集・分析 → 改善計画策定 → リファクタリング → コードレビュー"
 
+engine: v2
 focus: analyzer
 
 windows:

@@ -1,6 +1,8 @@
 name: tdd-v5
 description: "TDD development pipeline for team collaboration (engine v2)"
 
+engine: v2
+
 focus: plan
 
 windows:

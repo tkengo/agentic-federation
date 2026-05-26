@@ -151,8 +151,17 @@ function AppInner() {
     }
   }, [screen, detailRepoName, detailRepo]);
 
-  // Read available workflows from workflows/ directory with descriptions
+  // Read available workflows from workflows/ directory with descriptions.
+  // A workflow is recognized if it contains either workflow-v3.yaml (engine-v3
+  // default) or workflow-v2.yaml (legacy); v3 takes precedence when both exist.
   const workflows: WorkflowInfo[] = useMemo(() => {
+    const findYaml = (dir: string): string | null => {
+      const v3 = path.join(dir, "workflow-v3.yaml");
+      if (fs.existsSync(v3)) return v3;
+      const v2 = path.join(dir, "workflow-v2.yaml");
+      if (fs.existsSync(v2)) return v2;
+      return null;
+    };
     try {
       const dashboardDir = path.dirname(fileURLToPath(import.meta.url));
       const workflowsDir = path.resolve(dashboardDir, "../../workflows");
@@ -161,16 +170,18 @@ function AppInner() {
         .readdirSync(workflowsDir)
         .filter((d) => {
           const dirPath = path.join(workflowsDir, d);
-          return fs.statSync(dirPath).isDirectory()
-            && fs.existsSync(path.join(dirPath, "workflow-v2.yaml"));
+          return fs.statSync(dirPath).isDirectory() && findYaml(dirPath) !== null;
         })
         .map((d) => {
           let description = "";
-          try {
-            const content = fs.readFileSync(path.join(workflowsDir, d, "workflow-v2.yaml"), "utf-8");
-            const match = content.match(/^description:\s*"?([^"\n]+)"?\s*$/m);
-            if (match) description = match[1]!.trim();
-          } catch { /* ignore */ }
+          const yamlPath = findYaml(path.join(workflowsDir, d));
+          if (yamlPath) {
+            try {
+              const content = fs.readFileSync(yamlPath, "utf-8");
+              const match = content.match(/^description:\s*"?([^"\n]+)"?\s*$/m);
+              if (match) description = match[1]!.trim();
+            } catch { /* ignore */ }
+          }
           return { name: d, description };
         });
     } catch {

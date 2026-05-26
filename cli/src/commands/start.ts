@@ -12,7 +12,7 @@ import { initCommand } from "./init.js";
 import { loadV2Workflow } from "../lib/engine-v2/workflow-loader.js";
 import type { V2Window, V2Workflow, V2Step } from "../lib/engine-v2/types.js";
 import { initV2State } from "../lib/engine-v2/state.js";
-import { findWorkflowYaml } from "../lib/workflow-yaml.js";
+import { findWorkflowYaml, resolveEngineVersion } from "../lib/workflow-yaml.js";
 import { stringify as stringifyYaml } from "yaml";
 import { composeAgentInstruction } from "../lib/workflow.js";
 
@@ -348,7 +348,7 @@ export function createV2WindowLayout(
   }
   tmux.selectPane(`${w}.${win.layout.focus}`);
 
-  const isV3 = workflow?.engine === "v3";
+  const isV3 = workflow ? resolveEngineVersion(workflow.engine) === "v3" : false;
 
   // Send commands to panes
   for (const pane of win.panes) {

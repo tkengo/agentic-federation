@@ -2,12 +2,12 @@ import fs from "node:fs";
 import path from "node:path";
 import { resolveSession, requireSessionDir } from "../lib/session.js";
 import { loadV2Workflow as loadWorkflowForVersionCheck } from "../lib/engine-v2/workflow-loader.js";
-import { findWorkflowYaml } from "../lib/workflow-yaml.js";
+import { findWorkflowYaml, resolveEngineVersion } from "../lib/workflow-yaml.js";
 
 /** Resolve the engine version from the workflow YAML. */
 function getEngineVersion(workflowYamlPath: string): "v2" | "v3" {
   const workflow = loadWorkflowForVersionCheck(workflowYamlPath);
-  return workflow.engine === "v3" ? "v3" : "v2";
+  return resolveEngineVersion(workflow.engine);
 }
 
 /**

@@ -1,1 +1,0 @@
-../../tdd-v4/agents/code-reviewer-conventions.md
