@@ -2,7 +2,6 @@ import fs from "node:fs";
 import path from "node:path";
 import { ACTIVE_DIR, ARCHIVE_DIR } from "../lib/paths.js";
 import { resolveSession, readMeta } from "../lib/session.js";
-import { findCleanTargets } from "./clean.js";
 
 type Row = {
   repo: string;
@@ -67,17 +66,6 @@ function readStatus(sessionDir: string): string {
     return data.status || "unknown";
   } catch {
     return "unknown";
-  }
-}
-
-function printCleanableSummary(): void {
-  const { targets, protectedCount } = findCleanTargets();
-  if (targets.length > 0 || protectedCount > 0) {
-    console.log();
-    const parts: string[] = [];
-    if (targets.length > 0) parts.push(`${targets.length} cleanable`);
-    if (protectedCount > 0) parts.push(`${protectedCount} protected`);
-    console.log(`  ${parts.join(", ")} worktree(s) (fed clean --dry-run to preview)`);
   }
 }
 
@@ -209,7 +197,6 @@ export function listCommand(options?: {
 
   if (rows.length === 0) {
     console.log("No sessions found.");
-    printCleanableSummary();
     return;
   }
 
@@ -227,6 +214,4 @@ export function listCommand(options?: {
   if (allRows.length > limit) {
     console.log(`\n  Showing ${limit} of ${allRows.length} sessions (use --limit to show more)`);
   }
-
-  printCleanableSummary();
 }
