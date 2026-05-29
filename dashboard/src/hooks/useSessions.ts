@@ -138,6 +138,31 @@ function countProtectedWorktrees(): number {
   }
 }
 
+// Shallow-compare two session lists by content so the watcher can skip a
+// re-render when a file change did not actually alter the displayed data
+// (e.g. a log/artifact touch, or an agent_state rewrite with the same value).
+function sessionsEqual(a: SessionData[], b: SessionData[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    const x = a[i]!;
+    const y = b[i]!;
+    if (
+      x.name !== y.name ||
+      x.status !== y.status ||
+      x.workflow !== y.workflow ||
+      x.description !== y.description ||
+      x.currentStep !== y.currentStep ||
+      x.stateMtimeMs !== y.stateMtimeMs ||
+      x.tmuxAlive !== y.tmuxAlive ||
+      x.agentState.state !== y.agentState.state ||
+      x.agentState.reason !== y.agentState.reason
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
 // Async version - runs in background without blocking the event loop
 function countCleanableWorktreesAsync(callback: (count: number) => void): void {
   exec("fed clean --dry-run", { encoding: "utf-8" }, (err, stdout) => {
@@ -160,9 +185,14 @@ export function useSessions() {
     countCleanableWorktreesAsync(setCleanableCount);
   }, []);
 
-  // Fast refresh: only reload session list (sync file reads, very fast)
+  // Fast refresh: only reload session list (sync file reads, very fast).
+  // Keep the previous array reference when content is unchanged so React
+  // bails out of the re-render — avoids dashboard flicker on every file event.
   const refreshSessions = useCallback(() => {
-    setSessions(loadSessions());
+    setSessions((prev) => {
+      const next = loadSessions();
+      return sessionsEqual(prev, next) ? prev : next;
+    });
   }, []);
 
   // Slow refresh: update cleanable count in background (non-blocking)
@@ -172,7 +202,10 @@ export function useSessions() {
 
   // Full refresh: fast session reload + background cleanable count + protected count
   const refresh = useCallback(() => {
-    setSessions(loadSessions());
+    setSessions((prev) => {
+      const next = loadSessions();
+      return sessionsEqual(prev, next) ? prev : next;
+    });
     setProtectedCount(countProtectedWorktrees());
     countCleanableWorktreesAsync(setCleanableCount);
   }, []);
