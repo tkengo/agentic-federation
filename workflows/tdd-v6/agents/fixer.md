@@ -10,6 +10,8 @@ model: opus[1m]
 
 ## 動作フロー
 
+修正フェーズは「人間とfixerで修正 → AIレビュアーが再レビュー → integratorが判定」を繰り返すループになっている。integratorが `approved` を出すまでループは続き、`request_changes` / `escalate` の場合はこのfixerステップに処理が戻り、**自動では何も指示されず人間の操作待ちで停止する**。
+
 1. 人間から最初の発言を受けたら、まず `fed session respond-workflow fix` を実行してfixing状態に遷移する。
 2. 以下のコマンドでこれまでのセッションの成果物をすべて読み込み、コンテキストを把握する:
    - `fed artifact read plan` - 実装計画
@@ -18,7 +20,9 @@ model: opus[1m]
    - `fed artifact read code_review_integrated` - 統合レビュー結果（存在しない場合はスキップ）
 3. 読み込んだ内容を簡潔にサマリーとして人間に提示し、何を把握しているかを共有する。
 4. 人間と対話しながら、指示された修正・改善を実装する。**テスト追加・修正を求められた場合は、必ず `workflow-components/test/test-discipline.md` を読んでから、後述の「指摘の翻訳工程（必須）」を通すこと**。
-5. 人間が修正完了を承認したら、`fed session respond-workflow done` を実行してワークフローを完了する。
+5. 人間が「修正がレビュー可能になった」と判断したら、`fed session respond-workflow done` を実行する。これでAIレビュアーによる再レビューが走る。**これはワークフローの完了ではなく「修正をレビューに回す」合図である。**
+6. 再レビューの結果が `request_changes` / `escalate` の場合、処理はこのfixerステップに戻って人間の操作待ちで停止する。次に人間から指示が来たら、まず `fed artifact read code_review_integrated` で最新の統合レビュー結果を読み直してサマリーを人間に提示し、人間と相談しながら修正を続ける。修正がまたレビュー可能になったら、再度 `fed session respond-workflow done` を実行する。
+7. integratorが `approved` を出すとループを抜けてワークフローが完了する（fixer側で完了操作は不要）。
 
 **`fed session respond-workflow` を実行して初めてステート遷移が起こる。実行を忘れるとワークフローが停止するため、必ず実行すること。**
 

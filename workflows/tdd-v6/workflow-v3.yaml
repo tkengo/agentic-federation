@@ -213,9 +213,63 @@ steps:
         steps: []
       - if: ${{ steps.final_review.result == "fix" }}
         steps:
-          - id: fixing
-            type: human
-            agent: fixer
-            notify: false
-            prompt: "人間とfixerが対話しながら修正。完了したら: fed session respond-workflow done"
-            description: "人間とfixerエージェントが対話しながらコード修正"
+          # Fix + re-review loop.
+          # The human drives the fixer; once changes are ready, fixer signals
+          # via `respond-workflow done` and AI reviewers re-review the changes.
+          # On request_changes/escalate the loop returns to the `fixing` human
+          # step, so the engine simply stops and waits for the human — NO
+          # automatic instruction is sent to the fixer. Exit is only via the
+          # integrator's "approved" verdict.
+          - id: fix_review_cycle
+            type: loop
+            until: ${{ steps.fix_review_integrate.result == "approved" }}
+            steps:
+              - id: fixing
+                type: human
+                agent: fixer
+                notify: false
+                prompt: "人間とfixerが対話しながら修正。修正がレビュー可能になったらfixerが: fed session respond-workflow done"
+                description: "人間とfixerエージェントが対話しながらコード修正"
+
+              # Parallel re-review of the fixer's changes from 4 perspectives
+              - id: fix_review_parallel
+                type: parallel
+                description: "fixer修正に対する4観点の並列コードレビュー"
+                branches:
+                  - id: fix_review_diff
+                    type: codex
+                    agent: code-reviewer-diff
+                    description: "差分特化レビュー"
+                    resume: true
+                    resume_prompt: "fixerがコードを修正しました。最新の差分を再レビューしてください。"
+                  - id: fix_review_history
+                    type: claude
+                    agent: code-reviewer-history
+                    description: "変更履歴・コミット観点レビュー"
+                    resume: true
+                    resume_prompt: "fixerがコードを修正しました。変更履歴・コミット観点で再レビューしてください。"
+                  - id: fix_review_impact
+                    type: claude
+                    agent: code-reviewer-impact
+                    description: "影響範囲・リスク観点レビュー"
+                    resume: true
+                    resume_prompt: "fixerがコードを修正しました。影響範囲・リスク観点で再レビューしてください。"
+                  - id: fix_review_conventions
+                    type: codex
+                    agent: code-reviewer-conventions
+                    description: "規約・一貫性観点レビュー"
+                    resume: true
+                    resume_prompt: "fixerがコードを修正しました。規約・一貫性観点で再レビューしてください。"
+
+              # Review integration and judgment
+              - id: fix_review_integrate
+                type: claude
+                agent: code-review-integrator
+                description: "fixer修正レビュー結果の統合・判定"
+                resume: true
+                resume_prompt: "fixer修正に対する新しいレビューラウンドの結果が出揃いました。最新のレビューアーティファクトを読み直して、統合判定してください。"
+                result:
+                  values: [approved, request_changes, escalate]
+              # approved -> until satisfied -> loop exits (workflow completes).
+              # request_changes / escalate -> until unsatisfied -> loop returns
+              # to `fixing`, where the engine waits for the human (no auto-instruction).
