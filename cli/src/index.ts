@@ -43,6 +43,7 @@ import { archiveCommand } from "./commands/archive.js";
 import { cleanCommand } from "./commands/clean.js";
 import { workflowStatusCommand } from "./commands/workflow-status.js";
 import { dashCommand } from "./commands/dash.js";
+import { browseCommand } from "./commands/browse.js";
 import { describeSetCommand, describeShowCommand } from "./commands/describe.js";
 import { workflowValidateCommand } from "./commands/workflow.js";
 import {
@@ -400,9 +401,21 @@ program
 program
   .command("dashboard")
   .alias("dash")
-  .description("Launch interactive dashboard (Ink terminal UI)")
-  .action(() => {
-    dashCommand();
+  .description("Launch interactive dashboard (Ink terminal UI). Also starts the markdown browser by default.")
+  .option("--no-browse", "Do not also start the markdown browser server")
+  .option("-p, --port <port>", "Markdown browser server port (default: 7777)")
+  .action((options: { browse?: boolean; port?: string }) => {
+    dashCommand(options);
+  });
+
+// --- browse ---
+program
+  .command("browse")
+  .description("Launch markdown viewer in browser (HTTP server + Vite UI)")
+  .option("-p, --port <port>", "Port to listen on (default: 7777)")
+  .option("--no-open", "Do not auto-open the browser")
+  .action((options: { port?: string; open?: boolean }) => {
+    browseCommand(options);
   });
 
 // --- workflow ---

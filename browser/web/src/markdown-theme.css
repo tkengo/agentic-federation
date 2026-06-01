@@ -1,0 +1,283 @@
+/* ============================================================
+ * Adapted from ~/.config/nvim/mkdp.css (MarkdownPreview.nvim theme)
+ * Scoped to .markdown-body so it does not bleed into the app shell.
+ * ============================================================ */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500;600&display=swap");
+
+:root {
+  --mkdp-bg: #ffffff;
+  --mkdp-fg: #1f2328;
+  --mkdp-muted: #57606a;
+  --mkdp-border: #d8dee4;
+  --mkdp-border-soft: #eaeef2;
+  --mkdp-accent: #6366f1;
+  --mkdp-accent-soft: #eef2ff;
+  --mkdp-accent-fg: #4338ca;
+  --mkdp-table-head-bg: #f6f7fb;
+  --mkdp-table-stripe: #fafbfd;
+  --mkdp-code-bg: #f6f8fa;
+  --mkdp-inline-code-bg: #eef2ff;
+  --mkdp-inline-code-fg: #4338ca;
+  --mkdp-quote-bg: #f8f9fc;
+  --mkdp-shadow: 0 1px 2px rgba(15, 23, 42, 0.04),
+    0 4px 12px rgba(15, 23, 42, 0.04);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --mkdp-bg: #0d1117;
+    --mkdp-fg: #e6edf3;
+    --mkdp-muted: #8b949e;
+    --mkdp-border: #30363d;
+    --mkdp-border-soft: #21262d;
+    --mkdp-accent: #818cf8;
+    --mkdp-accent-soft: #1e1b4b;
+    --mkdp-accent-fg: #a5b4fc;
+    --mkdp-table-head-bg: #161b22;
+    --mkdp-table-stripe: #11161d;
+    --mkdp-code-bg: #161b22;
+    --mkdp-inline-code-bg: #1e1b4b;
+    --mkdp-inline-code-fg: #c7d2fe;
+    --mkdp-quote-bg: #11161d;
+    --mkdp-shadow: 0 1px 2px rgba(0, 0, 0, 0.4),
+      0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* ============================================================
+ * Body
+ * ============================================================ */
+.markdown-body {
+  background: var(--mkdp-bg) !important;
+  color: var(--mkdp-fg) !important;
+  line-height: 1.8;
+  font-size: 15px;
+  font-family: "Inter", "Noto Sans JP", "Hiragino Sans", "Yu Gothic",
+    -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  font-feature-settings: "palt" 1;
+}
+
+/* ============================================================
+ * Headings
+ * ============================================================ */
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4,
+.markdown-body h5,
+.markdown-body h6 {
+  font-weight: 700;
+  line-height: 1.35;
+  margin-top: 2em;
+  margin-bottom: 0.6em;
+  color: var(--mkdp-fg);
+  border-bottom: none;
+}
+
+.markdown-body h1 {
+  font-size: 2em;
+  padding-bottom: 0.3em;
+  border-bottom: 2px solid var(--mkdp-accent);
+  letter-spacing: -0.01em;
+}
+
+.markdown-body h2 {
+  font-size: 1.5em;
+  padding-left: 0.6em;
+  border-left: 4px solid var(--mkdp-accent);
+  border-bottom: 1px solid var(--mkdp-border-soft);
+  padding-bottom: 0.3em;
+}
+
+.markdown-body h3 {
+  font-size: 1.2em;
+  color: var(--mkdp-accent-fg);
+}
+
+.markdown-body h4 {
+  font-size: 1.05em;
+}
+
+/* ============================================================
+ * Paragraphs, links, lists
+ * ============================================================ */
+.markdown-body a {
+  color: var(--mkdp-accent);
+  text-decoration: none;
+  border-bottom: 1px dashed var(--mkdp-accent);
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.markdown-body a:hover {
+  color: var(--mkdp-accent-fg);
+  border-bottom-style: solid;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  padding-left: 1.6em;
+}
+
+.markdown-body li + li {
+  margin-top: 0.25em;
+}
+
+/* ============================================================
+ * Blockquote
+ * ============================================================ */
+.markdown-body blockquote {
+  margin: 1em 0;
+  padding: 0.6em 1em;
+  background: var(--mkdp-quote-bg);
+  border-left: 4px solid var(--mkdp-accent);
+  border-radius: 0 6px 6px 0;
+  color: var(--mkdp-muted);
+}
+
+.markdown-body blockquote > :first-child {
+  margin-top: 0;
+}
+
+.markdown-body blockquote > :last-child {
+  margin-bottom: 0;
+}
+
+/* ============================================================
+ * Horizontal rule
+ * ============================================================ */
+.markdown-body hr {
+  height: 1px;
+  border: 0;
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--mkdp-border),
+    transparent
+  );
+  margin: 2.5em 0;
+}
+
+/* ============================================================
+ * Tables
+ * ============================================================ */
+.markdown-body table {
+  display: table;
+  width: 100%;
+  table-layout: auto;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--mkdp-border);
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 1.2em 0;
+  box-shadow: var(--mkdp-shadow);
+}
+
+.markdown-body th,
+.markdown-body td {
+  border-bottom: 1px solid var(--mkdp-border-soft);
+  border-right: 1px solid var(--mkdp-border-soft);
+  padding: 10px 14px;
+  white-space: normal !important;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  vertical-align: top;
+}
+
+.markdown-body th:last-child,
+.markdown-body td:last-child {
+  border-right: 0;
+}
+
+.markdown-body tr:last-child td {
+  border-bottom: 0;
+}
+
+.markdown-body thead th {
+  background: var(--mkdp-table-head-bg);
+  font-weight: 600;
+  text-align: left;
+  border-bottom: 2px solid var(--mkdp-border);
+  color: var(--mkdp-fg);
+}
+
+.markdown-body tbody tr:nth-child(even) {
+  background: var(--mkdp-table-stripe);
+}
+
+.markdown-body tbody tr:hover {
+  background: var(--mkdp-accent-soft);
+  transition: background 0.15s;
+}
+
+.markdown-body td code,
+.markdown-body th code {
+  white-space: normal;
+  word-break: break-all;
+}
+
+/* ============================================================
+ * Code blocks
+ * ============================================================ */
+.markdown-body pre {
+  background: var(--mkdp-code-bg) !important;
+  border: 1px solid var(--mkdp-border-soft);
+  border-radius: 10px;
+  padding: 18px 22px !important;
+  overflow-x: auto;
+  font-size: 0.92em;
+  line-height: 1.6;
+  margin: 1.2em 0;
+  box-shadow: var(--mkdp-shadow);
+  position: relative;
+}
+
+.markdown-body pre code {
+  background: transparent !important;
+  padding: 0 !important;
+  border: 0;
+  font-family: "JetBrains Mono", "HackGen Console NF", "SF Mono", Menlo,
+    Consolas, monospace;
+}
+
+/* Inline code */
+.markdown-body :not(pre) > code {
+  background: var(--mkdp-inline-code-bg);
+  color: var(--mkdp-inline-code-fg);
+  border-radius: 5px;
+  padding: 0.15em 0.45em;
+  font-size: 0.88em;
+  font-family: "JetBrains Mono", "HackGen Console NF", "SF Mono", Menlo,
+    Consolas, monospace;
+  font-weight: 500;
+}
+
+/* ============================================================
+ * Inline code that resolves to a known file — make it clickable
+ * ============================================================ */
+.markdown-body code.clickable-path {
+  cursor: pointer;
+  border-bottom: 1px dashed var(--mkdp-accent);
+  transition: background 0.15s, color 0.15s;
+}
+
+.markdown-body code.clickable-path:hover {
+  background: var(--mkdp-accent);
+  color: #ffffff;
+  border-bottom-color: transparent;
+}
+
+/* ============================================================
+ * Selection
+ * ============================================================ */
+.markdown-body ::selection {
+  background: #c7d2fe; /* indigo-200 */
+  color: #1e1b4b; /* indigo-950 */
+}
+
+@media (prefers-color-scheme: dark) {
+  .markdown-body ::selection {
+    background: #4f46e5; /* indigo-600 */
+    color: #e0e7ff; /* indigo-100 */
+  }
+}

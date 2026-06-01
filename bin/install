@@ -66,6 +66,21 @@ npm run build
 echo "  Dashboard built."
 echo ""
 
+# Browser (server + web)
+echo "Installing Browser server..."
+cd "$REPO_DIR/browser/server"
+npm install
+npm run build
+echo "  Browser server built."
+echo ""
+
+echo "Installing Browser web..."
+cd "$REPO_DIR/browser/web"
+npm install
+npm run build
+echo "  Browser web built."
+echo ""
+
 # Cleanup broken symlinks in skills directory (normal mode only)
 if [ "$DEV_MODE" = false ]; then
   for target_dir in "$HOME/.claude/skills"; do

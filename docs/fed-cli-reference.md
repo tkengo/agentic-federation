@@ -17,7 +17,8 @@ For detailed options and usage of each command, see [fed-cli-detailed-reference.
 | `fed waiting-human` | Manage waiting-for-human state |
 | `fed clean` | Clean up worktrees of archived sessions |
 | `fed worktree` | Manage worktrees and their protection |
-| `fed dashboard` | Launch interactive dashboard (Ink terminal UI) |
+| `fed dashboard` | Launch interactive dashboard (Ink terminal UI). Also auto-starts the markdown browser by default. |
+| `fed browse` | Launch markdown viewer in browser (HTTP server + Vite UI) |
 | `fed workflow` | Manage workflow definitions |
 | `fed repo-script` | Run repo-defined scripts |
 | `fed config` | Manage fed configuration (`~/.fed/config.json`) |
@@ -119,4 +120,20 @@ For detailed options and usage of each command, see [fed-cli-detailed-reference.
 Options for `fed worktree list`:
 - `--protected` - Show only protected worktrees
 - `--no-protected` - Show only unprotected worktrees
+
+### `fed browse`
+
+Launches a local HTTP server (Hono) plus a Vite+React UI for browsing markdown across fed sessions and the current repo.
+
+Options:
+- `-p, --port <port>` - Port to listen on (default: 7777, also overridable via `FED_BROWSE_PORT`)
+- `--no-open` - Do not auto-open the browser
+
+### `fed dashboard`
+
+Launches the interactive dashboard (Ink terminal UI). By default also starts the markdown browser server in the background and opens it in a browser tab; both are stopped when the dashboard exits.
+
+Options:
+- `--no-browse` - Do not also start the markdown browser server
+- `-p, --port <port>` - Markdown browser server port (default: 7777, also overridable via `FED_BROWSE_PORT`)
 
