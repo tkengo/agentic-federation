@@ -45,6 +45,8 @@ type Row =
   | { type: "scalar"; scalarKey: ScalarKey; rowKey: string }
   | { type: "array_item"; arrayKey: ArrayKey; index: number; rowKey: string }
   | { type: "array_add"; arrayKey: ArrayKey; rowKey: string }
+  | { type: "env_item"; envKey: string; rowKey: string }
+  | { type: "env_add"; rowKey: string }
   | { type: "action"; id: "open-nvim"; label: string; icon: string; rowKey: string };
 
 // Presets for base_branch quick-select
@@ -55,7 +57,19 @@ type EditingState =
   | { kind: "scalar"; key: ScalarKey }
   | { kind: "branch_select"; preset: BranchPresetIdx }
   | { kind: "array_edit"; arrayKey: ArrayKey; index: number }
-  | { kind: "array_new"; arrayKey: ArrayKey };
+  | { kind: "array_new"; arrayKey: ArrayKey }
+  | { kind: "env_edit"; envKey: string }
+  | { kind: "env_new" };
+
+// Parse a "KEY=value" line into its parts. Returns null when the key is empty
+// or no "=" is present. Value may contain further "=" characters.
+function parseEnvLine(line: string): { key: string; value: string } | null {
+  const eq = line.indexOf("=");
+  if (eq < 0) return null;
+  const key = line.slice(0, eq).trim();
+  if (key === "") return null;
+  return { key, value: line.slice(eq + 1) };
+}
 
 interface RepoEditorProps {
   configPath: string;
@@ -95,6 +109,11 @@ export function RepoEditor({
       arr.forEach((_, i) => rs.push({ type: "array_item", arrayKey: af.key, index: i, rowKey: `a-${af.key}-${i}` }));
       rs.push({ type: "array_add", arrayKey: af.key, rowKey: `add-${af.key}` });
     });
+    rs.push({ type: "blank", rowKey: "b-env" });
+    rs.push({ type: "header", label: "env", rowKey: "h-env" });
+    const env = (config.env as Record<string, string> | undefined) ?? {};
+    Object.keys(env).forEach((k) => rs.push({ type: "env_item", envKey: k, rowKey: `env-${k}` }));
+    rs.push({ type: "env_add", rowKey: "add-env" });
     rs.push({ type: "blank", rowKey: "b-actions" });
     rs.push({ type: "header", label: "Actions", rowKey: "h-actions" });
     rs.push({ type: "action", id: "open-nvim", label: "Open in nvim", icon: "✎", rowKey: "act-nvim" });
@@ -168,6 +187,13 @@ export function RepoEditor({
     } else if (selectedRow.type === "array_add") {
       setEditValue("");
       setEditing({ kind: "array_new", arrayKey: selectedRow.arrayKey });
+    } else if (selectedRow.type === "env_item") {
+      const env = (config.env as Record<string, string> | undefined) ?? {};
+      setEditValue(`${selectedRow.envKey}=${env[selectedRow.envKey] ?? ""}`);
+      setEditing({ kind: "env_edit", envKey: selectedRow.envKey });
+    } else if (selectedRow.type === "env_add") {
+      setEditValue("");
+      setEditing({ kind: "env_new" });
     } else if (selectedRow.type === "action" && selectedRow.id === "open-nvim") {
       onOpenInNvim();
     }
@@ -218,6 +244,40 @@ export function RepoEditor({
       arr.push(value);
       next[editing.arrayKey] = arr;
       saveConfig(next, `Added to ${editing.arrayKey}`);
+    } else if (editing.kind === "env_edit") {
+      const env: Record<string, string> = { ...(next.env ?? {}) };
+      if (value === "") {
+        delete env[editing.envKey];
+        next.env = env;
+        saveConfig(next, `Removed env ${editing.envKey}`);
+      } else {
+        const parsed = parseEnvLine(value);
+        if (!parsed) {
+          onError("Format must be KEY=value");
+          return;
+        }
+        // Renaming the key drops the old entry (new key lands at the end).
+        if (parsed.key !== editing.envKey) {
+          delete env[editing.envKey];
+        }
+        env[parsed.key] = parsed.value;
+        next.env = env;
+        saveConfig(next, `Updated env ${parsed.key}`);
+      }
+    } else if (editing.kind === "env_new") {
+      if (value === "") {
+        setEditing(null);
+        return;
+      }
+      const parsed = parseEnvLine(value);
+      if (!parsed) {
+        onError("Format must be KEY=value");
+        return;
+      }
+      const env: Record<string, string> = { ...(next.env ?? {}) };
+      env[parsed.key] = parsed.value;
+      next.env = env;
+      saveConfig(next, `Added env ${parsed.key}`);
     }
     setEditing(null);
   }
@@ -243,11 +303,22 @@ export function RepoEditor({
       const next: RepoConfigJson = JSON.parse(JSON.stringify(config));
       delete next[selectedRow.scalarKey];
       saveConfig(next, `Cleared ${field.label}`);
+    } else if (selectedRow.type === "env_item") {
+      const next: RepoConfigJson = JSON.parse(JSON.stringify(config));
+      const env: Record<string, string> = { ...(next.env ?? {}) };
+      delete env[selectedRow.envKey];
+      next.env = env;
+      saveConfig(next, `Removed env ${selectedRow.envKey}`);
     }
   }
 
   function startAddOnCurrentArray() {
     if (!selectedRow) return;
+    if (selectedRow.type === "env_item" || selectedRow.type === "env_add") {
+      setEditValue("");
+      setEditing({ kind: "env_new" });
+      return;
+    }
     let arrayKey: ArrayKey | null = null;
     if (selectedRow.type === "array_item") arrayKey = selectedRow.arrayKey;
     else if (selectedRow.type === "array_add") arrayKey = selectedRow.arrayKey;
@@ -430,6 +501,55 @@ export function RepoEditor({
         <Box>
           <Text color={cursorColor} bold={isSelected}>{cursor}</Text>
           <Text dimColor>[+] Add</Text>
+        </Box>
+      );
+    }
+
+    if (row.type === "env_item") {
+      const env = (config.env as Record<string, string> | undefined) ?? {};
+      const value = env[row.envKey] ?? "";
+      const isEditingHere = editing?.kind === "env_edit" && editing.envKey === row.envKey;
+      return (
+        <Box>
+          <Text color={cursorColor} bold={isSelected}>{cursor}</Text>
+          {isEditingHere ? (
+            <EmacsTextInput
+              value={editValue}
+              onChange={setEditValue}
+              onSubmit={commitEdit}
+              focus={true}
+            />
+          ) : (
+            <>
+              <Text dimColor>{row.envKey}=</Text>
+              <Text>{value}</Text>
+            </>
+          )}
+        </Box>
+      );
+    }
+
+    if (row.type === "env_add") {
+      const isEditingHere = editing?.kind === "env_new";
+      if (isEditingHere) {
+        return (
+          <Box>
+            <Text color={cursorColor} bold={isSelected}>{cursor}</Text>
+            <Text dimColor>[+] </Text>
+            <EmacsTextInput
+              value={editValue}
+              onChange={setEditValue}
+              onSubmit={commitEdit}
+              focus={true}
+              placeholder="KEY=value"
+            />
+          </Box>
+        );
+      }
+      return (
+        <Box>
+          <Text color={cursorColor} bold={isSelected}>{cursor}</Text>
+          <Text dimColor>[+] Add (KEY=value)</Text>
         </Box>
       );
     }
