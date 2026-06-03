@@ -12,7 +12,7 @@ disable-model-invocation: true
 ## 前提条件
 
 - 現在のセッションに `plan` という名前のアーティファクトが存在すること（`fed artifact list` で確認）
-- 計画は `# [タスク名] 実装計画（TDD）` というタイトル形式で、`## 概要` `## 背景・ユーザーストーリー` `## 要件` `## 完了条件` セクションを含むこと
+- 計画は `# [タスク名] 実装計画（TDD）` というタイトル形式で、`## 背景・ユーザーストーリー` `## 要件` `## 完了条件` セクションを含むこと
 - 現在のブランチが main/master ではないこと
 - `gh` CLIが認証済みで、PR作成権限があること
 
@@ -43,7 +43,6 @@ disable-model-invocation: true
 | 抽出元 | PR上の見出し | 変換ルール |
 |---|---|---|
 | `# [タスク名] 実装計画（TDD）` | PRタイトル | `[タスク名]` をそのまま使用（70文字以内） |
-| `## 概要` | `## Overview` | 内容をそのまま転記 |
 | `## 背景・ユーザーストーリー` | `## Background & User Story` | `### 背景` `### ユーザーストーリー` `### ユースケース` のサブセクションを見出しごとそのまま転記 |
 | `## 要件` | `## Requirements` | 内容をそのまま箇条書きで転記 |
 | `## 完了条件` | `## Completion Criteria` | 各 `- 条件` を `- [ ] 条件` のチェックボックス形式に変換 |
@@ -51,10 +50,6 @@ disable-model-invocation: true
 PRボディフォーマット:
 
 ```markdown
-## Overview
-
-（計画の「## 概要」セクションの内容）
-
 ## Background & User Story
 
 ### 背景
@@ -87,7 +82,7 @@ bodyはHEREDOCで渡す（フォーマット崩れ防止）:
 
 ```bash
 gh pr create --draft --title "[タスク名]" --body "$(cat <<'EOF'
-## Overview
+## Background & User Story
 ...
 EOF
 )"
