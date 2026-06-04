@@ -57,6 +57,33 @@ export function sendKeys(target: string, keys: string): void {
   tmux(`send-keys -t ${quote(`=${target}`)} ${quote(keys)} Enter`);
 }
 
+// Wait until a freshly created pane's shell is ready to accept input.
+//
+// A brand-new shell may still be running its init (.zshrc / .bashrc,
+// instant-prompt plugins, etc.); send-keys issued during that window can be
+// dropped or garbled, which is why the engine occasionally failed to start.
+// Instead of a blind fixed sleep, we send a marker `echo` and poll the pane
+// until the marker is echoed back, proving the shell executed a command.
+// This returns almost immediately on a warm machine and only waits as long as
+// the shell actually needs (up to timeoutMs). It is also self-healing: if an
+// early marker is dropped, a later one gets through.
+export function waitForShellReady(target: string, timeoutMs: number = 8000): void {
+  const q = quote(`=${target}`);
+  const marker = "__FED_SHELL_READY__";
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    tmux(`send-keys -t ${q} ${quote(`echo ${marker}`)} Enter`);
+    execSync(`sleep 0.15`);
+    const content = tmux(`capture-pane -p -t ${q}`);
+    // The command line shows `echo __FED_SHELL_READY__`; the marker appearing
+    // on its own line is the command's output, i.e. the shell ran it.
+    if (content.split("\n").some((l) => l.trim() === marker)) {
+      tmux(`send-keys -t ${q} C-l`); // Clear the marker noise before the engine UI starts.
+      return;
+    }
+  }
+}
+
 // Send a prompt to an interactive CLI in a pane, then submit with Enter.
 // Splitting the text and the Enter into two send-keys calls (with a brief
 // pause between) prevents the receiving CLI from treating the trailing Enter

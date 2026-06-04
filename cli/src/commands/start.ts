@@ -16,6 +16,11 @@ import { findWorkflowYaml, resolveEngineVersion } from "../lib/workflow-yaml.js"
 import { stringify as stringifyYaml } from "yaml";
 import { composeAgentInstruction } from "../lib/workflow.js";
 
+// Upper bound for waiting on the engine window's shell to become ready before
+// sending the start-engine keystrokes. Normally returns far sooner; this is
+// only the timeout for pathologically slow shell startups.
+const ENGINE_SHELL_READY_TIMEOUT_MS = 8000;
+
 /**
  * `fed session start <workflow> [repo] [branch]`
  *
@@ -220,6 +225,12 @@ export async function startCommand(
     // Engine mode: create with [engine] window, then add user windows
     tmux.newSession(tmuxSession, cwd, "engine");
     applyEnvironmentVars(tmuxSession, config?.env, envVars);
+    // The engine window is created together with the session, so its shell is
+    // the slowest to finish initializing. Sending keys immediately can drop or
+    // garble the start-engine command (race seen only on this first window),
+    // leaving the engine unstarted. Wait until the shell can actually run a
+    // command before sending (returns quickly on a warm machine).
+    tmux.waitForShellReady(`${tmuxSession}:engine.1`, ENGINE_SHELL_READY_TIMEOUT_MS);
     tmux.sendKeys(`${tmuxSession}:engine.1`, `export FED_SESSION=${tmuxSession} FED_SESSION_DIR=${sessionPath}`);
     tmux.sendKeys(`${tmuxSession}:engine.1`, `fed session start-engine ${tmuxSession}`);
 
