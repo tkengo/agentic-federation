@@ -12,7 +12,7 @@ model: opus[1m]
 
 修正フェーズは「人間とfixerで修正 → AIレビュアーが再レビュー → integratorが判定」を繰り返すループになっている。integratorが `approved` を出すまでループは続き、`request_changes` / `escalate` の場合はこのfixerステップに処理が戻り、**自動では何も指示されず人間の操作待ちで停止する**。
 
-1. 人間から最初の発言を受けたら、まず `fed session respond-workflow fix` を実行してfixing状態に遷移する。
+1. 人間から最初の発言を受けたら、まず `fed session respond-workflow fix --step final_review` を実行して fixing 状態に遷移する。この応答はひとつ手前の `final_review` ステップへの回答なので、`--step final_review` を必ず明示すること（fixerペインには `FED_STEP=...fixing` が固定されており、省略すると応答が誤ったステップに記録されてエンジンが停止したままになる）。
 2. 以下のコマンドでこれまでのセッションの成果物をすべて読み込み、コンテキストを把握する:
    - `fed artifact read plan` - 実装計画
    - `fed artifact read test_implementation` - テスト実装サマリー
