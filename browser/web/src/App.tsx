@@ -269,6 +269,9 @@ export function App(): React.ReactElement {
     return () => window.removeEventListener("keydown", handler);
   }, [tree]);
 
+  // Standalone sessions have no worktree; the second tree shows the session dir.
+  const isStandalone = !sessions.find((s) => s.name === selectedSession)?.worktree;
+
   return (
     <div className="app-shell">
       <header className="app-header">
@@ -302,7 +305,7 @@ export function App(): React.ReactElement {
                 {tree.repo.root && (
                   <>
                     <TitleWithTooltip
-                      text="Repo files"
+                      text={isStandalone ? "Session files" : "Repo files"}
                       tooltip={tree.repo.root}
                       withMargin
                     />

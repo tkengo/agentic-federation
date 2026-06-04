@@ -34,10 +34,12 @@ export function SessionSelect({ sessions, value, onChange }: Props): React.React
                     •
                   </Select.ItemIndicator>
                   <Select.ItemText className="bu-select-item-text">
-                    <span className="bu-select-item-name">{s.name}</span>
-                    <span className="bu-select-item-meta">
-                      {s.workflow}
-                      {s.repo ? ` · ${s.repo}` : ""}
+                    <span className="bu-select-item-head">
+                      <span className="bu-select-item-name">{s.name}</span>
+                      <span className="bu-select-item-meta">
+                        {s.workflow}
+                        {s.repo ? ` · ${s.repo}` : ""}
+                      </span>
                     </span>
                     {s.description && (
                       <span className="bu-select-item-desc">{s.description}</span>

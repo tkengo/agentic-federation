@@ -15,6 +15,8 @@ treeRouter.get("/:session", (c) => {
   if (!meta) return c.json({ error: "session not found" }, 404);
 
   const artifactsRoot = path.join(meta.session_dir, "artifacts");
+  // Standalone sessions have no worktree; fall back to the session directory.
+  const repoRoot = meta.worktree || meta.session_dir;
 
   return c.json({
     session: {
@@ -22,8 +24,8 @@ treeRouter.get("/:session", (c) => {
       tree: buildTree(artifactsRoot),
     },
     repo: {
-      root: meta.worktree,
-      tree: buildTree(meta.worktree),
+      root: repoRoot,
+      tree: buildTree(repoRoot),
     },
   });
 });

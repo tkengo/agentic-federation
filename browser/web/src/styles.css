@@ -170,6 +170,13 @@ button {
   min-width: 0;
 }
 
+.bu-select-item-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .bu-select-item-name {
   font-size: 13px;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;

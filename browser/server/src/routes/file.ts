@@ -5,8 +5,9 @@ import { readSessionMeta } from "../lib/sessions.js";
 import { resolveWithinRoot } from "../lib/fstree.js";
 
 // For kind=session, the visible root is the artifacts subdirectory.
+// For kind=repo, standalone sessions have no worktree, so fall back to the session directory.
 function rootFor(kind: "session" | "repo", meta: { session_dir: string; worktree: string }): string {
-  return kind === "session" ? path.join(meta.session_dir, "artifacts") : meta.worktree;
+  return kind === "session" ? path.join(meta.session_dir, "artifacts") : meta.worktree || meta.session_dir;
 }
 
 export const fileRouter = new Hono();
