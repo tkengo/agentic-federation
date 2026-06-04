@@ -85,6 +85,10 @@ model: opus[1m]
 
 ---
 
+@include(workflow-components/implementation/no-plan-ids-in-comments.md)
+
+---
+
 ## テスト実装サマリーの形式
 
 ```markdown

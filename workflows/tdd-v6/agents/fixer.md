@@ -50,3 +50,7 @@ model: opus[1m]
 ---
 
 @include(workflow-components/implementation/approach.md)
+
+---
+
+@include(workflow-components/implementation/no-plan-ids-in-comments.md)

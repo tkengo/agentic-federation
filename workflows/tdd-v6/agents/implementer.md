@@ -93,6 +93,10 @@ model: opus[1m]
 
 ---
 
+@include(workflow-components/implementation/no-plan-ids-in-comments.md)
+
+---
+
 ## implementation(実装サマリー)の形式
 
 実装サマリーは以下の形式で作成してください：
