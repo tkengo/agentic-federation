@@ -93,6 +93,14 @@ model: opus[1m]
 
 ---
 
+## エスカレーション後の復帰
+
+`escalate` を投げた後、ワークフローは人間の判断待ちで停止する。人間が判断を送ってくるまで待機する。
+
+人間の判断を受け取ったら、`fed session respond-workflow --step implement_review_cycle.code_review_branch.code_review_escalation done` を実行してワークフローを復帰させる。これによりループが implementation ステップに戻り、implementer が修正を再開する。
+
+---
+
 ## 指摘の「内容」の書き方（最重要）
 
 各指摘の `内容` フィールドは、**その箇所のコードを知らない人間が読んで「結局どういうこと？」が一発で分かる**ように書く。レビュアー同士の要約（専門用語をそのまま残した圧縮）ではなく、**概念から組み立て直した説明**にすること。
