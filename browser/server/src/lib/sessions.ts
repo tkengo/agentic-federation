@@ -21,6 +21,16 @@ export interface SessionSummary {
   branch: string;
   workflow: string;
   created_at: string;
+  description?: string;
+}
+
+function readDescription(sessionDir: string): string | undefined {
+  try {
+    const content = fs.readFileSync(path.join(sessionDir, "description.txt"), "utf8").trim();
+    return content || undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 export function listSessions(): SessionSummary[] {
@@ -52,6 +62,7 @@ export function listSessions(): SessionSummary[] {
         branch: meta.branch,
         workflow: meta.workflow,
         created_at: meta.created_at,
+        description: readDescription(realDir),
       });
     } catch {
       // Skip malformed meta.json

@@ -39,6 +39,9 @@ export function SessionSelect({ sessions, value, onChange }: Props): React.React
                       {s.workflow}
                       {s.repo ? ` · ${s.repo}` : ""}
                     </span>
+                    {s.description && (
+                      <span className="bu-select-item-desc">{s.description}</span>
+                    )}
                   </Select.ItemText>
                 </Select.Item>
               ))}

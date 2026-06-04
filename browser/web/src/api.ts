@@ -6,6 +6,7 @@ export interface SessionSummary {
   branch: string;
   workflow: string;
   created_at: string;
+  description?: string;
 }
 
 export interface TreeNode {

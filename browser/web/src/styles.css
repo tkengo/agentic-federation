@@ -181,6 +181,14 @@ button {
   color: var(--fg-muted);
 }
 
+.bu-select-item-desc {
+  font-size: 11px;
+  color: var(--fg-muted);
+  margin-top: 2px;
+  white-space: normal;
+  word-break: break-word;
+}
+
 .app-body {
   flex: 1;
   display: flex;
