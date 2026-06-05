@@ -1,6 +1,6 @@
 # テスト規律 — 振る舞いに対してテストを書く
 
-fed の TDD ワークフロー（tdd-v5 / tdd-v6 等）の **全 agent が共通で従う原則** を定義する正本。テストを書く側（test-implementer / implementer / fixer）と、テストを論じる側（code-reviewer-* / code-review-integrator）の双方からここを参照する。
+fed の TDD ワークフロー（tdd-v6 等）の **全 agent が共通で従う原則** を定義する正本。テストを書く側（test-implementer / implementer / fixer）と、テストを論じる側（code-reviewer-* / code-review-integrator）の双方からここを参照する。
 
 「テストは振る舞いに対してしか書かない」は決め打ちチェックリストではない。リストに無いアンチパターンは無数にある。**判定基準そのもの** を持って、新しいケースに自分で当てて判別できるようにすること。これが本ファイルの目的。
 
