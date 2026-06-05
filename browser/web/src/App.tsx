@@ -9,7 +9,13 @@ import {
   type TreeResponse,
 } from "./api.ts";
 import { Tooltip } from "@base-ui/react/tooltip";
-import { RiMenuFoldLine, RiMenuUnfoldLine } from "@remixicon/react";
+import {
+  RiMenuFoldLine,
+  RiMenuUnfoldLine,
+  RiArrowLeftDoubleLine,
+  RiArrowRightDoubleLine,
+  RiSplitCellsHorizontal,
+} from "@remixicon/react";
 import { SessionSelect } from "./components/SessionSelect.tsx";
 import { FileTree } from "./components/FileTree.tsx";
 import { FileView } from "./components/FileView.tsx";
@@ -31,6 +37,9 @@ interface PaneState {
 }
 
 const initialPaneState: PaneState = { tabs: [], activePath: null };
+
+// localStorage key for the persisted artifact/code pane split percentage.
+const SPLIT_KEY = "fed-browse-split";
 
 function getActiveTab(pane: PaneState): Tab | null {
   if (!pane.activePath) return null;
@@ -77,6 +86,42 @@ export function App(): React.ReactElement {
   const [repoPane, setRepoPane] = useState<PaneState>(initialPaneState);
   const [searchOpen, setSearchOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  // Width of the artifact pane as a percentage of the content area. The code
+  // pane fills the rest. Persisted so reloads keep the same split.
+  const [split, setSplit] = useState<number>(() => {
+    const raw = typeof localStorage !== "undefined" ? localStorage.getItem(SPLIT_KEY) : null;
+    const n = raw === null ? NaN : Number(raw);
+    return Number.isFinite(n) && n >= 0 && n <= 100 ? n : 50;
+  });
+  const [dragging, setDragging] = useState(false);
+  const contentRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    localStorage.setItem(SPLIT_KEY, String(split));
+  }, [split]);
+
+  // Drag the splitter: translate the pointer's x position within the content
+  // area into a percentage and clamp it so the gutter stays grabbable.
+  const startDrag = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
+    const el = contentRef.current;
+    if (!el) return;
+    setDragging(true);
+    const move = (ev: PointerEvent): void => {
+      const rect = el.getBoundingClientRect();
+      if (rect.width === 0) return;
+      const pct = ((ev.clientX - rect.left) / rect.width) * 100;
+      setSplit(Math.min(97, Math.max(3, pct)));
+    };
+    const up = (): void => {
+      setDragging(false);
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  }, []);
 
   // Load sessions on mount, and refresh on SSE events
   useEffect(() => {
@@ -320,19 +365,27 @@ export function App(): React.ReactElement {
             )}
           </section>
         </aside>
-        <main className="content">
+        <main className={`content${dragging ? " content--dragging" : ""}`} ref={contentRef}>
           <PaneRenderer
             label="ARTIFACT"
             modifier="artifact"
+            basis={split}
             pane={artifactPane}
             flatFiles={flatFiles}
             onPathClick={handleSelectFile}
             onActivate={(p) => activateTab(setArtifactPane, p)}
             onClose={(p) => closeTab(setArtifactPane, p)}
           />
+          <Splitter
+            onResizeStart={startDrag}
+            onCollapseLeft={() => setSplit(0)}
+            onReset={() => setSplit(50)}
+            onCollapseRight={() => setSplit(100)}
+          />
           <PaneRenderer
             label="CODE"
             modifier="repo"
+            basis={100 - split}
             pane={repoPane}
             flatFiles={flatFiles}
             onPathClick={handleSelectFile}
@@ -354,9 +407,66 @@ export function App(): React.ReactElement {
   );
 }
 
+interface SplitterProps {
+  onResizeStart: (e: React.PointerEvent) => void;
+  onCollapseLeft: () => void;
+  onReset: () => void;
+  onCollapseRight: () => void;
+}
+
+// Draggable gutter between the two panes, with controls to maximize either
+// side or restore an even 50/50 split.
+function Splitter({
+  onResizeStart,
+  onCollapseLeft,
+  onReset,
+  onCollapseRight,
+}: SplitterProps): React.ReactElement {
+  return (
+    <div
+      className="splitter"
+      role="separator"
+      aria-orientation="vertical"
+      onPointerDown={onResizeStart}
+    >
+      {/* Stop pointerdown here so clicking a control does not start a drag. */}
+      <div className="splitter__controls" onPointerDown={(e) => e.stopPropagation()}>
+        <button
+          type="button"
+          className="splitter__btn"
+          aria-label="Maximize code pane"
+          title="Maximize code pane"
+          onClick={onCollapseLeft}
+        >
+          <RiArrowLeftDoubleLine size={14} />
+        </button>
+        <button
+          type="button"
+          className="splitter__btn"
+          aria-label="Reset to 50/50"
+          title="Reset to 50/50"
+          onClick={onReset}
+        >
+          <RiSplitCellsHorizontal size={14} />
+        </button>
+        <button
+          type="button"
+          className="splitter__btn"
+          aria-label="Maximize artifact pane"
+          title="Maximize artifact pane"
+          onClick={onCollapseRight}
+        >
+          <RiArrowRightDoubleLine size={14} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 interface PaneRendererProps {
   label: string;
   modifier: "artifact" | "repo";
+  basis: number;
   pane: PaneState;
   flatFiles: FlatFile[];
   onPathClick: (kind: FileKind, path: string) => void;
@@ -367,6 +477,7 @@ interface PaneRendererProps {
 function PaneRenderer({
   label,
   modifier,
+  basis,
   pane,
   flatFiles,
   onPathClick,
@@ -375,7 +486,7 @@ function PaneRenderer({
 }: PaneRendererProps): React.ReactElement {
   const active = getActiveTab(pane);
   return (
-    <section className={`pane pane--${modifier}`}>
+    <section className={`pane pane--${modifier}`} style={{ flex: `0 1 ${basis}%` }}>
       <div className="pane__label">{label}</div>
       <TabBar
         tabs={pane.tabs.map((t) => ({
