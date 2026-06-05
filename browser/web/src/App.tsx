@@ -228,6 +228,12 @@ export function App(): React.ReactElement {
 
   const handleSelectFile = useCallback(
     (kind: FileKind, path: string) => {
+      // If the destination pane is collapsed out of view, restore a 50/50
+      // split so the opened file is actually visible.
+      setSplit((s) => {
+        const targetWidth = kind === "session" ? s : 100 - s;
+        return targetWidth < 5 ? 50 : s;
+      });
       if (kind === "session") {
         openTab("session", setArtifactPane, path);
       } else {
