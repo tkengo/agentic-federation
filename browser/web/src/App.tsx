@@ -76,7 +76,12 @@ function TitleWithTooltip({ text, tooltip, withMargin }: TitleWithTooltipProps):
 export function App(): React.ReactElement {
   // Read the URL once so reload restores selection.
   const initialUrl = useMemo(() => readUrlState(), []);
-  const pendingUrlRef = useRef({ artifact: initialUrl.artifact, repo: initialUrl.repo });
+  const pendingUrlRef = useRef({
+    artifacts: initialUrl.artifacts,
+    artifactActive: initialUrl.artifactActive,
+    repos: initialUrl.repos,
+    repoActive: initialUrl.repoActive,
+  });
 
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [selectedSession, setSelectedSession] = useState<string | null>(initialUrl.session);
@@ -281,26 +286,31 @@ export function App(): React.ReactElement {
     ];
   }, [tree]);
 
-  // Once the tree loads after a reload, apply any artifact/repo paths from the
-  // URL so the previous state is restored. Consume the pending ref so it only
-  // runs once per page load.
+  // Once the tree loads after a reload, reopen every tab from the URL for both
+  // panes, then activate the tab that was active. Consume the pending ref so it
+  // only runs once per page load.
   useEffect(() => {
     if (!tree || !selectedSession) return;
     const pending = pendingUrlRef.current;
-    if (!pending.artifact && !pending.repo) return;
-    if (pending.artifact) openTab("session", setArtifactPane, pending.artifact);
-    if (pending.repo) openTab("repo", setRepoPane, pending.repo);
-    pendingUrlRef.current = { artifact: null, repo: null };
-  }, [tree, selectedSession, openTab]);
+    if (pending.artifacts.length === 0 && pending.repos.length === 0) return;
+    for (const path of pending.artifacts) openTab("session", setArtifactPane, path);
+    for (const path of pending.repos) openTab("repo", setRepoPane, path);
+    if (pending.artifactActive) activateTab(setArtifactPane, pending.artifactActive);
+    if (pending.repoActive) activateTab(setRepoPane, pending.repoActive);
+    pendingUrlRef.current = { artifacts: [], artifactActive: null, repos: [], repoActive: null };
+  }, [tree, selectedSession, openTab, activateTab]);
 
-  // Sync state to URL so reloads restore the same view.
+  // Sync state to URL so reloads restore the same view: every open tab in each
+  // pane plus the active tab.
   useEffect(() => {
     writeUrlState({
       session: selectedSession,
-      artifact: artifactPane.activePath,
-      repo: repoPane.activePath,
+      artifacts: artifactPane.tabs.map((t) => t.path),
+      artifactActive: artifactPane.activePath,
+      repos: repoPane.tabs.map((t) => t.path),
+      repoActive: repoPane.activePath,
     });
-  }, [selectedSession, artifactPane.activePath, repoPane.activePath]);
+  }, [selectedSession, artifactPane, repoPane]);
 
   // Global shortcut: 'o' opens the file search palette. Ignore when typing in
   // form fields or when a modifier key is held.

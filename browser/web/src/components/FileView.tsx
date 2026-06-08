@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { FileResponse } from "../api.ts";
 import { highlightCode, langForFile, renderMarkdown } from "../markdown.ts";
 import type { FileKind, FlatFile } from "./FileSearch.tsx";
@@ -47,6 +47,28 @@ function detectMode(file: FileResponse): RenderMode {
 export function FileView({ file, loading, error, flatFiles, onPathClick }: Props): React.ReactElement {
   const [html, setHtml] = useState<string>("");
   const mode: RenderMode = file ? detectMode(file) : "plain";
+
+  // Remember each tab's scroll offset (keyed by file path) so switching tabs
+  // returns to where the user left off instead of jumping to the top. The map
+  // lives in a ref so it survives re-renders without triggering them.
+  const scrollPositions = useRef<Map<string, number>>(new Map());
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const currentPath = file?.path ?? null;
+
+  const handleScroll = (): void => {
+    const el = scrollRef.current;
+    if (!el || !currentPath) return;
+    scrollPositions.current.set(currentPath, el.scrollTop);
+  };
+
+  // Restore the saved offset after the active file or its rendered content
+  // changes. Rendered markup (markdown/highlight) arrives asynchronously, so
+  // this re-runs on `html` to restore once the content is actually in the DOM.
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (!el || !currentPath) return;
+    el.scrollTop = scrollPositions.current.get(currentPath) ?? 0;
+  }, [currentPath, html, mode]);
 
   useEffect(() => {
     let cancelled = false;
@@ -101,7 +123,7 @@ export function FileView({ file, loading, error, flatFiles, onPathClick }: Props
   }
 
   return (
-    <div className="file-view">
+    <div className="file-view" ref={scrollRef} onScroll={handleScroll}>
       <div className="file-view__header">
         <span className="file-view__path">{file.path}</span>
         <span className="file-view__size">{formatSize(file.size)}</span>

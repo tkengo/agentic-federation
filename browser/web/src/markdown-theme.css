@@ -238,6 +238,9 @@
   border: 0;
   font-family: "JetBrains Mono", "HackGen Console NF", "SF Mono", Menlo,
     Consolas, monospace;
+  /* Disable ligatures so operators like => and === stay as distinct glyphs. */
+  font-variant-ligatures: none;
+  font-feature-settings: "liga" 0, "calt" 0;
 }
 
 /* Inline code */
@@ -250,6 +253,8 @@
   font-family: "JetBrains Mono", "HackGen Console NF", "SF Mono", Menlo,
     Consolas, monospace;
   font-weight: 500;
+  font-variant-ligatures: none;
+  font-feature-settings: "liga" 0, "calt" 0;
 }
 
 /* ============================================================

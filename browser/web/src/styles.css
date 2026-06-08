@@ -744,6 +744,10 @@ button {
   font-family: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
   font-size: 13px;
   line-height: 1.6;
+  /* Disable ligatures so operators like => and === stay as distinct glyphs
+     instead of being merged into a single arrow / equality symbol. */
+  font-variant-ligatures: none;
+  font-feature-settings: "liga" 0, "calt" 0;
 }
 
 .file-view__code pre code {
