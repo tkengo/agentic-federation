@@ -35,9 +35,10 @@ interface Props {
   onPathClick: (kind: FileKind, path: string) => void;
 }
 
-type RenderMode = "markdown" | "highlight" | "plain";
+type RenderMode = "markdown" | "highlight" | "plain" | "image";
 
 function detectMode(file: FileResponse): RenderMode {
+  if (file.dataUrl) return "image";
   if (file.ext === ".md" || file.ext === ".markdown") return "markdown";
   if (file.size > HIGHLIGHT_MAX_BYTES) return "plain";
   return langForFile(file.name, file.ext) ? "highlight" : "plain";
@@ -117,6 +118,11 @@ export function FileView({ file, loading, error, flatFiles, onPathClick }: Props
           className="file-view__code"
           dangerouslySetInnerHTML={{ __html: html }}
         />
+      )}
+      {mode === "image" && (
+        <div className="file-view__image">
+          <img src={file.dataUrl} alt={file.name} />
+        </div>
       )}
       {mode === "plain" && <pre className="file-view__plain">{file.content}</pre>}
     </div>

@@ -28,6 +28,9 @@ export interface FileResponse {
   size: number;
   mtime: number;
   content: string;
+  // Present only for image files: MIME type and a base64 data URL for <img> rendering.
+  mime?: string;
+  dataUrl?: string;
 }
 
 export async function fetchSessions(): Promise<SessionSummary[]> {
