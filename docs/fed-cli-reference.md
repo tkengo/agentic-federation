@@ -125,6 +125,14 @@ Options for `fed worktree list`:
 
 Launches a local HTTP server (Hono) plus a Vite+React UI for browsing markdown across fed sessions and the current repo.
 
+The UI lets you give feedback to a running agent (e.g. the planner) while reviewing its work in the browser, GitHub-review style.
+
+**Line comments.** Code/plain files show line numbers inline (syntax-highlighted); markdown files have a **Preview / Source** toggle (scroll position is synced between the two via `data-source-line` anchors), and you comment in Source view. Comments accumulate as per-file drafts under `<sessionDir>/feedback/<kind>__<path>.draft.json`.
+
+**Send feedback panel** (header button). Lists every file with draft comments, plus a free-form message box and a target-pane dropdown (the pane is picked, not auto-resolved). **Submit** delivers the message and all comments — one section per file, with the referenced source lines — to the pane as a single message (via a tmux bracketed paste, so multi-line text stays intact), then renames each draft to `<...>.<yyyymmddhhmmss>.posted.json`. Either the message or the comments may be empty, but not both — so you can also just send a plain message with no comments.
+
+Backed by `GET /api/panes/:session` (list panes), `GET /api/comments/:session` (list drafts) / `?kind=&path=` (one file), `PUT /api/comments/:session` (replace a file's draft), and `POST /api/comments/:session/submit-all` (deliver message + comments, mark drafts posted).
+
 Options:
 - `-p, --port <port>` - Port to listen on (default: 7777, also overridable via `FED_BROWSE_PORT`)
 - `--no-open` - Do not auto-open the browser

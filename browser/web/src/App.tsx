@@ -15,12 +15,14 @@ import {
   RiArrowLeftDoubleLine,
   RiArrowRightDoubleLine,
   RiSplitCellsHorizontal,
+  RiFeedbackLine,
 } from "@remixicon/react";
 import { SessionSelect } from "./components/SessionSelect.tsx";
 import { FileTree } from "./components/FileTree.tsx";
 import { FileView } from "./components/FileView.tsx";
 import { FileSearch, flattenFiles, type FlatFile } from "./components/FileSearch.tsx";
 import { TabBar } from "./components/TabBar.tsx";
+import { FeedbackPanel } from "./components/FeedbackPanel.tsx";
 
 type FileKind = "session" | "repo";
 
@@ -91,6 +93,8 @@ export function App(): React.ReactElement {
   const [repoPane, setRepoPane] = useState<PaneState>(initialPaneState);
   const [searchOpen, setSearchOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const feedbackBtnRef = useRef<HTMLButtonElement>(null);
 
   // Width of the artifact pane as a percentage of the content area. The code
   // pane fills the rest. Persisted so reloads keep the same split.
@@ -350,6 +354,17 @@ export function App(): React.ReactElement {
           value={selectedSession}
           onChange={setSelectedSession}
         />
+        <button
+          ref={feedbackBtnRef}
+          type="button"
+          className="app-header__icon-btn"
+          aria-label="Send feedback to session"
+          title="Send feedback to session"
+          onClick={() => setFeedbackOpen((v) => !v)}
+          disabled={!selectedSession}
+        >
+          <RiFeedbackLine size={18} />
+        </button>
       </header>
       <div className="app-body">
         <aside className={`sidebar${sidebarOpen ? "" : " sidebar--collapsed"}`}>
@@ -385,6 +400,8 @@ export function App(): React.ReactElement {
           <PaneRenderer
             label="ARTIFACT"
             modifier="artifact"
+            kind="session"
+            session={selectedSession}
             basis={split}
             pane={artifactPane}
             flatFiles={flatFiles}
@@ -401,6 +418,8 @@ export function App(): React.ReactElement {
           <PaneRenderer
             label="CODE"
             modifier="repo"
+            kind="repo"
+            session={selectedSession}
             basis={100 - split}
             pane={repoPane}
             flatFiles={flatFiles}
@@ -417,6 +436,14 @@ export function App(): React.ReactElement {
           sessionTree={tree.session.tree}
           repoTree={tree.repo.tree}
           onSelect={handleSelectFile}
+        />
+      )}
+      {feedbackOpen && selectedSession && (
+        <FeedbackPanel
+          session={selectedSession}
+          anchorRef={feedbackBtnRef}
+          onClose={() => setFeedbackOpen(false)}
+          onOpenFile={handleSelectFile}
         />
       )}
     </div>
@@ -482,6 +509,8 @@ function Splitter({
 interface PaneRendererProps {
   label: string;
   modifier: "artifact" | "repo";
+  kind: FileKind;
+  session: string | null;
   basis: number;
   pane: PaneState;
   flatFiles: FlatFile[];
@@ -493,6 +522,8 @@ interface PaneRendererProps {
 function PaneRenderer({
   label,
   modifier,
+  kind,
+  session,
   basis,
   pane,
   flatFiles,
@@ -520,6 +551,8 @@ function PaneRenderer({
         error={active?.error ?? null}
         flatFiles={flatFiles}
         onPathClick={onPathClick}
+        session={session}
+        kind={kind}
       />
     </section>
   );

@@ -3,6 +3,7 @@ import type { FileResponse } from "../api.ts";
 import { highlightCode, langForFile, renderMarkdown } from "../markdown.ts";
 import type { FileKind, FlatFile } from "./FileSearch.tsx";
 import { findFileMatch } from "../lib/pathLink.ts";
+import { SourceWithComments, type SourceHandle } from "./SourceWithComments.tsx";
 
 const HIGHLIGHT_MAX_BYTES = 256 * 1024;
 
@@ -33,6 +34,10 @@ interface Props {
   error: string | null;
   flatFiles: FlatFile[];
   onPathClick: (kind: FileKind, path: string) => void;
+  // The active session and which tree this file belongs to — needed to load
+  // and submit line comments in source view.
+  session: string | null;
+  kind: FileKind;
 }
 
 type RenderMode = "markdown" | "highlight" | "plain" | "image";
@@ -44,31 +49,105 @@ function detectMode(file: FileResponse): RenderMode {
   return langForFile(file.name, file.ext) ? "highlight" : "plain";
 }
 
-export function FileView({ file, loading, error, flatFiles, onPathClick }: Props): React.ReactElement {
+export function FileView({ file, loading, error, flatFiles, onPathClick, session, kind }: Props): React.ReactElement {
   const [html, setHtml] = useState<string>("");
+  const [viewMode, setViewMode] = useState<"preview" | "source">("preview");
   const mode: RenderMode = file ? detectMode(file) : "plain";
 
   // Remember each tab's scroll offset (keyed by file path) so switching tabs
   // returns to where the user left off instead of jumping to the top. The map
   // lives in a ref so it survives re-renders without triggering them.
+  // Preview scroll offsets, keyed by file path, kept separately from the source
+  // view's so each mode restores its own position. Refs survive re-renders.
   const scrollPositions = useRef<Map<string, number>>(new Map());
+  const sourceScroll = useRef<Map<string, number>>(new Map());
   const scrollRef = useRef<HTMLDivElement>(null);
+  const sourceRef = useRef<SourceHandle>(null);
+  const syncTargetRef = useRef<number | null>(null);
   const currentPath = file?.path ?? null;
 
+  // Default back to preview whenever the active file changes.
+  useEffect(() => {
+    setViewMode("preview");
+  }, [currentPath]);
+
+  // Line comments only make sense for text files in a known session.
+  const canComment = !!file && !!session && mode !== "image";
+  const isMarkdown = mode === "markdown";
+  // Code/plain files render the same with or without highlighting, so they are
+  // always shown in the commentable line view (no toggle needed). Only markdown
+  // — which renders differently as preview vs. source — gets a toggle.
+  const commentInline = canComment && !isMarkdown;
+  const markdownSource = canComment && isMarkdown && viewMode === "source";
+  const showSource = commentInline || markdownSource;
+  const showToggle = canComment && isMarkdown;
+
   const handleScroll = (): void => {
+    // The source view manages its own scroll container, so only record the
+    // preview offset here.
+    if (showSource) return;
     const el = scrollRef.current;
     if (!el || !currentPath) return;
     scrollPositions.current.set(currentPath, el.scrollTop);
   };
 
-  // Restore the saved offset after the active file or its rendered content
-  // changes. Rendered markup (markdown/highlight) arrives asynchronously, so
-  // this re-runs on `html` to restore once the content is actually in the DOM.
+  // Restore the saved preview offset after the active file, its rendered
+  // content, or the view mode changes. Rendered markup (markdown/highlight)
+  // arrives asynchronously, so this re-runs on `html` to restore once the
+  // content is actually in the DOM. Skipped in source view (it scrolls itself).
   useLayoutEffect(() => {
+    if (showSource) return;
     const el = scrollRef.current;
     if (!el || !currentPath) return;
     el.scrollTop = scrollPositions.current.get(currentPath) ?? 0;
-  }, [currentPath, html, mode]);
+  }, [currentPath, html, mode, showSource]);
+
+  // The source line currently at the top of the markdown preview, derived from
+  // the data-source-line attributes markdown-it emits on each block.
+  const previewTopLine = (): number | null => {
+    const container = scrollRef.current;
+    if (!container) return null;
+    const cTop = container.getBoundingClientRect().top;
+    let line: number | null = null;
+    for (const el of container.querySelectorAll<HTMLElement>("[data-source-line]")) {
+      if (el.getBoundingClientRect().top - cTop <= 4) line = Number(el.dataset.sourceLine);
+      else break;
+    }
+    return line;
+  };
+
+  const scrollPreviewToLine = (line: number): void => {
+    const container = scrollRef.current;
+    if (!container) return;
+    let target: HTMLElement | null = null;
+    for (const el of container.querySelectorAll<HTMLElement>("[data-source-line]")) {
+      if (Number(el.dataset.sourceLine) <= line) target = el;
+      else break;
+    }
+    if (!target) return;
+    container.scrollTop += target.getBoundingClientRect().top - container.getBoundingClientRect().top;
+  };
+
+  // Toggle markdown view, capturing the logical line at the top of the view we
+  // are leaving so the new view can be scrolled to the same place.
+  const switchMode = (next: "preview" | "source"): void => {
+    if (next === viewMode) return;
+    syncTargetRef.current =
+      viewMode === "preview" ? previewTopLine() : (sourceRef.current?.getTopLine() ?? null);
+    setViewMode(next);
+  };
+
+  // After a markdown toggle, scroll the now-visible view to the captured line.
+  // Declared after the preview-restore effect so it runs last and wins.
+  useLayoutEffect(() => {
+    if (!isMarkdown) return;
+    const line = syncTargetRef.current;
+    if (line == null) return;
+    syncTargetRef.current = null;
+    if (viewMode === "source") sourceRef.current?.scrollToLine(line);
+    else scrollPreviewToLine(line);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewMode]);
 
   useEffect(() => {
     let cancelled = false;
@@ -126,27 +205,60 @@ export function FileView({ file, loading, error, flatFiles, onPathClick }: Props
     <div className="file-view" ref={scrollRef} onScroll={handleScroll}>
       <div className="file-view__header">
         <span className="file-view__path">{file.path}</span>
+        {showToggle && (
+          <div className="file-view__viewtoggle" role="group" aria-label="View mode">
+            <button
+              type="button"
+              className={`file-view__viewtoggle-btn${viewMode === "preview" ? " is-active" : ""}`}
+              onClick={() => switchMode("preview")}
+            >
+              Preview
+            </button>
+            <button
+              type="button"
+              className={`file-view__viewtoggle-btn${viewMode === "source" ? " is-active" : ""}`}
+              onClick={() => switchMode("source")}
+            >
+              Source
+            </button>
+          </div>
+        )}
         <span className="file-view__size">{formatSize(file.size)}</span>
       </div>
-      {mode === "markdown" && (
-        <article
-          className="markdown-body file-view__markdown"
-          dangerouslySetInnerHTML={{ __html: html }}
-          onClick={handleClick}
+      {showSource && session ? (
+        <SourceWithComments
+          ref={sourceRef}
+          session={session}
+          kind={kind}
+          path={file.path}
+          content={file.content}
+          lang={mode === "highlight" ? langForFile(file.name, file.ext) : null}
+          initialScroll={sourceScroll.current.get(file.path) ?? 0}
+          onScrollChange={(top) => sourceScroll.current.set(file.path, top)}
         />
+      ) : (
+        <>
+          {mode === "markdown" && (
+            <article
+              className="markdown-body file-view__markdown"
+              dangerouslySetInnerHTML={{ __html: html }}
+              onClick={handleClick}
+            />
+          )}
+          {mode === "highlight" && (
+            <div
+              className="file-view__code"
+              dangerouslySetInnerHTML={{ __html: html }}
+            />
+          )}
+          {mode === "image" && (
+            <div className="file-view__image">
+              <img src={file.dataUrl} alt={file.name} />
+            </div>
+          )}
+          {mode === "plain" && <pre className="file-view__plain">{file.content}</pre>}
+        </>
       )}
-      {mode === "highlight" && (
-        <div
-          className="file-view__code"
-          dangerouslySetInnerHTML={{ __html: html }}
-        />
-      )}
-      {mode === "image" && (
-        <div className="file-view__image">
-          <img src={file.dataUrl} alt={file.name} />
-        </div>
-      )}
-      {mode === "plain" && <pre className="file-view__plain">{file.content}</pre>}
     </div>
   );
 }

@@ -8,6 +8,8 @@ import { sessionsRouter } from "./routes/sessions.js";
 import { treeRouter } from "./routes/tree.js";
 import { fileRouter } from "./routes/file.js";
 import { eventsRouter } from "./routes/events.js";
+import { panesRouter } from "./routes/panes.js";
+import { commentsRouter } from "./routes/comments.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -38,6 +40,8 @@ app.route("/api/sessions", sessionsRouter);
 app.route("/api/tree", treeRouter);
 app.route("/api/file", fileRouter);
 app.route("/api/events", eventsRouter);
+app.route("/api/panes", panesRouter);
+app.route("/api/comments", commentsRouter);
 
 // Serve Vite build output from WEB_DIST. SPA fallback: unknown paths -> index.html
 app.get("/*", (c) => {

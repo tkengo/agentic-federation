@@ -128,6 +128,16 @@ async function getMd(): Promise<MarkdownIt> {
       }
     },
   });
+  // Tag each top-level block with its 1-based source line so the preview can be
+  // scroll-synced with the line-numbered source view.
+  mdInstance.core.ruler.push("source_line", (state) => {
+    for (const token of state.tokens) {
+      if (token.map && token.nesting !== -1) {
+        token.attrSet("data-source-line", String(token.map[0] + 1));
+      }
+    }
+    return false;
+  });
   return mdInstance;
 }
 
@@ -147,4 +157,20 @@ export async function highlightCode(source: string, lang: string): Promise<strin
     lang,
     theme: isDarkMode() ? THEMES.dark : THEMES.light,
   });
+}
+
+/**
+ * Highlight a source and return the inner HTML of each line, so a line-numbered
+ * view can render per-line content with comments interleaved. Returns null if
+ * the language is not loaded (caller falls back to plain text).
+ */
+export async function highlightCodeLines(source: string, lang: string): Promise<string[] | null> {
+  if (!LANGS.includes(lang)) return null;
+  const highlighter = await getHighlighter();
+  const html = highlighter.codeToHtml(source, {
+    lang,
+    theme: isDarkMode() ? THEMES.dark : THEMES.light,
+  });
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  return Array.from(doc.querySelectorAll(".line")).map((el) => el.innerHTML);
 }
