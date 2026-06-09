@@ -22,6 +22,8 @@ interface Props {
   // Scroll position to restore for this file (used for tab-switch memory).
   initialScroll?: number;
   onScrollChange?: (top: number) => void;
+  // Called after a comment is added/removed so the header badge can update.
+  onCommentsChanged?: () => void;
 }
 
 // Imperative handle so the parent can scroll-sync this view with the preview.
@@ -45,7 +47,7 @@ function newId(): string {
 // A line-numbered source view that lets the user attach comments to individual
 // lines, persist them as a draft, and submit them all to a chosen pane.
 export const SourceWithComments = forwardRef<SourceHandle, Props>(function SourceWithComments(
-  { session, kind, path, content, lang, initialScroll, onScrollChange },
+  { session, kind, path, content, lang, initialScroll, onScrollChange, onCommentsChanged },
   ref,
 ): React.ReactElement {
   const lines = useMemo(() => splitLines(content), [content]);
@@ -132,9 +134,11 @@ export const SourceWithComments = forwardRef<SourceHandle, Props>(function Sourc
   const persist = (next: LineComment[]): void => {
     setComments(next);
     setSaveError(null);
-    saveComments(session, { kind, path, comments: next }).catch((err: unknown) => {
-      setSaveError(err instanceof Error ? err.message : String(err));
-    });
+    saveComments(session, { kind, path, comments: next })
+      .then(() => onCommentsChanged?.())
+      .catch((err: unknown) => {
+        setSaveError(err instanceof Error ? err.message : String(err));
+      });
   };
 
   const byLine = useMemo(() => {

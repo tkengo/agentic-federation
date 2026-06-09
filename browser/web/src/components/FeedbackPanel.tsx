@@ -10,6 +10,8 @@ interface Props {
   anchorRef: React.RefObject<HTMLElement | null>;
   onClose: () => void;
   onOpenFile: (kind: FileKind, path: string) => void;
+  // Called after submit clears the drafts, so the header badge can update.
+  onChanged: () => void;
 }
 
 type Status = "idle" | "sending" | "sent" | "error";
@@ -17,7 +19,7 @@ type Status = "idle" | "sending" | "sent" | "error";
 // Unified feedback panel (GitHub review style): submit the session's line
 // comments together with an optional free-form message, in one delivery. Either
 // part may be empty, but not both.
-export function FeedbackPanel({ session, anchorRef, onClose, onOpenFile }: Props): React.ReactElement {
+export function FeedbackPanel({ session, anchorRef, onClose, onOpenFile, onChanged }: Props): React.ReactElement {
   const [drafts, setDrafts] = useState<DraftSummary[]>([]);
   const [target, setTarget] = useState<string | null>(null);
   const [message, setMessage] = useState("");
@@ -63,6 +65,7 @@ export function FeedbackPanel({ session, anchorRef, onClose, onOpenFile }: Props
         setDrafts([]);
         setMessage("");
         setStatus("sent");
+        onChanged();
       })
       .catch((err: unknown) => {
         setStatus("error");

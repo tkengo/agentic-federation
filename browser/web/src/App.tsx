@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { readUrlState, writeUrlState } from "./lib/urlState.ts";
 import {
+  fetchDraftList,
   fetchFile,
   fetchSessions,
   fetchTree,
@@ -95,6 +96,26 @@ export function App(): React.ReactElement {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const feedbackBtnRef = useRef<HTMLButtonElement>(null);
+  const [commentCount, setCommentCount] = useState(0);
+
+  // Total draft comments across the session, shown as a badge on the feedback
+  // button. Refreshed on session change and whenever comments are added,
+  // removed, or submitted.
+  const refreshCommentCount = useCallback(() => {
+    if (!selectedSession) {
+      setCommentCount(0);
+      return;
+    }
+    fetchDraftList(selectedSession)
+      .then((list) => setCommentCount(list.reduce((n, d) => n + d.count, 0)))
+      .catch(() => {
+        /* leave the previous count on failure */
+      });
+  }, [selectedSession]);
+
+  useEffect(() => {
+    refreshCommentCount();
+  }, [refreshCommentCount]);
 
   // Width of the artifact pane as a percentage of the content area. The code
   // pane fills the rest. Persisted so reloads keep the same split.
@@ -357,13 +378,14 @@ export function App(): React.ReactElement {
         <button
           ref={feedbackBtnRef}
           type="button"
-          className="app-header__icon-btn"
+          className="app-header__icon-btn app-header__icon-btn--badge"
           aria-label="Send feedback to session"
           title="Send feedback to session"
           onClick={() => setFeedbackOpen((v) => !v)}
           disabled={!selectedSession}
         >
           <RiFeedbackLine size={18} />
+          {commentCount > 0 && <span className="app-header__badge">{commentCount}</span>}
         </button>
       </header>
       <div className="app-body">
@@ -408,6 +430,7 @@ export function App(): React.ReactElement {
             onPathClick={handleSelectFile}
             onActivate={(p) => activateTab(setArtifactPane, p)}
             onClose={(p) => closeTab(setArtifactPane, p)}
+            onCommentsChanged={refreshCommentCount}
           />
           <Splitter
             onResizeStart={startDrag}
@@ -426,6 +449,7 @@ export function App(): React.ReactElement {
             onPathClick={handleSelectFile}
             onActivate={(p) => activateTab(setRepoPane, p)}
             onClose={(p) => closeTab(setRepoPane, p)}
+            onCommentsChanged={refreshCommentCount}
           />
         </main>
       </div>
@@ -444,6 +468,7 @@ export function App(): React.ReactElement {
           anchorRef={feedbackBtnRef}
           onClose={() => setFeedbackOpen(false)}
           onOpenFile={handleSelectFile}
+          onChanged={refreshCommentCount}
         />
       )}
     </div>
@@ -517,6 +542,7 @@ interface PaneRendererProps {
   onPathClick: (kind: FileKind, path: string) => void;
   onActivate: (path: string) => void;
   onClose: (path: string) => void;
+  onCommentsChanged: () => void;
 }
 
 function PaneRenderer({
@@ -530,6 +556,7 @@ function PaneRenderer({
   onPathClick,
   onActivate,
   onClose,
+  onCommentsChanged,
 }: PaneRendererProps): React.ReactElement {
   const active = getActiveTab(pane);
   return (
@@ -553,6 +580,7 @@ function PaneRenderer({
         onPathClick={onPathClick}
         session={session}
         kind={kind}
+        onCommentsChanged={onCommentsChanged}
       />
     </section>
   );

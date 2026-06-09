@@ -39,6 +39,8 @@ interface Props {
   // and submit line comments in source view.
   session: string | null;
   kind: FileKind;
+  // Called when line comments are added/removed so the header badge can update.
+  onCommentsChanged: () => void;
 }
 
 type RenderMode = "markdown" | "highlight" | "plain" | "image";
@@ -50,7 +52,7 @@ function detectMode(file: FileResponse): RenderMode {
   return langForFile(file.name, file.ext) ? "highlight" : "plain";
 }
 
-export function FileView({ file, loading, error, flatFiles, onPathClick, session, kind }: Props): React.ReactElement {
+export function FileView({ file, loading, error, flatFiles, onPathClick, session, kind, onCommentsChanged }: Props): React.ReactElement {
   const [html, setHtml] = useState<string>("");
   const [viewMode, setViewMode] = useState<"preview" | "source">("preview");
   const [ghLoading, setGhLoading] = useState(false);
@@ -267,6 +269,7 @@ export function FileView({ file, loading, error, flatFiles, onPathClick, session
           lang={mode === "highlight" ? langForFile(file.name, file.ext) : null}
           initialScroll={sourceScroll.current.get(file.path) ?? 0}
           onScrollChange={(top) => sourceScroll.current.set(file.path, top)}
+          onCommentsChanged={onCommentsChanged}
         />
       ) : (
         <>
