@@ -1106,6 +1106,51 @@ button {
   color: #fff;
 }
 
+/* Markdown preview blocks that have line comments: highlighted and clickable,
+   jumping into the source view at the comment. */
+.file-view__markdown .has-comment {
+  cursor: pointer;
+  background: rgba(255, 196, 0, 0.16);
+  border-radius: 3px;
+  transition: background 0.12s;
+}
+
+.file-view__markdown .has-comment:hover {
+  background: rgba(255, 196, 0, 0.3);
+}
+
+/* Flow blocks get a left accent bar; padding/margin keep the text aligned. */
+.file-view__markdown p.has-comment,
+.file-view__markdown li.has-comment,
+.file-view__markdown h1.has-comment,
+.file-view__markdown h2.has-comment,
+.file-view__markdown h3.has-comment,
+.file-view__markdown h4.has-comment,
+.file-view__markdown h5.has-comment,
+.file-view__markdown h6.has-comment,
+.file-view__markdown blockquote.has-comment,
+.file-view__markdown pre.has-comment {
+  box-shadow: inset 3px 0 0 rgba(255, 196, 0, 0.9);
+  padding-left: 6px;
+  margin-left: -6px;
+}
+
+/* Table rows can't take padding/box-shadow, so color the cells of the row. */
+.file-view__markdown tr.has-comment {
+  background: none;
+}
+
+.file-view__markdown tr.has-comment td,
+.file-view__markdown tr.has-comment th {
+  cursor: pointer;
+  background: rgba(255, 196, 0, 0.16);
+}
+
+.file-view__markdown tr.has-comment:hover td,
+.file-view__markdown tr.has-comment:hover th {
+  background: rgba(255, 196, 0, 0.3);
+}
+
 /* Line-numbered source view with attachable comments. */
 .source-comments {
   display: flex;

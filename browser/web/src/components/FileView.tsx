@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { RiGithubFill } from "@remixicon/react";
-import { fetchGitLink, type FileResponse } from "../api.ts";
+import { fetchComments, fetchGitLink, type FileResponse } from "../api.ts";
 import { highlightCode, langForFile, renderMarkdown } from "../markdown.ts";
 import type { FileKind, FlatFile } from "./FileSearch.tsx";
 import { findFileMatch } from "../lib/pathLink.ts";
@@ -56,6 +56,8 @@ export function FileView({ file, loading, error, flatFiles, onPathClick, session
   const [html, setHtml] = useState<string>("");
   const [viewMode, setViewMode] = useState<"preview" | "source">("preview");
   const [ghLoading, setGhLoading] = useState(false);
+  const [commentLines, setCommentLines] = useState<number[]>([]);
+  const markdownRef = useRef<HTMLElement>(null);
   const mode: RenderMode = file ? detectMode(file) : "plain";
 
   // Remember each tab's scroll offset (keyed by file path) so switching tabs
@@ -169,6 +171,64 @@ export function FileView({ file, loading, error, flatFiles, onPathClick, session
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewMode]);
 
+  // Switch to source view and scroll to the line a preview comment marker
+  // points at, so the comment (rendered under that line) comes into view.
+  const jumpToComment = (line: number): void => {
+    syncTargetRef.current = line;
+    setViewMode("source");
+  };
+
+  // Which lines have comments, for highlighting blocks in the markdown preview.
+  useEffect(() => {
+    if (!file || !session || !isMarkdown) {
+      setCommentLines([]);
+      return;
+    }
+    let cancelled = false;
+    fetchComments(session, kind, file.path)
+      .then((d) => {
+        if (!cancelled) setCommentLines(d.comments.map((c) => c.line));
+      })
+      .catch(() => {
+        if (!cancelled) setCommentLines([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [file, session, kind, isMarkdown, viewMode]);
+
+  // Mark the preview block that contains each commented line so it can be
+  // highlighted and clicked. A block "contains" a comment line when it is the
+  // last data-source-line element at or before that line.
+  useEffect(() => {
+    const root = markdownRef.current;
+    if (!root) return;
+    for (const el of root.querySelectorAll<HTMLElement>(".has-comment")) {
+      el.classList.remove("has-comment");
+      delete el.dataset.commentLine;
+    }
+    if (commentLines.length === 0) return;
+    const lineEls = Array.from(root.querySelectorAll<HTMLElement>("[data-source-line]")).map((el) => ({
+      el,
+      line: Number(el.dataset.sourceLine),
+    }));
+    for (const c of commentLines) {
+      let chosen: HTMLElement | null = null;
+      let chosenLine = -1;
+      for (const le of lineEls) {
+        if (le.line <= c && le.line >= chosenLine) {
+          chosen = le.el;
+          chosenLine = le.line;
+        }
+      }
+      if (chosen) {
+        chosen.classList.add("has-comment");
+        const prev = chosen.dataset.commentLine ? Number(chosen.dataset.commentLine) : Infinity;
+        chosen.dataset.commentLine = String(Math.min(prev, c));
+      }
+    }
+  }, [html, commentLines, viewMode]);
+
   useEffect(() => {
     let cancelled = false;
     if (!file) {
@@ -197,13 +257,22 @@ export function FileView({ file, loading, error, flatFiles, onPathClick, session
   }, [file, mode, flatFiles]);
 
   const handleClick = (e: React.MouseEvent<HTMLElement>): void => {
-    const target = (e.target as HTMLElement).closest<HTMLElement>(".clickable-path");
-    if (!target) return;
-    const kind = target.dataset.kind as FileKind | undefined;
-    const path = target.dataset.filePath;
-    if (kind && path) {
+    const el = e.target as HTMLElement;
+    const pathEl = el.closest<HTMLElement>(".clickable-path");
+    if (pathEl) {
+      const linkKind = pathEl.dataset.kind as FileKind | undefined;
+      const path = pathEl.dataset.filePath;
+      if (linkKind && path) {
+        e.preventDefault();
+        onPathClick(linkKind, path);
+      }
+      return;
+    }
+    // A commented block: jump into source view at that comment's line.
+    const commentEl = el.closest<HTMLElement>(".has-comment");
+    if (commentEl?.dataset.commentLine) {
       e.preventDefault();
-      onPathClick(kind, path);
+      jumpToComment(Number(commentEl.dataset.commentLine));
     }
   };
 
@@ -275,6 +344,7 @@ export function FileView({ file, loading, error, flatFiles, onPathClick, session
         <>
           {mode === "markdown" && (
             <article
+              ref={markdownRef}
               className="markdown-body file-view__markdown"
               dangerouslySetInnerHTML={{ __html: html }}
               onClick={handleClick}
