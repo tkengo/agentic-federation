@@ -25,8 +25,9 @@ function encodePath(p: string): string {
   return p.split("/").map(encodeURIComponent).join("/");
 }
 
-// Resolve the GitHub web link for a repo-relative file: the open PR's diff if
-// one exists for the branch, otherwise the file on its branch. Any gh failure
+// Resolve the GitHub web link for the branch. With a file path: the open PR's
+// diff for that file if a PR exists, else the file on its branch. Without a
+// path: the PR page if one exists, else the branch's tree page. Any gh failure
 // (not installed, not authed, no PR) degrades gracefully to the branch link.
 export function resolveGitLink(worktree: string, branch: string, relPath: string): GitLink {
   let remote: string;
@@ -50,10 +51,17 @@ export function resolveGitLink(worktree: string, branch: string, relPath: string
     prNumber = null;
   }
 
+  const hasPath = relPath.length > 0;
+
   if (prNumber != null) {
+    if (!hasPath) return { kind: "pr", url: `https://github.com/${ownerRepo}/pull/${prNumber}` };
     // GitHub anchors a file in the PR files view by the SHA-256 of its path.
     const anchor = createHash("sha256").update(relPath).digest("hex");
     return { kind: "pr", url: `https://github.com/${ownerRepo}/pull/${prNumber}/files#diff-${anchor}` };
+  }
+
+  if (!hasPath) {
+    return { kind: "branch", url: `https://github.com/${ownerRepo}/tree/${encodePath(branch)}` };
   }
   return {
     kind: "branch",

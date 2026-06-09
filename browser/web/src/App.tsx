@@ -3,6 +3,7 @@ import { readUrlState, writeUrlState } from "./lib/urlState.ts";
 import {
   fetchDraftList,
   fetchFile,
+  fetchGitLink,
   fetchSessions,
   fetchTree,
   type FileResponse,
@@ -17,6 +18,7 @@ import {
   RiArrowRightDoubleLine,
   RiSplitCellsHorizontal,
   RiFeedbackLine,
+  RiGithubFill,
 } from "@remixicon/react";
 import { SessionSelect } from "./components/SessionSelect.tsx";
 import { FileTree } from "./components/FileTree.tsx";
@@ -116,6 +118,18 @@ export function App(): React.ReactElement {
   useEffect(() => {
     refreshCommentCount();
   }, [refreshCommentCount]);
+
+  // Open the session's PR page on GitHub (or the branch tree if there is no PR).
+  const openSessionGithub = useCallback(async (): Promise<void> => {
+    if (!selectedSession) return;
+    try {
+      const link = await fetchGitLink(selectedSession);
+      if (link.url) window.open(link.url, "_blank", "noopener,noreferrer");
+      else window.alert("GitHub の PR / ブランチが見つかりませんでした。");
+    } catch {
+      window.alert("GitHub リンクの取得に失敗しました。");
+    }
+  }, [selectedSession]);
 
   // Width of the artifact pane as a percentage of the content area. The code
   // pane fills the rest. Persisted so reloads keep the same split.
@@ -375,6 +389,16 @@ export function App(): React.ReactElement {
           value={selectedSession}
           onChange={setSelectedSession}
         />
+        <button
+          type="button"
+          className="app-header__icon-btn"
+          aria-label="Open PR on GitHub"
+          title="Open PR on GitHub (or the branch if there is no PR)"
+          onClick={openSessionGithub}
+          disabled={!selectedSession}
+        >
+          <RiGithubFill size={18} />
+        </button>
         <button
           ref={feedbackBtnRef}
           type="button"

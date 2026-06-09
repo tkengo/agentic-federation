@@ -153,11 +153,12 @@ export interface GitLink {
   url?: string;
 }
 
-// Resolve the GitHub web link for a repo-relative file (open PR diff if any,
-// else the file on its branch).
-export async function fetchGitLink(session: string, filePath: string): Promise<GitLink> {
-  const params = new URLSearchParams({ path: filePath });
-  const res = await fetch(`/api/git-link/${encodeURIComponent(session)}?${params}`);
+// Resolve a GitHub web link. With a file path: the open PR diff for that file,
+// else the file on its branch. Without a path: the PR page, else the branch
+// tree page.
+export async function fetchGitLink(session: string, filePath?: string): Promise<GitLink> {
+  const qs = filePath ? `?${new URLSearchParams({ path: filePath })}` : "";
+  const res = await fetch(`/api/git-link/${encodeURIComponent(session)}${qs}`);
   if (!res.ok) throw new Error(`Failed to resolve GitHub link: ${res.status}`);
   return (await res.json()) as GitLink;
 }
