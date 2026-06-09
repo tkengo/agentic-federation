@@ -1031,12 +1031,39 @@ button {
 }
 
 /* Preview / Source toggle in the file header. */
+/* Right-aligned group in the file header: view toggle, size, GitHub link. */
+.file-view__header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
 .file-view__viewtoggle {
   display: inline-flex;
-  margin-left: auto;
   border: 1px solid var(--border);
   border-radius: 6px;
   overflow: hidden;
+}
+
+.file-view__gh {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px;
+  border-radius: 6px;
+  color: var(--fg-muted);
+  transition: background 0.15s, color 0.15s;
+}
+
+.file-view__gh:hover:not(:disabled) {
+  background: rgba(127, 127, 127, 0.12);
+  color: var(--fg);
+}
+
+.file-view__gh:disabled {
+  opacity: 0.5;
+  cursor: progress;
 }
 
 .file-view__viewtoggle-btn {
@@ -1053,11 +1080,6 @@ button {
 .file-view__viewtoggle-btn.is-active {
   background: var(--accent);
   color: #fff;
-}
-
-/* When the toggle is present the size sits after it, not pushed to the edge. */
-.file-view__viewtoggle + .file-view__size {
-  margin-left: 12px;
 }
 
 /* Line-numbered source view with attachable comments. */

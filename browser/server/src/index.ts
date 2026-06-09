@@ -10,6 +10,7 @@ import { fileRouter } from "./routes/file.js";
 import { eventsRouter } from "./routes/events.js";
 import { panesRouter } from "./routes/panes.js";
 import { commentsRouter } from "./routes/comments.js";
+import { gitRouter } from "./routes/git.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -42,6 +43,7 @@ app.route("/api/file", fileRouter);
 app.route("/api/events", eventsRouter);
 app.route("/api/panes", panesRouter);
 app.route("/api/comments", commentsRouter);
+app.route("/api/git-link", gitRouter);
 
 // Serve Vite build output from WEB_DIST. SPA fallback: unknown paths -> index.html
 app.get("/*", (c) => {

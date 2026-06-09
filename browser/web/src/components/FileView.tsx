@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import type { FileResponse } from "../api.ts";
+import { RiGithubFill } from "@remixicon/react";
+import { fetchGitLink, type FileResponse } from "../api.ts";
 import { highlightCode, langForFile, renderMarkdown } from "../markdown.ts";
 import type { FileKind, FlatFile } from "./FileSearch.tsx";
 import { findFileMatch } from "../lib/pathLink.ts";
@@ -52,6 +53,7 @@ function detectMode(file: FileResponse): RenderMode {
 export function FileView({ file, loading, error, flatFiles, onPathClick, session, kind }: Props): React.ReactElement {
   const [html, setHtml] = useState<string>("");
   const [viewMode, setViewMode] = useState<"preview" | "source">("preview");
+  const [ghLoading, setGhLoading] = useState(false);
   const mode: RenderMode = file ? detectMode(file) : "plain";
 
   // Remember each tab's scroll offset (keyed by file path) so switching tabs
@@ -81,6 +83,22 @@ export function FileView({ file, loading, error, flatFiles, onPathClick, session
   const markdownSource = canComment && isMarkdown && viewMode === "source";
   const showSource = commentInline || markdownSource;
   const showToggle = canComment && isMarkdown;
+  // Only repo (CODE pane) files have a GitHub counterpart.
+  const showGithub = !!file && !!session && kind === "repo";
+
+  const openGithub = async (): Promise<void> => {
+    if (!session || !file) return;
+    setGhLoading(true);
+    try {
+      const link = await fetchGitLink(session, file.path);
+      if (link.url) window.open(link.url, "_blank", "noopener,noreferrer");
+      else window.alert("GitHub のリンクが見つかりませんでした（リモート未設定かもしれません）。");
+    } catch {
+      window.alert("GitHub のリンク取得に失敗しました。");
+    } finally {
+      setGhLoading(false);
+    }
+  };
 
   const handleScroll = (): void => {
     // The source view manages its own scroll container, so only record the
@@ -205,25 +223,39 @@ export function FileView({ file, loading, error, flatFiles, onPathClick, session
     <div className="file-view" ref={scrollRef} onScroll={handleScroll}>
       <div className="file-view__header">
         <span className="file-view__path">{file.path}</span>
-        {showToggle && (
-          <div className="file-view__viewtoggle" role="group" aria-label="View mode">
+        <div className="file-view__header-right">
+          {showToggle && (
+            <div className="file-view__viewtoggle" role="group" aria-label="View mode">
+              <button
+                type="button"
+                className={`file-view__viewtoggle-btn${viewMode === "preview" ? " is-active" : ""}`}
+                onClick={() => switchMode("preview")}
+              >
+                Preview
+              </button>
+              <button
+                type="button"
+                className={`file-view__viewtoggle-btn${viewMode === "source" ? " is-active" : ""}`}
+                onClick={() => switchMode("source")}
+              >
+                Source
+              </button>
+            </div>
+          )}
+          <span className="file-view__size">{formatSize(file.size)}</span>
+          {showGithub && (
             <button
               type="button"
-              className={`file-view__viewtoggle-btn${viewMode === "preview" ? " is-active" : ""}`}
-              onClick={() => switchMode("preview")}
+              className="file-view__gh"
+              onClick={openGithub}
+              disabled={ghLoading}
+              title="Open on GitHub (PR diff, or the file on its branch)"
+              aria-label="Open on GitHub"
             >
-              Preview
+              <RiGithubFill size={16} />
             </button>
-            <button
-              type="button"
-              className={`file-view__viewtoggle-btn${viewMode === "source" ? " is-active" : ""}`}
-              onClick={() => switchMode("source")}
-            >
-              Source
-            </button>
-          </div>
-        )}
-        <span className="file-view__size">{formatSize(file.size)}</span>
+          )}
+        </div>
       </div>
       {showSource && session ? (
         <SourceWithComments

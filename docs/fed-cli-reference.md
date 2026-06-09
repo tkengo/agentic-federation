@@ -131,6 +131,8 @@ The UI lets you give feedback to a running agent (e.g. the planner) while review
 
 **Send feedback panel** (header button). Lists every file with draft comments, plus a free-form message box and a target-pane dropdown (the pane is picked, not auto-resolved). **Submit** delivers the message and all comments — one section per file, with the referenced source lines — to the pane as a single message (via a tmux bracketed paste, so multi-line text stays intact), then renames each draft to `<...>.<yyyymmddhhmmss>.posted.json`. Either the message or the comments may be empty, but not both — so you can also just send a plain message with no comments.
 
+**GitHub link.** CODE-pane (repo) files have a GitHub icon in the header that opens the file on GitHub: the open PR's diff for the branch if one exists, otherwise the file on its branch (`blob/<branch>/<path>`). PR detection uses `gh` server-side. Backed by `GET /api/git-link/:session?path=<path>`.
+
 Backed by `GET /api/panes/:session` (list panes), `GET /api/comments/:session` (list drafts) / `?kind=&path=` (one file), `PUT /api/comments/:session` (replace a file's draft), and `POST /api/comments/:session/submit-all` (deliver message + comments, mark drafts posted).
 
 Options:

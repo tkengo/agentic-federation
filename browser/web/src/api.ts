@@ -147,3 +147,17 @@ export async function fetchPanes(session: string): Promise<PaneInfo[]> {
   const data = (await res.json()) as { panes: PaneInfo[] };
   return data.panes;
 }
+
+export interface GitLink {
+  kind: "pr" | "branch" | "none";
+  url?: string;
+}
+
+// Resolve the GitHub web link for a repo-relative file (open PR diff if any,
+// else the file on its branch).
+export async function fetchGitLink(session: string, filePath: string): Promise<GitLink> {
+  const params = new URLSearchParams({ path: filePath });
+  const res = await fetch(`/api/git-link/${encodeURIComponent(session)}?${params}`);
+  if (!res.ok) throw new Error(`Failed to resolve GitHub link: ${res.status}`);
+  return (await res.json()) as GitLink;
+}
